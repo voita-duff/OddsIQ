@@ -48,6 +48,7 @@ class PlacementResult:
     """Executor outcome for a place_bet command. ``status``: ``placed`` |
     ``rejected`` (a normal outcome — price moved below min_odds / offer gone;
     does NOT trip the breaker) | ``error``."""
+
     status: str
     accepted_odds: float | None = None
     receipt_id: str | None = None
@@ -105,12 +106,18 @@ class BettingService:
             return
         now = datetime.now(timezone.utc)
         reason = await self._qualify(
-            game, vb, pinnacle_fresh_at, now, pinnacle_source_updated_at)
+            game, vb, pinnacle_fresh_at, now, pinnacle_source_updated_at
+        )
         if reason is not None:
-            await self._store.insert_placed_bet(PlacedBet(
-                value_bet_id=vb.id, game_id=game.id, sport=vb.sport,
-                status="skipped", skip_reason=reason,
-            ))
+            await self._store.insert_placed_bet(
+                PlacedBet(
+                    value_bet_id=vb.id,
+                    game_id=game.id,
+                    sport=vb.sport,
+                    status="skipped",
+                    skip_reason=reason,
+                )
+            )
             logger.info("bet_skipped: value_bet_id=%d reason=%s", vb.id, reason)
             if reason == "not_logged_in":
                 # The one skip that alerts (2026-08-30): a qualified bet lost
@@ -123,12 +130,19 @@ class BettingService:
         stake = await self._resolve_stake()
         min_odds = round(vb.fair_odds * (1.0 + config.EDGE_THRESHOLD), 3)
         latency_detect_ms = max(0, int((now - vb.flagged_at).total_seconds() * 1000))
-        pb_id = await self._store.insert_placed_bet(PlacedBet(
-            value_bet_id=vb.id, game_id=game.id, sport=vb.sport,
-            status="pending", stake_czk=stake, requested_odds=vb.entry_odds,
-            min_odds=min_odds, commanded_at=now,
-            latency_detect_ms=latency_detect_ms,
-        ))
+        pb_id = await self._store.insert_placed_bet(
+            PlacedBet(
+                value_bet_id=vb.id,
+                game_id=game.id,
+                sport=vb.sport,
+                status="pending",
+                stake_czk=stake,
+                requested_odds=vb.entry_odds,
+                min_odds=min_odds,
+                commanded_at=now,
+                latency_detect_ms=latency_detect_ms,
+            )
+        )
         if pb_id is None:
             return  # decision already exists (schema double-bet guard)
 
@@ -142,7 +156,11 @@ class BettingService:
         }
         logger.info(
             "bet_command: value_bet_id=%d match_id=%s opp_id=%s stake_czk=%.0f min_odds=%.3f",
-            vb.id, vb.tipsport_match_id, vb.tipsport_opp_id, stake, min_odds,
+            vb.id,
+            vb.tipsport_match_id,
+            vb.tipsport_opp_id,
+            stake,
+            min_odds,
         )
         dispatched_at = datetime.now(timezone.utc)
         try:
@@ -152,27 +170,35 @@ class BettingService:
             # (or Phase-2 reconciliation) resolves it — a blind retry here is
             # the double-bet failure mode.
             await self._store.update_placed_bet_result(
-                pb_id, status="unknown", error=str(e))
+                pb_id, status="unknown", error=str(e)
+            )
             logger.error("bet_unknown: value_bet_id=%d error=%s", vb.id, e)
             await self._auto_disarm("unknown_placement")
             return
         except Exception as e:
             await self._store.update_placed_bet_result(
-                pb_id, status="failed", error=str(e))
+                pb_id, status="failed", error=str(e)
+            )
             logger.error("bet_failed: value_bet_id=%d error=%s", vb.id, e)
             # Breaker BEFORE the alert: the circuit count on the money path
             # must never depend on the notification formatter succeeding.
             await self._register_failure()
-            await telegram.send_telegram(telegram.format_bet_attempt_failed(
-                game, vb, stake_czk=stake, status="failed", reason=str(e)))
+            await telegram.send_telegram(
+                telegram.format_bet_attempt_failed(
+                    game, vb, stake_czk=stake, status="failed", reason=str(e)
+                )
+            )
             return
 
         latency_place_ms = int(
-            (datetime.now(timezone.utc) - dispatched_at).total_seconds() * 1000)
+            (datetime.now(timezone.utc) - dispatched_at).total_seconds() * 1000
+        )
         if result.status == "placed":
             self._consecutive_failures = 0
             await self._store.update_placed_bet_result(
-                pb_id, status="placed", accepted_odds=result.accepted_odds,
+                pb_id,
+                status="placed",
+                accepted_odds=result.accepted_odds,
                 receipt_id=result.receipt_id,
                 balance_after_czk=result.balance_czk,
                 latency_place_ms=latency_place_ms,
@@ -180,12 +206,16 @@ class BettingService:
             logger.info(
                 "bet_placed: value_bet_id=%d stake_czk=%.0f accepted_odds=%s "
                 "receipt=%s latency_place_ms=%d",
-                vb.id, stake, result.accepted_odds, result.receipt_id,
+                vb.id,
+                stake,
+                result.accepted_odds,
+                result.receipt_id,
                 latency_place_ms,
             )
             self._warn_on_accepted_odds_anomaly(vb, result)
             await telegram.send_telegram(
-                telegram.format_bet_placed(game, vb, stake, result))
+                telegram.format_bet_placed(game, vb, stake, result)
+            )
         elif result.status == "rejected":
             # Normal outcome (price moved / offer gone) — a real-money attempt,
             # so it alerts (2026-08-25: 6/6 silent offer_gone rejections hid a
@@ -195,27 +225,39 @@ class BettingService:
             # healthy, so failed -> rejected -> failed is still two actuator
             # failures and must auto-disarm. Only a `placed` result resets.
             await self._store.update_placed_bet_result(
-                pb_id, status="rejected", error=result.message,
+                pb_id,
+                status="rejected",
+                error=result.message,
                 latency_place_ms=latency_place_ms,
             )
             logger.info(
-                "bet_rejected: value_bet_id=%d reason=%s", vb.id, result.message)
-            await telegram.send_telegram(telegram.format_bet_attempt_failed(
-                game, vb, stake_czk=stake, status="rejected", reason=result.message))
+                "bet_rejected: value_bet_id=%d reason=%s", vb.id, result.message
+            )
+            await telegram.send_telegram(
+                telegram.format_bet_attempt_failed(
+                    game, vb, stake_czk=stake, status="rejected", reason=result.message
+                )
+            )
         else:
             await self._store.update_placed_bet_result(
-                pb_id, status="failed", error=result.message,
+                pb_id,
+                status="failed",
+                error=result.message,
                 latency_place_ms=latency_place_ms,
             )
-            logger.error(
-                "bet_failed: value_bet_id=%d error=%s", vb.id, result.message)
+            logger.error("bet_failed: value_bet_id=%d error=%s", vb.id, result.message)
             # Breaker before the alert (same rationale as the exception path).
             await self._register_failure()
-            await telegram.send_telegram(telegram.format_bet_attempt_failed(
-                game, vb, stake_czk=stake, status="failed", reason=result.message))
+            await telegram.send_telegram(
+                telegram.format_bet_attempt_failed(
+                    game, vb, stake_czk=stake, status="failed", reason=result.message
+                )
+            )
 
     def _warn_on_accepted_odds_anomaly(
-        self, vb: ValueBet, result: PlacementResult,
+        self,
+        vb: ValueBet,
+        result: PlacementResult,
     ) -> None:
         """Server-side backstop against a NON-SINGLETON bet slip.
 
@@ -239,7 +281,10 @@ class BettingService:
             "accepted_odds_anomaly: value_bet_id=%s requested=%.3f accepted=%.3f "
             "ratio=%.3f — slip may not have been a singleton; verify the ticket "
             "at Tipsport",
-            vb.id, requested, accepted, accepted / requested,
+            vb.id,
+            requested,
+            accepted,
+            accepted / requested,
         )
 
     async def armed(self) -> bool:
@@ -258,7 +303,9 @@ class BettingService:
         """First failing rule wins; ordering is cheapest-first (the sport gate
         is one meta point-read — kept first so skip-reason semantics stay
         comparable across the 2026-08-25 gate change), DB-aggregate caps last."""
-        if vb.sport not in parse_betting_sports(await self._store.get_meta("betting_sports")):
+        if vb.sport not in parse_betting_sports(
+            await self._store.get_meta("betting_sports")
+        ):
             return "sport_not_enabled"
         if vb.tier not in ("warm", "hot"):
             # Warm-tier betting enabled 2026-08-30 (operator decision): both
@@ -276,7 +323,9 @@ class BettingService:
             return "executor_disconnected"
         if not getattr(self._executor, "logged_in", True):
             return "not_logged_in"
-        if (now - pinnacle_fresh_at).total_seconds() > config.BETTING_FAIR_MAX_AGE_SECONDS:
+        if (
+            now - pinnacle_fresh_at
+        ).total_seconds() > config.BETTING_FAIR_MAX_AGE_SECONDS:
             return "stale_fair"
         # Not a duplicate of the detection-time guard in _suspect_reason: that
         # one measures observed_at - source_at, this one now - source_at, so it
@@ -307,7 +356,9 @@ class BettingService:
             return "selection_already_open"
         stats = await self._store.betting_day_stats(now.date().isoformat())
         max_bets = await self._bounded_meta_int(
-            "betting_max_bets_per_day", 10, config.BETTING_MAX_BETS_PER_DAY,
+            "betting_max_bets_per_day",
+            10,
+            config.BETTING_MAX_BETS_PER_DAY,
         )
         if stats["bets_commanded"] >= max_bets:
             return "daily_bet_cap"
@@ -315,13 +366,15 @@ class BettingService:
         if stake <= 0:
             return "invalid_stake"
         max_open = await self._bounded_meta_float(
-            "betting_max_open_stakes_czk", 500.0,
+            "betting_max_open_stakes_czk",
+            500.0,
             config.BETTING_MAX_OPEN_STAKES_CZK,
         )
         if stats["open_stakes_czk"] + stake > max_open:
             return "open_stakes_cap"
         loss_limit = await self._bounded_meta_float(
-            "betting_daily_loss_limit_czk", 300.0,
+            "betting_daily_loss_limit_czk",
+            300.0,
             config.BETTING_MAX_DAILY_LOSS_CZK,
         )
         if stats["realized_pl_czk"] <= -loss_limit:
@@ -332,7 +385,10 @@ class BettingService:
         return None
 
     async def _maybe_alert_not_logged_in(
-        self, game: Game, vb: ValueBet, now: datetime,
+        self,
+        game: Game,
+        vb: ValueBet,
+        now: datetime,
     ) -> None:
         last = self._last_not_logged_in_alert
         if last is not None and (
@@ -341,11 +397,13 @@ class BettingService:
             return
         self._last_not_logged_in_alert = now
         await telegram.send_telegram(
-            telegram.format_bet_skipped_not_logged_in(game, vb))
+            telegram.format_bet_skipped_not_logged_in(game, vb)
+        )
 
     async def _resolve_stake(self) -> float:
         return await self._bounded_meta_float(
-            "betting_flat_stake_czk", 20.0,
+            "betting_flat_stake_czk",
+            20.0,
             config.BETTING_MAX_STAKE_CZK,
         )
 
@@ -382,7 +440,12 @@ class BettingService:
             return default
 
     async def _bounded_meta_float(
-        self, key: str, default: float, maximum: float, *, minimum: float = 0.0,
+        self,
+        key: str,
+        default: float,
+        maximum: float,
+        *,
+        minimum: float = 0.0,
     ) -> float:
         ceiling = maximum if math.isfinite(maximum) else default
         ceiling = max(minimum, ceiling)
@@ -390,7 +453,12 @@ class BettingService:
         return max(minimum, min(value, ceiling))
 
     async def _bounded_meta_int(
-        self, key: str, default: int, maximum: int, *, minimum: int = 0,
+        self,
+        key: str,
+        default: int,
+        maximum: int,
+        *,
+        minimum: int = 0,
     ) -> int:
         ceiling = max(minimum, maximum)
         value = await self._meta_int(key, default)

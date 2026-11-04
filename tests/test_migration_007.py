@@ -45,9 +45,9 @@ def test_migration_007_fresh_rows_default_to_null(tmp_path: Path):
             f"VALUES ({gid}, 'tipsport', 'moneyline', 'away', 2.12, 2.06, 3.0, 'hot', 'nba')"
         )
         conn.commit()
-        assert conn.execute(
-            "SELECT excluded_reason FROM value_bets"
-        ).fetchone()[0] is None
+        assert (
+            conn.execute("SELECT excluded_reason FROM value_bets").fetchone()[0] is None
+        )
     finally:
         conn.close()
 

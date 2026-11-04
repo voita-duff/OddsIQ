@@ -17,8 +17,11 @@ import sqlite3
 
 
 def apply(conn: sqlite3.Connection) -> None:
-    cols = {row[1] for row in conn.execute(
-        "PRAGMA table_info(live_edge_candidates)").fetchall()}
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(live_edge_candidates)").fetchall()
+    }
     if "frozen_cycles" not in cols:
         conn.execute(
-            "ALTER TABLE live_edge_candidates ADD COLUMN frozen_cycles INTEGER")
+            "ALTER TABLE live_edge_candidates ADD COLUMN frozen_cycles INTEGER"
+        )

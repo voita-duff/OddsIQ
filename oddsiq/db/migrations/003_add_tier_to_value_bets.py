@@ -34,9 +34,7 @@ def apply(conn: sqlite3.Connection) -> None:
     # Add the column with a NOT NULL default so existing rows pick up 'hot'
     # automatically — that matches their actual detection tier (the only
     # tier that fired find_edges before this migration).
-    conn.execute(
-        "ALTER TABLE value_bets ADD COLUMN tier TEXT NOT NULL DEFAULT 'hot'"
-    )
+    conn.execute("ALTER TABLE value_bets ADD COLUMN tier TEXT NOT NULL DEFAULT 'hot'")
     # Rebuild the unique index to include tier. The ON CONFLICT clause in
     # insert_value_bet must mirror this expression list exactly so SQLite
     # maps the conflict to this index.

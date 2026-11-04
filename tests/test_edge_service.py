@@ -41,16 +41,27 @@ def _betting_double():
 
 
 def _snap(book, sel, odds, mid=None):
-    return OddsSnapshot(game_id=1, bookmaker=book, market_type="moneyline",
-                        selection=sel, odds=odds, captured_at=datetime.now(timezone.utc),
-                        _tipsport_match_id=mid)
+    return OddsSnapshot(
+        game_id=1,
+        bookmaker=book,
+        market_type="moneyline",
+        selection=sel,
+        odds=odds,
+        captured_at=datetime.now(timezone.utc),
+        _tipsport_match_id=mid,
+    )
 
 
 async def _game(store, sport="nba"):
-    g = Game(external_id="e1", home_team="Boston Celtics", away_team="Miami Heat",
-             scheduled_at=datetime.now(timezone.utc) + timedelta(minutes=20),
-             commence_time=datetime.now(timezone.utc) + timedelta(minutes=20),
-             status="scheduled", sport=sport)
+    g = Game(
+        external_id="e1",
+        home_team="Boston Celtics",
+        away_team="Miami Heat",
+        scheduled_at=datetime.now(timezone.utc) + timedelta(minutes=20),
+        commence_time=datetime.now(timezone.utc) + timedelta(minutes=20),
+        status="scheduled",
+        sport=sport,
+    )
     g.id = await store.upsert_game(g)
     return g
 
@@ -58,8 +69,15 @@ async def _game(store, sport="nba"):
 async def _game_at(store, external_id, kickoff, *, home, away, sport="nfl"):
     """Persist a game with an EXPLICIT kickoff (scheduled_at == commence_time),
     so dispatch-order tests control each bet's deadline exactly."""
-    g = Game(external_id=external_id, home_team=home, away_team=away,
-             scheduled_at=kickoff, commence_time=kickoff, status="scheduled", sport=sport)
+    g = Game(
+        external_id=external_id,
+        home_team=home,
+        away_team=away,
+        scheduled_at=kickoff,
+        commence_time=kickoff,
+        status="scheduled",
+        sport=sport,
+    )
     g.id = await store.upsert_game(g)
     return g
 
@@ -119,7 +137,7 @@ async def test_clean_bet_reaches_betting_service_with_fresh_fair(store):
     betting = _betting_double()
     svc = EdgeService(store=store, stats=SessionStats(), betting=betting)
     pending = await svc.detect_pregame_edges(g, snaps, tier="hot")
-    betting.on_value_bet.assert_not_awaited()          # nothing dispatched yet
+    betting.on_value_bet.assert_not_awaited()  # nothing dispatched yet
     assert len(pending) == 1
     await svc.dispatch_pending(pending)
     betting.on_value_bet.assert_awaited_once()
@@ -198,6 +216,7 @@ async def test_implausible_edge_stamped_not_alerted_not_counted(store):
     keeps validating the cap) but is stamped excluded_reason and neither
     alerts nor counts toward session stats."""
     from oddsiq.notifications import telegram as tg
+
     g = await _game(store)
     # fair 2.0/2.0; tipsport home 2.9 => +45% edge; book sum 1/2.9+1/1.4 = 1.06 (coherent)
     snaps = {
@@ -221,6 +240,7 @@ async def test_in_play_offer_stamped_suspect(store):
     forensics: ALL three clean /live/-url detections were commanded and ALL
     died offer_gone — the prematch odd button doesn't exist on a live page)."""
     from oddsiq.notifications import telegram as tg
+
     g = await _game(store)
     home = _snap("tipsport", "home", 2.3)
     away = _snap("tipsport", "away", 1.7)
@@ -246,7 +266,7 @@ async def test_pregame_url_not_stamped_in_play(store):
     in-play guard; the clean path stays clean. (Odds kept under the 8%
     plausibility cap and coherent so no OTHER guard fires either.)"""
     g = await _game(store)
-    home = _snap("tipsport", "home", 2.08)   # 4% edge vs fair 2.0
+    home = _snap("tipsport", "home", 2.08)  # 4% edge vs fair 2.0
     away = _snap("tipsport", "away", 1.7)
     home._tipsport_url = "/kurzy/zapas/baseball-athletics-minnesota-twins/8441288"
     away._tipsport_url = "/kurzy/zapas/baseball-athletics-minnesota-twins/8441288"
@@ -267,6 +287,7 @@ async def test_incoherent_book_stamps_both_sides(store):
     itself), the book is stale/incoherent — every edge it produces is stamped,
     even when each side individually sits below the plausibility cap."""
     from oddsiq.notifications import telegram as tg
+
     g = await _game(store)
     # fair 2.0/2.0; tipsport 2.15/2.15 => both +7.5% (below cap), implied sum 0.93
     snaps = {
@@ -287,11 +308,13 @@ async def test_missing_sharp_source_timestamp_is_excluded(store):
     pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     for snap in pin:
         snap._source_freshness_missing = True
-    tips = [_snap("tipsport", "home", 2.1, mid=44),
-            _snap("tipsport", "away", 1.8, mid=44)]
-    pending = await EdgeService(
-        store=store, stats=SessionStats()).detect_pregame_edges(
-            g, {"pinnacle": pin, "tipsport": tips}, tier="hot")
+    tips = [
+        _snap("tipsport", "home", 2.1, mid=44),
+        _snap("tipsport", "away", 1.8, mid=44),
+    ]
+    pending = await EdgeService(store=store, stats=SessionStats()).detect_pregame_edges(
+        g, {"pinnacle": pin, "tipsport": tips}, tier="hot"
+    )
 
     bets = await store.get_pending_value_bets(g.id)
     assert pending == []
@@ -306,11 +329,13 @@ async def test_stale_sharp_source_timestamp_is_excluded(store):
     for snap in pin:
         snap.captured_at = observed
         snap.source_updated_at = observed - timedelta(seconds=301)
-    tips = [_snap("tipsport", "home", 2.1, mid=45),
-            _snap("tipsport", "away", 1.8, mid=45)]
-    pending = await EdgeService(
-        store=store, stats=SessionStats()).detect_pregame_edges(
-            g, {"pinnacle": pin, "tipsport": tips}, tier="hot")
+    tips = [
+        _snap("tipsport", "home", 2.1, mid=45),
+        _snap("tipsport", "away", 1.8, mid=45),
+    ]
+    pending = await EdgeService(store=store, stats=SessionStats()).detect_pregame_edges(
+        g, {"pinnacle": pin, "tipsport": tips}, tier="hot"
+    )
 
     bets = await store.get_pending_value_bets(g.id)
     assert pending == []
@@ -322,14 +347,17 @@ async def test_stale_sharp_source_timestamp_is_excluded(store):
 async def test_incomplete_tipsport_market_is_excluded(store):
     g = await _game(store)
     tips = [_snap("tipsport", "home", 2.1, mid=46)]
-    pending = await EdgeService(
-        store=store, stats=SessionStats()).detect_pregame_edges(
-            g,
-            {"pinnacle": [_snap("pinnacle", "home", 2.0),
-                          _snap("pinnacle", "away", 2.0)],
-             "tipsport": tips},
-            tier="hot",
-        )
+    pending = await EdgeService(store=store, stats=SessionStats()).detect_pregame_edges(
+        g,
+        {
+            "pinnacle": [
+                _snap("pinnacle", "home", 2.0),
+                _snap("pinnacle", "away", 2.0),
+            ],
+            "tipsport": tips,
+        },
+        tier="hot",
+    )
 
     bets = await store.get_pending_value_bets(g.id)
     assert pending == []
@@ -340,24 +368,30 @@ async def _one_sided_detection(store):
     """A Tipsport listing carrying an execution id but only ONE side — the
     input the completeness guard exists for."""
     g = await _game(store)
-    pending = await EdgeService(
-        store=store, stats=SessionStats()).detect_pregame_edges(
-            g,
-            {"pinnacle": [_snap("pinnacle", "home", 2.0),
-                          _snap("pinnacle", "away", 2.0)],
-             "tipsport": [_snap("tipsport", "home", 2.1, mid=47)]},
-            tier="hot",
-        )
+    pending = await EdgeService(store=store, stats=SessionStats()).detect_pregame_edges(
+        g,
+        {
+            "pinnacle": [
+                _snap("pinnacle", "home", 2.0),
+                _snap("pinnacle", "away", 2.0),
+            ],
+            "tipsport": [_snap("tipsport", "home", 2.1, mid=47)],
+        },
+        tier="hot",
+    )
     return g, pending
 
 
 @pytest.mark.asyncio
-async def test_completeness_guard_kill_switch_off_leaves_the_bet_clean(store, monkeypatch):
+async def test_completeness_guard_kill_switch_off_leaves_the_bet_clean(
+    store, monkeypatch
+):
     """PREGAME_REQUIRE_COMPLETE_BOOK_MARKET=0 stops the stamp without a
     rebuild. The coherence floor still runs (floor > 0 keeps the block
     entered), but a one-sided market has no implied sum to judge, so the
     detection comes through clean and bettable."""
     from oddsiq import config
+
     monkeypatch.setattr(config, "PREGAME_REQUIRE_COMPLETE_BOOK_MARKET", False)
     g, pending = await _one_sided_detection(store)
 
@@ -369,12 +403,14 @@ async def test_completeness_guard_kill_switch_off_leaves_the_bet_clean(store, mo
 
 @pytest.mark.asyncio
 async def test_completeness_guard_kill_switch_off_with_floor_disabled_skips_block(
-    store, monkeypatch,
+    store,
+    monkeypatch,
 ):
     """With the floor ALSO disabled the whole overround block is skipped —
     the pre-2026-09-06 meaning of PREGAME_MIN_BOOK_OVERROUND<=0 ("disables"),
     which the completeness guard had silently taken away."""
     from oddsiq import config
+
     monkeypatch.setattr(config, "PREGAME_REQUIRE_COMPLETE_BOOK_MARKET", False)
     monkeypatch.setattr(config, "PREGAME_MIN_BOOK_OVERROUND", 0.0)
     g, pending = await _one_sided_detection(store)
@@ -390,6 +426,7 @@ async def test_completeness_guard_kill_switch_on_still_stamps(store, monkeypatch
     """The default direction, pinned explicitly against the flag: on ->
     stamped, even with the coherence floor disabled."""
     from oddsiq import config
+
     monkeypatch.setattr(config, "PREGAME_REQUIRE_COMPLETE_BOOK_MARKET", True)
     monkeypatch.setattr(config, "PREGAME_MIN_BOOK_OVERROUND", 0.0)
     g, pending = await _one_sided_detection(store)
@@ -405,23 +442,28 @@ async def test_clean_detection_survives_earlier_stale_source_in_same_tier(store)
     not consume the tier's dedup slot and hide the later actionable edge."""
     g = await _game(store)
     observed = datetime.now(timezone.utc)
-    stale_pin = [_snap("pinnacle", "home", 2.0),
-                 _snap("pinnacle", "away", 2.0)]
+    stale_pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     for snap in stale_pin:
         snap.captured_at = observed
         snap.source_updated_at = observed - timedelta(seconds=301)
-    tips = [_snap("tipsport", "home", 2.1, mid=47),
-            _snap("tipsport", "away", 1.8, mid=47)]
+    tips = [
+        _snap("tipsport", "home", 2.1, mid=47),
+        _snap("tipsport", "away", 1.8, mid=47),
+    ]
     svc = EdgeService(store=store, stats=SessionStats())
-    assert await svc.detect_pregame_edges(
-        g, {"pinnacle": stale_pin, "tipsport": tips}, tier="hot") == []
+    assert (
+        await svc.detect_pregame_edges(
+            g, {"pinnacle": stale_pin, "tipsport": tips}, tier="hot"
+        )
+        == []
+    )
 
-    fresh_pin = [_snap("pinnacle", "home", 2.0),
-                 _snap("pinnacle", "away", 2.0)]
+    fresh_pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     for snap in fresh_pin:
         snap.source_updated_at = snap.captured_at
     pending = await svc.detect_pregame_edges(
-        g, {"pinnacle": fresh_pin, "tipsport": tips}, tier="hot")
+        g, {"pinnacle": fresh_pin, "tipsport": tips}, tier="hot"
+    )
 
     bets = await store.get_pending_value_bets(g.id)
     assert len(bets) == 2
@@ -433,6 +475,7 @@ async def test_clean_detection_survives_earlier_stale_source_in_same_tier(store)
 @pytest.mark.asyncio
 async def test_plausible_edge_unaffected_and_alerts(store):
     from oddsiq.notifications import telegram as tg
+
     g = await _game(store)
     # fair 2.0/2.0; tipsport home 2.1 => +5% edge; book sum 1/2.1+1/1.8 = 1.03
     snaps = {
@@ -471,6 +514,7 @@ async def test_duplicate_tier_records_both_rows_without_alerting(store):
     independent row (dedup-key design: tier is part of the key) — and, since
     the 2026-08-10 rebrand, detections never alert the phone at all."""
     from oddsiq.notifications import telegram as tg
+
     g = await _game(store)
     snaps = {
         "pinnacle": [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)],
@@ -498,8 +542,10 @@ async def test_incoherent_guard_pairs_within_one_listing(store):
     snaps = {
         "pinnacle": [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)],
         "tipsport": [
-            _snap("tipsport", "home", 2.15, mid=222), _snap("tipsport", "away", 2.15, mid=222),
-            _snap("tipsport", "home", 1.9, mid=111), _snap("tipsport", "away", 1.9, mid=111),
+            _snap("tipsport", "home", 2.15, mid=222),
+            _snap("tipsport", "away", 2.15, mid=222),
+            _snap("tipsport", "home", 1.9, mid=111),
+            _snap("tipsport", "away", 1.9, mid=111),
         ],
     }
     svc = EdgeService(store=store, stats=SessionStats())
@@ -511,8 +557,10 @@ async def test_incoherent_guard_pairs_within_one_listing(store):
 
 
 def _dispatch_order_ids(betting) -> list[int]:
-    return [c.args[0].id if c.args else c.kwargs["game"].id
-            for c in betting.on_value_bet.await_args_list]
+    return [
+        c.args[0].id if c.args else c.kwargs["game"].id
+        for c in betting.on_value_bet.await_args_list
+    ]
 
 
 @pytest.mark.asyncio
@@ -521,18 +569,38 @@ async def test_dispatch_pending_same_kickoff_places_largest_edge_first(store):
     edge first (placements are serial, 5-25s each, and the tipoff buffer
     closes on the whole wave at once)."""
     kickoff = datetime.now(timezone.utc) + timedelta(minutes=20)
-    g1 = await _game_at(store, "e1", kickoff,
-                        home="Houston Texans", away="Buffalo Bills")
-    g2 = await _game_at(store, "e2", kickoff,
-                        home="Seattle Seahawks", away="New England Patriots")
+    g1 = await _game_at(
+        store, "e1", kickoff, home="Houston Texans", away="Buffalo Bills"
+    )
+    g2 = await _game_at(
+        store, "e2", kickoff, home="Seattle Seahawks", away="New England Patriots"
+    )
     betting = _betting_double()
     svc = EdgeService(store=store, stats=SessionStats(), betting=betting)
     pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     small = await svc.detect_pregame_edges(
-        g1, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.08), _snap("tipsport", "away", 1.9)]}, tier="hot")  # +4.0%
+        g1,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.08),
+                _snap("tipsport", "away", 1.9),
+            ],
+        },
+        tier="hot",
+    )  # +4.0%
     big = await svc.detect_pregame_edges(
-        g2, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.14), _snap("tipsport", "away", 1.85)]}, tier="hot")  # +7.0%
-    await svc.dispatch_pending(small + big)   # detection order: small first
+        g2,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.14),
+                _snap("tipsport", "away", 1.85),
+            ],
+        },
+        tier="hot",
+    )  # +7.0%
+    await svc.dispatch_pending(small + big)  # detection order: small first
     # Same kickoff => the ordering key collapses to edge order.
     assert _dispatch_order_ids(betting) == [g2.id, g1.id]
 
@@ -543,17 +611,45 @@ async def test_dispatch_pending_earliest_kickoff_first_even_with_smaller_edge(st
     deadline wins: a bet with an hour of slack must not spend the last window
     of one that is minutes from kickoff, however much bigger its edge is."""
     now = datetime.now(timezone.utc)
-    soon = await _game_at(store, "soon", now + timedelta(minutes=20),
-                          home="Houston Texans", away="Buffalo Bills")
-    later = await _game_at(store, "later", now + timedelta(minutes=90),
-                           home="Seattle Seahawks", away="New England Patriots")
+    soon = await _game_at(
+        store,
+        "soon",
+        now + timedelta(minutes=20),
+        home="Houston Texans",
+        away="Buffalo Bills",
+    )
+    later = await _game_at(
+        store,
+        "later",
+        now + timedelta(minutes=90),
+        home="Seattle Seahawks",
+        away="New England Patriots",
+    )
     betting = _betting_double()
     svc = EdgeService(store=store, stats=SessionStats(), betting=betting)
     pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     small_soon = await svc.detect_pregame_edges(
-        soon, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.08), _snap("tipsport", "away", 1.9)]}, tier="hot")  # +4.0%
+        soon,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.08),
+                _snap("tipsport", "away", 1.9),
+            ],
+        },
+        tier="hot",
+    )  # +4.0%
     big_later = await svc.detect_pregame_edges(
-        later, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.14), _snap("tipsport", "away", 1.85)]}, tier="warm")  # +7.0%
+        later,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.14),
+                _snap("tipsport", "away", 1.85),
+            ],
+        },
+        tier="warm",
+    )  # +7.0%
     await svc.dispatch_pending(big_later + small_soon)
     assert _dispatch_order_ids(betting) == [soon.id, later.id]
 
@@ -565,20 +661,40 @@ async def test_dispatch_pending_isolates_a_failing_bet(store):
     UNRECOVERABLE — its value_bets row already exists, so the next cycle's
     re-detection dedups away and it is never re-pended for this tier."""
     kickoff = datetime.now(timezone.utc) + timedelta(minutes=20)
-    g1 = await _game_at(store, "iso-1", kickoff,
-                        home="Houston Texans", away="Buffalo Bills")
-    g2 = await _game_at(store, "iso-2", kickoff,
-                        home="Seattle Seahawks", away="New England Patriots")
+    g1 = await _game_at(
+        store, "iso-1", kickoff, home="Houston Texans", away="Buffalo Bills"
+    )
+    g2 = await _game_at(
+        store, "iso-2", kickoff, home="Seattle Seahawks", away="New England Patriots"
+    )
     betting = _betting_double()
     betting.on_value_bet.side_effect = [RuntimeError("db busy"), None]
     svc = EdgeService(store=store, stats=SessionStats(), betting=betting)
     pin = [_snap("pinnacle", "home", 2.0), _snap("pinnacle", "away", 2.0)]
     first = await svc.detect_pregame_edges(
-        g1, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.14), _snap("tipsport", "away", 1.85)]}, tier="hot")  # +7.0%
+        g1,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.14),
+                _snap("tipsport", "away", 1.85),
+            ],
+        },
+        tier="hot",
+    )  # +7.0%
     second = await svc.detect_pregame_edges(
-        g2, {"pinnacle": pin, "tipsport": [_snap("tipsport", "home", 2.08), _snap("tipsport", "away", 1.9)]}, tier="hot")  # +4.0%
+        g2,
+        {
+            "pinnacle": pin,
+            "tipsport": [
+                _snap("tipsport", "home", 2.08),
+                _snap("tipsport", "away", 1.9),
+            ],
+        },
+        tier="hot",
+    )  # +4.0%
 
-    await svc.dispatch_pending(first + second)   # must not raise
+    await svc.dispatch_pending(first + second)  # must not raise
 
     assert betting.on_value_bet.await_count == 2
     assert _dispatch_order_ids(betting) == [g1.id, g2.id]

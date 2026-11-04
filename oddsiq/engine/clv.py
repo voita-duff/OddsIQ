@@ -6,8 +6,11 @@ def calculate_clv(entry_odds: float, closing_fair_odds: float) -> float:
 
 
 def resolve_bet_result(
-    market_type: str, selection: str, line: float | None,
-    home_score: int, away_score: int,
+    market_type: str,
+    selection: str,
+    line: float | None,
+    home_score: int,
+    away_score: int,
 ) -> str:
     if market_type == "moneyline":
         # A tie resolves to "draw" for both sides (defensive: NHL/MLB don't tie

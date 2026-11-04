@@ -9,6 +9,7 @@ live scout was removed 2026-08-27.)
 Odds API URL + snapshot sport off it; Tipsport keys its warmup/competition/2-way
 matchView + snapshot sport off it.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,7 +32,9 @@ class PollCoordinator:
         self._edge_service = edge_service
         self._coverage = coverage
 
-    async def poll(self, profile, pollable: list[Game], slate: list[Game], now: datetime) -> None:
+    async def poll(
+        self, profile, pollable: list[Game], slate: list[Game], now: datetime
+    ) -> None:
         """Fetch odds once per scraper, then distribute to matching games.
 
         Pinnacle calls are gated by tier to balance Odds API budget against
@@ -72,9 +75,11 @@ class PollCoordinator:
         # (SportProfile.shadow_far_detection; NFL since 2026-09-06).
         active_tiers = {t for t in tier_by_id.values() if t is not None}
         needs_pinnacle = tiers.pinnacle_needed(
-            active_tiers, shadow_far=profile.shadow_far_detection)
+            active_tiers, shadow_far=profile.shadow_far_detection
+        )
         detect_tiers = (
-            {"hot", "warm", tiers.SHADOW_TIER} if profile.shadow_far_detection
+            {"hot", "warm", tiers.SHADOW_TIER}
+            if profile.shadow_far_detection
             else {"hot", "warm"}
         )
 
@@ -138,14 +143,21 @@ class PollCoordinator:
                         health["matched_game_ids"].add(game.id)
                         if scraper_name == "pinnacle":
                             health["sharp_source_ages_ms"].extend(
-                                max(0, int(
-                                    (snap.captured_at - snap.source_updated_at)
-                                    .total_seconds() * 1000
-                                ))
+                                max(
+                                    0,
+                                    int(
+                                        (
+                                            snap.captured_at - snap.source_updated_at
+                                        ).total_seconds()
+                                        * 1000
+                                    ),
+                                )
                                 for snap in matched
                                 if snap.source_updated_at is not None
                             )
-                    self._coverage.record_match(game.id, scraper_name, datetime.now(timezone.utc))
+                    self._coverage.record_match(
+                        game.id, scraper_name, datetime.now(timezone.utc)
+                    )
                     for snap in matched:
                         snap.game_id = game.id
                     if (
@@ -173,14 +185,17 @@ class PollCoordinator:
                 try:
                     pending_bets.extend(
                         await self._edge_service.detect_pregame_edges(
-                            game, game_snapshots, tier))
+                            game, game_snapshots, tier
+                        )
+                    )
                 except Exception:
                     # One game's detection failure (e.g. a store error) must not
                     # abort the sport's cycle and strand the bets already
                     # collected — those rows exist, so they can never be
                     # re-pended for this tier on the next cycle.
                     logger.exception(
-                        "detect_failed: game_id=%s sport=%s", game.id, profile.key)
+                        "detect_failed: game_id=%s sport=%s", game.id, profile.key
+                    )
 
         # Betting handoff for the whole cycle, earliest kickoff first (largest
         # edge as the tiebreak) — each bet is re-qualified on the engine's clock
@@ -190,7 +205,8 @@ class PollCoordinator:
         pollable_ids = {g.id for g in pollable if g.id is not None}
         far_pollable = [g for g in pollable if tier_by_id.get(g.id) == "far"]
         other_games = [
-            g for g in slate
+            g
+            for g in slate
             if g.id is not None
             and g.id not in pollable_ids
             and g.status not in ("final", "postponed", "live")
@@ -228,7 +244,8 @@ class PollCoordinator:
             if is_pinnacle:
                 slate_external_ids = {g.external_id for g in slate}
                 health["event_id_mismatch_snapshot_count"] = sum(
-                    1 for snap in all_odds
+                    1
+                    for snap in all_odds
                     if snap._source_event_id is not None
                     and snap._source_event_id not in slate_external_ids
                 )
@@ -293,14 +310,16 @@ class PollCoordinator:
         # show up in the health log.
         internal_errors = getattr(scraper, "last_fetch_error_count", 0)
         unsafe_start_snapshot_count = sum(
-            1 for snap in odds
+            1
+            for snap in odds
             if scraper.name == "tipsport" and snap._commence_time is None
         )
         if unsafe_start_snapshot_count:
             logger.warning(
                 "Scraper %s produced %d snapshots without listing start; "
                 "discarding them from game attribution",
-                scraper.name, unsafe_start_snapshot_count,
+                scraper.name,
+                unsafe_start_snapshot_count,
             )
         health = {
             "duration_ms": int((time.perf_counter() - started) * 1000),
@@ -313,9 +332,11 @@ class PollCoordinator:
             "unsafe_start_snapshot_count": unsafe_start_snapshot_count,
             "sharp_source_ages_ms": [],
             "missing_source_update_count": getattr(
-                scraper, "last_parse_missing_source_updates", 0),
+                scraper, "last_parse_missing_source_updates", 0
+            ),
             "missing_event_id_count": getattr(
-                scraper, "last_parse_missing_event_ids", 0),
+                scraper, "last_parse_missing_event_ids", 0
+            ),
             "event_id_mismatch_snapshot_count": 0,
         }
         self._stats.record_scraper_poll(
@@ -365,22 +386,26 @@ class PollCoordinator:
         if snap.bookmaker == "tipsport" and snap._commence_time is None:
             return False
         if snap._commence_time is not None and game_tipoff is not None:
-            return abs(
-                (snap._commence_time - game_tipoff).total_seconds()
-            ) <= PollCoordinator._COMMENCE_MATCH_WINDOW_SECONDS
+            return (
+                abs((snap._commence_time - game_tipoff).total_seconds())
+                <= PollCoordinator._COMMENCE_MATCH_WINDOW_SECONDS
+            )
         return True
 
     async def _reconcile_commence_time(
         self, game: Game, snapshots: list[OddsSnapshot]
     ) -> None:
-        times = sorted({s._commence_time for s in snapshots if s._commence_time is not None})
+        times = sorted(
+            {s._commence_time for s in snapshots if s._commence_time is not None}
+        )
         if not times:
             return
         commence_time = times[-1]
         if len(times) > 1:
             logger.warning(
                 "Multiple Pinnacle commence_time values for game_id=%d; using latest %s",
-                game.id, commence_time.isoformat(),
+                game.id,
+                commence_time.isoformat(),
             )
         if game.commence_time == commence_time:
             return

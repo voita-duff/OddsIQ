@@ -36,7 +36,9 @@ def test_format_backup_filename_startup():
 
 def test_format_backup_filename_shutdown():
     ts = datetime(2026, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
-    assert _format_backup_filename(ts, "shutdown") == "oddsiq-20261231-235959-shutdown.db"
+    assert (
+        _format_backup_filename(ts, "shutdown") == "oddsiq-20261231-235959-shutdown.db"
+    )
 
 
 def test_format_backup_filename_periodic():
@@ -44,7 +46,9 @@ def test_format_backup_filename_periodic():
     moment. It was rejected from 2026-08-09 to 2026-09-06, so no `-periodic`
     backup ever existed; the name must share the startup/shutdown shape."""
     ts = datetime(2026, 9, 6, 12, 0, 0, tzinfo=timezone.utc)
-    assert _format_backup_filename(ts, "periodic") == "oddsiq-20260906-120000-periodic.db"
+    assert (
+        _format_backup_filename(ts, "periodic") == "oddsiq-20260906-120000-periodic.db"
+    )
 
 
 def test_format_backup_filename_rejects_bad_moment():
@@ -154,6 +158,7 @@ def test_backup_deletes_file_if_integrity_check_fails(tmp_path: Path, monkeypatc
     backup_dir = tmp_path / "backups"
 
     from oddsiq import backup as backup_mod
+
     monkeypatch.setattr(backup_mod, "_run_integrity_check", lambda p: False)
 
     result = backup_database(src, backup_dir, "startup")
@@ -335,10 +340,14 @@ def test_prune_treats_periodic_as_one_pool_with_startup_and_shutdown(tmp_path: P
     backup_dir.mkdir()
 
     _touch(backup_dir / "oddsiq-20260115-120000-periodic.db")  # old month → pruned
-    _touch(backup_dir / "oddsiq-20260315-120000-startup.db")   # kept: monthly archive
-    _touch(backup_dir / "oddsiq-20260410-120000-periodic.db")  # outside keep_daily → pruned
+    _touch(backup_dir / "oddsiq-20260315-120000-startup.db")  # kept: monthly archive
+    _touch(
+        backup_dir / "oddsiq-20260410-120000-periodic.db"
+    )  # outside keep_daily → pruned
     _touch(backup_dir / "oddsiq-20260411-120000-periodic.db")  # kept: daily
-    _touch(backup_dir / "oddsiq-20260412-120000-shutdown.db")  # kept: daily + newest month
+    _touch(
+        backup_dir / "oddsiq-20260412-120000-shutdown.db"
+    )  # kept: daily + newest month
 
     _prune_old_backups(backup_dir, keep_daily=2, keep_monthly=2)
 

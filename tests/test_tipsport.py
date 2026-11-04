@@ -6,7 +6,10 @@ from curl_cffi.requests.cookies import Cookies
 
 from oddsiq.scrapers.cloudflare import CloudflareSolveError
 from oddsiq.scrapers.tipsport import (
-    HEADERS, TIPSPORT_IMPERSONATE, TipsportScraper, TipsportMarketUnavailable,
+    HEADERS,
+    TIPSPORT_IMPERSONATE,
+    TipsportScraper,
+    TipsportMarketUnavailable,
     _warmup_url,
 )
 from oddsiq.sports.profiles import NBA, NHL, MLB, WNBA, NFL
@@ -17,64 +20,130 @@ from oddsiq.sports.profiles import NBA, NHL, MLB, WNBA, NFL
 # true incl-OT winner lives in WINNER_FINAL_DECISION; the parser must select
 # it and never fall back to the regulation tab.
 SAMPLE_MONEYLINE_RESPONSE = {
-    "offerSuperSports": [{
-        "id": {"superSportId": 7},
-        "name": "Basketbal",
-        "tabs": [
-            {
-                "matchView": "WINNER_WHOLE_MATCH",
-                "name": "Zápas",
-                "subTabs": [],
-                "offerCompetitionAnnuals": [{
-                    "id": 249904,
-                    "competitionId": 23,
-                    "name": "NBA, Basketbal - muži",
-                    "matches": [
+    "offerSuperSports": [
+        {
+            "id": {"superSportId": 7},
+            "name": "Basketbal",
+            "tabs": [
+                {
+                    "matchView": "WINNER_WHOLE_MATCH",
+                    "name": "Zápas",
+                    "subTabs": [],
+                    "offerCompetitionAnnuals": [
                         {
-                            "id": 7432495,
-                            "nameFull": "Toronto Raptors - Miami Heat",
-                            "participantHome": "Toronto Raptors",
-                            "participantVisiting": "Miami Heat",
-                            "oppRows": [{
-                                "oppsTab": [
-                                    {"id": 1, "eventId": 100, "label": "1", "type": "1", "odd": 1.58, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                    {"id": 2, "eventId": 101, "label": "10", "type": "1x", "odd": 1.45, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                    {"id": 3, "eventId": 100, "label": "0", "type": "x", "odd": 14.8, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                    {"id": 4, "eventId": 101, "label": "02", "type": "x2", "odd": 2.35, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                    {"id": 5, "eventId": 100, "label": "2", "type": "2", "odd": 2.75, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                ]
-                            }]
+                            "id": 249904,
+                            "competitionId": 23,
+                            "name": "NBA, Basketbal - muži",
+                            "matches": [
+                                {
+                                    "id": 7432495,
+                                    "nameFull": "Toronto Raptors - Miami Heat",
+                                    "participantHome": "Toronto Raptors",
+                                    "participantVisiting": "Miami Heat",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "id": 1,
+                                                    "eventId": 100,
+                                                    "label": "1",
+                                                    "type": "1",
+                                                    "odd": 1.58,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                                {
+                                                    "id": 2,
+                                                    "eventId": 101,
+                                                    "label": "10",
+                                                    "type": "1x",
+                                                    "odd": 1.45,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                                {
+                                                    "id": 3,
+                                                    "eventId": 100,
+                                                    "label": "0",
+                                                    "type": "x",
+                                                    "odd": 14.8,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                                {
+                                                    "id": 4,
+                                                    "eventId": 101,
+                                                    "label": "02",
+                                                    "type": "x2",
+                                                    "odd": 2.35,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                                {
+                                                    "id": 5,
+                                                    "eventId": 100,
+                                                    "label": "2",
+                                                    "type": "2",
+                                                    "odd": 2.75,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
                         }
-                    ]
-                }]
-            },
-            {
-                "matchView": "WINNER_FINAL_DECISION",
-                "name": "Vítěz do rozhodnutí",
-                "subTabs": [],
-                "offerCompetitionAnnuals": [{
-                    "id": 249904,
-                    "competitionId": 23,
-                    "name": "NBA, Basketbal - muži",
-                    "matches": [
+                    ],
+                },
+                {
+                    "matchView": "WINNER_FINAL_DECISION",
+                    "name": "Vítěz do rozhodnutí",
+                    "subTabs": [],
+                    "offerCompetitionAnnuals": [
                         {
-                            "id": 7432495,
-                            "nameFull": "Toronto Raptors - Miami Heat",
-                            "url": "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/7432495",
-                            "participantHome": "Toronto Raptors",
-                            "participantVisiting": "Miami Heat",
-                            "oppRows": [{
-                                "oppsTab": [
-                                    {"id": 6, "eventId": 102, "label": "Toronto", "type": "1", "odd": 1.50, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                    {"id": 7, "eventId": 102, "label": "Miami", "type": "2", "odd": 2.59, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                ]
-                            }]
+                            "id": 249904,
+                            "competitionId": 23,
+                            "name": "NBA, Basketbal - muži",
+                            "matches": [
+                                {
+                                    "id": 7432495,
+                                    "nameFull": "Toronto Raptors - Miami Heat",
+                                    "url": "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/7432495",
+                                    "participantHome": "Toronto Raptors",
+                                    "participantVisiting": "Miami Heat",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "id": 6,
+                                                    "eventId": 102,
+                                                    "label": "Toronto",
+                                                    "type": "1",
+                                                    "odd": 1.50,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                                {
+                                                    "id": 7,
+                                                    "eventId": 102,
+                                                    "label": "Miami",
+                                                    "type": "2",
+                                                    "odd": 2.59,
+                                                    "bettingEnabled": True,
+                                                    "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
                         }
-                    ]
-                }]
-            },
-        ]
-    }]
+                    ],
+                },
+            ],
+        }
+    ]
 }
 
 
@@ -97,13 +166,15 @@ def _raw_responses_to_tmp(monkeypatch, tmp_path):
 
 
 def _browser_jsessionid_cookie() -> list[dict]:
-    return [{
-        "name": "JSESSIONID",
-        "value": "browser-session",
-        "domain": ".tipsport.cz",
-        "path": "/",
-        "secure": True,
-    }]
+    return [
+        {
+            "name": "JSESSIONID",
+            "value": "browser-session",
+            "domain": ".tipsport.cz",
+            "path": "/",
+            "secure": True,
+        }
+    ]
 
 
 def test_parse_moneyline(scraper):
@@ -134,47 +205,78 @@ def test_parse_captures_tipsport_ids(scraper):
     assert away._tipsport_match_id == 7432495
     assert home._tipsport_opp_id == 6
     assert away._tipsport_opp_id == 7
-    assert home._tipsport_url == "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/7432495"
+    assert (
+        home._tipsport_url
+        == "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/7432495"
+    )
 
 
 def test_parse_nba_fails_closed_without_final_decision(scraper):
     # Only the regulation WHOLE_MATCH tab present -> market unavailable, never
     # read the 3-way legs as moneyline (same contract as NHL).
-    only_regulation = {"offerSuperSports": [{"tabs": [
-        SAMPLE_MONEYLINE_RESPONSE["offerSuperSports"][0]["tabs"][0]
-    ]}]}
+    only_regulation = {
+        "offerSuperSports": [
+            {"tabs": [SAMPLE_MONEYLINE_RESPONSE["offerSuperSports"][0]["tabs"][0]]}
+        ]
+    }
     with pytest.raises(TipsportMarketUnavailable):
         scraper.parse_response(only_regulation, NBA)
 
 
 def test_parse_skips_disabled_odds(scraper):
     data = {
-        "offerSuperSports": [{
-            "id": {"superSportId": 7},
-            "name": "Basketbal",
-            "tabs": [{
-                "matchView": "WINNER_FINAL_DECISION",
-                "name": "Vítěz do rozhodnutí",
-                "subTabs": [],
-                "offerCompetitionAnnuals": [{
-                    "id": 249904,
-                    "competitionId": 23,
-                    "name": "NBA",
-                    "matches": [{
-                        "id": 1,
-                        "nameFull": "Toronto Raptors - Miami Heat",
-                        "participantHome": "Toronto Raptors",
-                        "participantVisiting": "Miami Heat",
-                        "oppRows": [{
-                            "oppsTab": [
-                                {"id": 1, "eventId": 100, "label": "1", "type": "1", "odd": 1.58, "bettingEnabled": False, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                                {"id": 2, "eventId": 100, "label": "2", "type": "2", "odd": 2.75, "bettingEnabled": True, "dateClosed": "2026-04-10T01:10:00.000+02:00"},
-                            ]
-                        }]
-                    }]
-                }]
-            }]
-        }]
+        "offerSuperSports": [
+            {
+                "id": {"superSportId": 7},
+                "name": "Basketbal",
+                "tabs": [
+                    {
+                        "matchView": "WINNER_FINAL_DECISION",
+                        "name": "Vítěz do rozhodnutí",
+                        "subTabs": [],
+                        "offerCompetitionAnnuals": [
+                            {
+                                "id": 249904,
+                                "competitionId": 23,
+                                "name": "NBA",
+                                "matches": [
+                                    {
+                                        "id": 1,
+                                        "nameFull": "Toronto Raptors - Miami Heat",
+                                        "participantHome": "Toronto Raptors",
+                                        "participantVisiting": "Miami Heat",
+                                        "oppRows": [
+                                            {
+                                                "oppsTab": [
+                                                    {
+                                                        "id": 1,
+                                                        "eventId": 100,
+                                                        "label": "1",
+                                                        "type": "1",
+                                                        "odd": 1.58,
+                                                        "bettingEnabled": False,
+                                                        "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                    },
+                                                    {
+                                                        "id": 2,
+                                                        "eventId": 100,
+                                                        "label": "2",
+                                                        "type": "2",
+                                                        "odd": 2.75,
+                                                        "bettingEnabled": True,
+                                                        "dateClosed": "2026-04-10T01:10:00.000+02:00",
+                                                    },
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
     }
     snapshots = scraper.parse_response(data, NBA)
     assert len(snapshots) == 1
@@ -457,13 +559,15 @@ async def test_stale_jsessionid_forces_browser_restart(scraper, monkeypatch):
             # second instance (idx=1) is the freshly minted one after the
             # force_new_browser close+restart.
             value = "FRESH-SESSION-B" if self._idx > 0 else "STALE-SESSION-A"
-            return [{
-                "name": "JSESSIONID",
-                "value": value,
-                "domain": ".tipsport.cz",
-                "path": "/",
-                "secure": True,
-            }]
+            return [
+                {
+                    "name": "JSESSIONID",
+                    "value": value,
+                    "domain": ".tipsport.cz",
+                    "path": "/",
+                    "secure": True,
+                }
+            ]
 
         async def post(self, url, **kwargs):
             raise AssertionError(
@@ -480,8 +584,11 @@ async def test_stale_jsessionid_forces_browser_restart(scraper, monkeypatch):
     # but the server has since invalidated the JSESSIONID.
     client = await scraper._get_client(NBA)
     client.cookies.set(
-        "JSESSIONID", "STALE-SESSION-A",
-        domain=".tipsport.cz", path="/", secure=True,
+        "JSESSIONID",
+        "STALE-SESSION-A",
+        domain=".tipsport.cz",
+        path="/",
+        secure=True,
     )
     scraper._cf_session = FakeCfSession()
     await scraper._cf_session.start()
@@ -491,7 +598,9 @@ async def test_stale_jsessionid_forces_browser_restart(scraper, monkeypatch):
     assert len(odds) == 2, "fetch should succeed after force-new-browser restart"
     # Two FakeCfSession instances were created: the pre-planted stale one
     # and the post-restart fresh one.
-    assert len(cf_instances) == 2, "expected force_new_browser to spawn a second Playwright session"
+    assert len(cf_instances) == 2, (
+        "expected force_new_browser to spawn a second Playwright session"
+    )
     # The pre-planted (idx=0) was closed before the restart.
     assert 0 in cf_closes
     # The fresh session (idx=1) was started.
@@ -534,29 +643,71 @@ async def test_get_client_warmup_403_log_matches_deferred_fallback(
 
 def test_parse_skips_invalid_odds_values(scraper):
     data = {
-        "offerSuperSports": [{
-            "id": {"superSportId": 7},
-            "name": "Basketbal",
-            "tabs": [{
-                "matchView": "WINNER_FINAL_DECISION",
-                "offerCompetitionAnnuals": [{
-                    "matches": [{
-                        "id": 1,
-                        "nameFull": "Toronto Raptors - Miami Heat",
-                        "participantHome": "Toronto Raptors",
-                        "participantVisiting": "Miami Heat",
-                        "oppRows": [{"oppsTab": [
-                            {"type": "1", "label": "1", "odd": 1.58, "bettingEnabled": True},
-                            {"type": "2", "label": "2", "odd": None, "bettingEnabled": True},
-                            {"type": "2", "label": "2", "odd": True, "bettingEnabled": True},
-                            {"type": "2", "label": "2", "odd": "bad", "bettingEnabled": True},
-                            {"type": "2", "label": "2", "odd": 0, "bettingEnabled": True},
-                            {"type": "2", "label": "2", "odd": -1.0, "bettingEnabled": True},
-                        ]}],
-                    }],
-                }],
-            }],
-        }],
+        "offerSuperSports": [
+            {
+                "id": {"superSportId": 7},
+                "name": "Basketbal",
+                "tabs": [
+                    {
+                        "matchView": "WINNER_FINAL_DECISION",
+                        "offerCompetitionAnnuals": [
+                            {
+                                "matches": [
+                                    {
+                                        "id": 1,
+                                        "nameFull": "Toronto Raptors - Miami Heat",
+                                        "participantHome": "Toronto Raptors",
+                                        "participantVisiting": "Miami Heat",
+                                        "oppRows": [
+                                            {
+                                                "oppsTab": [
+                                                    {
+                                                        "type": "1",
+                                                        "label": "1",
+                                                        "odd": 1.58,
+                                                        "bettingEnabled": True,
+                                                    },
+                                                    {
+                                                        "type": "2",
+                                                        "label": "2",
+                                                        "odd": None,
+                                                        "bettingEnabled": True,
+                                                    },
+                                                    {
+                                                        "type": "2",
+                                                        "label": "2",
+                                                        "odd": True,
+                                                        "bettingEnabled": True,
+                                                    },
+                                                    {
+                                                        "type": "2",
+                                                        "label": "2",
+                                                        "odd": "bad",
+                                                        "bettingEnabled": True,
+                                                    },
+                                                    {
+                                                        "type": "2",
+                                                        "label": "2",
+                                                        "odd": 0,
+                                                        "bettingEnabled": True,
+                                                    },
+                                                    {
+                                                        "type": "2",
+                                                        "label": "2",
+                                                        "odd": -1.0,
+                                                        "bettingEnabled": True,
+                                                    },
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     }
 
     snapshots = scraper.parse_response(data, NBA)
@@ -600,19 +751,28 @@ def test_parse_fails_closed_when_moneyline_tab_absent(scraper):
     # Well-formed envelope, but the sport's moneyline matchView tab is absent.
     # Still fail closed (never read another tab), but with a DISTINCT type so the
     # fetch layer can tell "market not offered" from a transport/parse failure.
-    data = {"offerSuperSports": [{"tabs": [{"matchView": "GOAL_SCORERS", "offerCompetitionAnnuals": []}]}]}
+    data = {
+        "offerSuperSports": [
+            {"tabs": [{"matchView": "GOAL_SCORERS", "offerCompetitionAnnuals": []}]}
+        ]
+    }
     with pytest.raises(TipsportMarketUnavailable):
         scraper.parse_response(data, NBA)
 
 
 @pytest.mark.asyncio
-async def test_fetch_odds_does_not_count_market_unavailable_as_failure(scraper, monkeypatch):
+async def test_fetch_odds_does_not_count_market_unavailable_as_failure(
+    scraper, monkeypatch
+):
     """A well-formed response missing the moneyline tab (market not offered) must
     NOT count as a consecutive failure — a session reset can't conjure a market,
     and the shared Cloudflare session is used by the other sports in the same
     cycle. Returns [] without incrementing _consecutive_failures."""
-    wellformed_no_ml = {"offerSuperSports": [{"tabs": [
-        {"matchView": "GOAL_SCORERS", "offerCompetitionAnnuals": []}]}]}
+    wellformed_no_ml = {
+        "offerSuperSports": [
+            {"tabs": [{"matchView": "GOAL_SCORERS", "offerCompetitionAnnuals": []}]}
+        ]
+    }
 
     class FakeResp:
         def __init__(self, status, payload=None):
@@ -777,7 +937,9 @@ async def test_captured_at_stamped_at_request_initiation_not_parse_time(
 
 
 @pytest.mark.asyncio
-async def test_raw_response_path_propagates_to_snapshots(scraper, monkeypatch, tmp_path):
+async def test_raw_response_path_propagates_to_snapshots(
+    scraper, monkeypatch, tmp_path
+):
     """Regression: raw_response_path must be set on every returned snapshot,
     pointing at the JSON file actually written to disk."""
 
@@ -825,6 +987,7 @@ async def test_raw_response_path_propagates_to_snapshots(scraper, monkeypatch, t
             f"raw_response_path is None on {snap.market_type}/{snap.selection} snapshot"
         )
         from pathlib import Path
+
         assert Path(snap.raw_response_path).exists(), (
             f"raw_response_path {snap.raw_response_path} does not exist on disk"
         )
@@ -875,7 +1038,9 @@ async def test_playwright_session_reused_across_fetch_calls(scraper, monkeypatch
 
     await scraper.fetch_odds(date.today(), NBA)
     await scraper.fetch_odds(date.today(), NBA)
-    assert start_count == 1, "Playwright should start only once, reused across fetch calls"
+    assert start_count == 1, (
+        "Playwright should start only once, reused across fetch calls"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -886,53 +1051,137 @@ async def test_playwright_session_reused_across_fetch_calls(scraper, monkeypatch
 # WINNER_WHOLE_MATCH tab is the 3-way regulation (1/x/2 + double chance) and
 # MUST be excluded — reading it would fabricate edges.
 SAMPLE_NHL_RESPONSE = {
-    "offerSuperSports": [{
-        "id": {"superSportId": 23},
-        "tabs": [
-            {"matchView": "WINNER_WHOLE_MATCH", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "participantHome": "Carolina Hurricanes",
-                    "participantVisiting": "Vegas Golden Knights",
-                    "nameFull": "Carolina Hurricanes - Vegas Golden Knights",
-                    "oppRows": [{"oppsTab": [
-                        {"label": "1", "type": "1", "odd": 2.04, "bettingEnabled": True},
-                        {"label": "10", "type": "1x", "odd": 1.32, "bettingEnabled": True},
-                        {"label": "0", "type": "x", "odd": 3.83, "bettingEnabled": True},
-                        {"label": "02", "type": "x2", "odd": 1.69, "bettingEnabled": True},
-                        {"label": "2", "type": "2", "odd": 3.07, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-            {"matchView": "WINNER_FINAL_DECISION", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "participantHome": "Carolina Hurricanes",
-                    "participantVisiting": "Vegas Golden Knights",
-                    "nameFull": "Carolina Hurricanes - Vegas Golden Knights",
-                    "oppRows": [{"oppsTab": [
-                        {"label": "Carolina", "type": "1", "odd": 1.56, "bettingEnabled": True},
-                        {"label": "Vegas", "type": "2", "odd": 2.27, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-        ],
-    }]
+    "offerSuperSports": [
+        {
+            "id": {"superSportId": 23},
+            "tabs": [
+                {
+                    "matchView": "WINNER_WHOLE_MATCH",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "participantHome": "Carolina Hurricanes",
+                                    "participantVisiting": "Vegas Golden Knights",
+                                    "nameFull": "Carolina Hurricanes - Vegas Golden Knights",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "label": "1",
+                                                    "type": "1",
+                                                    "odd": 2.04,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "10",
+                                                    "type": "1x",
+                                                    "odd": 1.32,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "0",
+                                                    "type": "x",
+                                                    "odd": 3.83,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "02",
+                                                    "type": "x2",
+                                                    "odd": 1.69,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "2",
+                                                    "type": "2",
+                                                    "odd": 3.07,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "matchView": "WINNER_FINAL_DECISION",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "participantHome": "Carolina Hurricanes",
+                                    "participantVisiting": "Vegas Golden Knights",
+                                    "nameFull": "Carolina Hurricanes - Vegas Golden Knights",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "label": "Carolina",
+                                                    "type": "1",
+                                                    "odd": 1.56,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "Vegas",
+                                                    "type": "2",
+                                                    "odd": 2.27,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ],
+        }
+    ]
 }
 
 SAMPLE_MLB_RESPONSE = {
-    "offerSuperSports": [{
-        "id": {"superSportId": 6},
-        "tabs": [{"matchView": "WINNER_WHOLE_MATCH", "offerCompetitionAnnuals": [{
-            "matches": [{
-                "participantHome": "Washington Nationals",
-                "participantVisiting": "Miami Marlins",
-                "nameFull": "Washington Nationals - Miami Marlins",
-                "oppRows": [{"oppsTab": [
-                    {"label": "1", "type": "1", "odd": 1.92, "bettingEnabled": True},
-                    {"label": "2", "type": "2", "odd": 1.94, "bettingEnabled": True},
-                ]}],
-            }],
-        }]}],
-    }]
+    "offerSuperSports": [
+        {
+            "id": {"superSportId": 6},
+            "tabs": [
+                {
+                    "matchView": "WINNER_WHOLE_MATCH",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "participantHome": "Washington Nationals",
+                                    "participantVisiting": "Miami Marlins",
+                                    "nameFull": "Washington Nationals - Miami Marlins",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "label": "1",
+                                                    "type": "1",
+                                                    "odd": 1.92,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "2",
+                                                    "type": "2",
+                                                    "odd": 1.94,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
 }
 
 
@@ -948,9 +1197,17 @@ def test_parse_nhl_uses_final_decision_not_regulation(scraper):
 
 
 def test_parse_nhl_fails_closed_without_final_decision(scraper):
-    only_regulation = {"offerSuperSports": [{"tabs": [
-        SAMPLE_NHL_RESPONSE["offerSuperSports"][0]["tabs"][0]  # WINNER_WHOLE_MATCH only
-    ]}]}
+    only_regulation = {
+        "offerSuperSports": [
+            {
+                "tabs": [
+                    SAMPLE_NHL_RESPONSE["offerSuperSports"][0]["tabs"][
+                        0
+                    ]  # WINNER_WHOLE_MATCH only
+                ]
+            }
+        ]
+    }
     # Still fail closed (never read the 3-way regulation tab as moneyline), but
     # as the distinct market-unavailable type rather than a bare KeyError.
     with pytest.raises(TipsportMarketUnavailable):
@@ -967,6 +1224,7 @@ def test_parse_mlb_two_way(scraper):
 
 def test_moneyline_filters_per_sport():
     from oddsiq.scrapers.tipsport import _moneyline_filters
+
     # MLB is the only WHOLE_MATCH (true 2-way; baseball cannot tie) -> default [].
     assert _moneyline_filters(MLB) == []
     # Hockey and basketball request their 2-way incl-OT tab explicitly.
@@ -996,36 +1254,95 @@ def test_moneyline_filters_per_sport():
 # basketbal-zeny category (competition id 10). Odds mirror the live A/B capture
 # of 2026-06-12 (FINAL_DECISION 1.25/3.70 vs regulation legs 1.28/3.84).
 SAMPLE_WNBA_RESPONSE = {
-    "offerSuperSports": [{
-        "id": {"superSportId": 7},
-        "tabs": [
-            {"matchView": "WINNER_WHOLE_MATCH", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "participantHome": "Indiana Fever Ž",
-                    "participantVisiting": "Chicago Sky Ž",
-                    "nameFull": "Indiana Fever Ž - Chicago Sky Ž",
-                    "oppRows": [{"oppsTab": [
-                        {"label": "1", "type": "1", "odd": 1.28, "bettingEnabled": True},
-                        {"label": "10", "type": "1x", "odd": 1.20, "bettingEnabled": True},
-                        {"label": "0", "type": "x", "odd": 20.0, "bettingEnabled": True},
-                        {"label": "02", "type": "x2", "odd": 3.17, "bettingEnabled": True},
-                        {"label": "2", "type": "2", "odd": 3.84, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-            {"matchView": "WINNER_FINAL_DECISION", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "participantHome": "Indiana Fever Ž",
-                    "participantVisiting": "Chicago Sky Ž",
-                    "nameFull": "Indiana Fever Ž - Chicago Sky Ž",
-                    "oppRows": [{"oppsTab": [
-                        {"label": "Indiana", "type": "1", "odd": 1.25, "bettingEnabled": True},
-                        {"label": "Chicago", "type": "2", "odd": 3.70, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-        ],
-    }]
+    "offerSuperSports": [
+        {
+            "id": {"superSportId": 7},
+            "tabs": [
+                {
+                    "matchView": "WINNER_WHOLE_MATCH",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "participantHome": "Indiana Fever Ž",
+                                    "participantVisiting": "Chicago Sky Ž",
+                                    "nameFull": "Indiana Fever Ž - Chicago Sky Ž",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "label": "1",
+                                                    "type": "1",
+                                                    "odd": 1.28,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "10",
+                                                    "type": "1x",
+                                                    "odd": 1.20,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "0",
+                                                    "type": "x",
+                                                    "odd": 20.0,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "02",
+                                                    "type": "x2",
+                                                    "odd": 3.17,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "2",
+                                                    "type": "2",
+                                                    "odd": 3.84,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "matchView": "WINNER_FINAL_DECISION",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "participantHome": "Indiana Fever Ž",
+                                    "participantVisiting": "Chicago Sky Ž",
+                                    "nameFull": "Indiana Fever Ž - Chicago Sky Ž",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "label": "Indiana",
+                                                    "type": "1",
+                                                    "odd": 1.25,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "label": "Chicago",
+                                                    "type": "2",
+                                                    "odd": 3.70,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ],
+        }
+    ]
 }
 
 
@@ -1041,9 +1358,11 @@ def test_parse_wnba_two_way_normalizes_z_suffix(scraper):
 
 
 def test_parse_wnba_fails_closed_without_final_decision(scraper):
-    only_regulation = {"offerSuperSports": [{"tabs": [
-        SAMPLE_WNBA_RESPONSE["offerSuperSports"][0]["tabs"][0]
-    ]}]}
+    only_regulation = {
+        "offerSuperSports": [
+            {"tabs": [SAMPLE_WNBA_RESPONSE["offerSuperSports"][0]["tabs"][0]]}
+        ]
+    }
     with pytest.raises(TipsportMarketUnavailable):
         scraper.parse_response(only_regulation, WNBA)
 
@@ -1059,43 +1378,114 @@ def test_parse_wnba_fails_closed_without_final_decision(scraper):
 # the real offer response captured at recon (match id/url + opp id/eventId feed
 # the migration-009 execution-identity capture the betting engine addresses).
 SAMPLE_NFL_RESPONSE = {
-    "offerSuperSports": [{
-        "id": {"superSportId": 2},
-        "name": "Americký fotbal",
-        "tabs": [
-            {"matchView": "WINNER_WHOLE_MATCH", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "id": 9000001,
-                    "participantHome": "Kansas City Chiefs",
-                    "participantVisiting": "Buffalo Bills",
-                    "nameFull": "Kansas City Chiefs - Buffalo Bills",
-                    "url": "/kurzy/zapas/americky-fotbal-kc-buf/9000001",
-                    "oppRows": [{"oppsTab": [
-                        {"id": 91, "eventId": 81, "label": "1", "type": "1", "odd": 1.62, "bettingEnabled": True},
-                        {"id": 92, "eventId": 82, "label": "10", "type": "1x", "odd": 1.55, "bettingEnabled": True},
-                        {"id": 93, "eventId": 83, "label": "0", "type": "x", "odd": 15.0, "bettingEnabled": True},
-                        {"id": 94, "eventId": 84, "label": "02", "type": "x2", "odd": 2.6, "bettingEnabled": True},
-                        {"id": 95, "eventId": 85, "label": "2", "type": "2", "odd": 2.95, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-            {"matchView": "WINNER_FINAL_DECISION", "offerCompetitionAnnuals": [{
-                "matches": [{
-                    "id": 9000001,
-                    "participantHome": "Kansas City Chiefs",
-                    "participantVisiting": "Buffalo Bills",
-                    "nameFull": "Kansas City Chiefs - Buffalo Bills",
-                    "url": "/kurzy/zapas/americky-fotbal-kc-buf/9000001",
-                    "oppRows": [{"oppsTab": [
-                        {"id": 2670000001, "eventId": 2257000001,
-                         "label": "Kansas City Chiefs", "type": "1", "odd": 1.55, "bettingEnabled": True},
-                        {"id": 2670000002, "eventId": 2257000002,
-                         "label": "Buffalo Bills", "type": "2", "odd": 2.72, "bettingEnabled": True},
-                    ]}],
-                }],
-            }]},
-        ],
-    }]
+    "offerSuperSports": [
+        {
+            "id": {"superSportId": 2},
+            "name": "Americký fotbal",
+            "tabs": [
+                {
+                    "matchView": "WINNER_WHOLE_MATCH",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "id": 9000001,
+                                    "participantHome": "Kansas City Chiefs",
+                                    "participantVisiting": "Buffalo Bills",
+                                    "nameFull": "Kansas City Chiefs - Buffalo Bills",
+                                    "url": "/kurzy/zapas/americky-fotbal-kc-buf/9000001",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "id": 91,
+                                                    "eventId": 81,
+                                                    "label": "1",
+                                                    "type": "1",
+                                                    "odd": 1.62,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "id": 92,
+                                                    "eventId": 82,
+                                                    "label": "10",
+                                                    "type": "1x",
+                                                    "odd": 1.55,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "id": 93,
+                                                    "eventId": 83,
+                                                    "label": "0",
+                                                    "type": "x",
+                                                    "odd": 15.0,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "id": 94,
+                                                    "eventId": 84,
+                                                    "label": "02",
+                                                    "type": "x2",
+                                                    "odd": 2.6,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "id": 95,
+                                                    "eventId": 85,
+                                                    "label": "2",
+                                                    "type": "2",
+                                                    "odd": 2.95,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+                {
+                    "matchView": "WINNER_FINAL_DECISION",
+                    "offerCompetitionAnnuals": [
+                        {
+                            "matches": [
+                                {
+                                    "id": 9000001,
+                                    "participantHome": "Kansas City Chiefs",
+                                    "participantVisiting": "Buffalo Bills",
+                                    "nameFull": "Kansas City Chiefs - Buffalo Bills",
+                                    "url": "/kurzy/zapas/americky-fotbal-kc-buf/9000001",
+                                    "oppRows": [
+                                        {
+                                            "oppsTab": [
+                                                {
+                                                    "id": 2670000001,
+                                                    "eventId": 2257000001,
+                                                    "label": "Kansas City Chiefs",
+                                                    "type": "1",
+                                                    "odd": 1.55,
+                                                    "bettingEnabled": True,
+                                                },
+                                                {
+                                                    "id": 2670000002,
+                                                    "eventId": 2257000002,
+                                                    "label": "Buffalo Bills",
+                                                    "type": "2",
+                                                    "odd": 2.72,
+                                                    "bettingEnabled": True,
+                                                },
+                                            ]
+                                        }
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ],
+        }
+    ]
 }
 
 
@@ -1120,9 +1510,11 @@ def test_parse_nfl_fails_closed_without_final_decision(scraper):
     # The exact pre-September reality observed live 2026-08-25: only the
     # WHOLE_MATCH tab (futures/3-way) present -> market unavailable, never a
     # fallback to the regulation legs.
-    only_regulation = {"offerSuperSports": [{"tabs": [
-        SAMPLE_NFL_RESPONSE["offerSuperSports"][0]["tabs"][0]
-    ]}]}
+    only_regulation = {
+        "offerSuperSports": [
+            {"tabs": [SAMPLE_NFL_RESPONSE["offerSuperSports"][0]["tabs"][0]]}
+        ]
+    }
     with pytest.raises(TipsportMarketUnavailable):
         scraper.parse_response(only_regulation, NFL)
 
@@ -1141,6 +1533,7 @@ def test_warmup_url_uses_gender_slug():
 # pregame; names-only matching pinned tomorrow's opener on today's game).
 # ---------------------------------------------------------------------------
 
+
 def test_parse_response_carries_listing_start_from_opp_dateclosed(scraper):
     """SAMPLE fixture has no match-level dateClosed — the per-opp fallback
     still stamps every snapshot with the listing's own start."""
@@ -1152,37 +1545,62 @@ def test_parse_response_carries_listing_start_from_opp_dateclosed(scraper):
 
 def test_parse_response_prefers_match_level_dateclosed(scraper):
     data = {
-        "offerSuperSports": [{
-            "id": {"superSportId": 7},
-            "name": "Basketbal",
-            "tabs": [{
-                "matchView": "WINNER_FINAL_DECISION",
-                "name": "Vítěz do rozhodnutí",
-                "subTabs": [],
-                "offerCompetitionAnnuals": [{
-                    "id": 249904, "competitionId": 23,
-                    "name": "NBA, Basketbal - muži",
-                    "matches": [{
-                        "id": 8442783,
-                        "nameFull": "Toronto Raptors - Miami Heat",
-                        "url": "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/8442783",
-                        "participantHome": "Toronto Raptors",
-                        "participantVisiting": "Miami Heat",
-                        # Match-level start (the real payload shape) wins over
-                        # the per-opp fallback.
-                        "dateClosed": "2026-08-30T22:07:00.000+02:00",
-                        "oppRows": [{"oppsTab": [
-                            {"id": 1, "eventId": 9, "label": "Toronto", "type": "1",
-                             "odd": 2.58, "bettingEnabled": True,
-                             "dateClosed": "2026-08-31T00:00:00.000+02:00"},
-                            {"id": 2, "eventId": 9, "label": "Miami", "type": "2",
-                             "odd": 1.53, "bettingEnabled": True,
-                             "dateClosed": "2026-08-31T00:00:00.000+02:00"},
-                        ]}],
-                    }],
-                }],
-            }],
-        }],
+        "offerSuperSports": [
+            {
+                "id": {"superSportId": 7},
+                "name": "Basketbal",
+                "tabs": [
+                    {
+                        "matchView": "WINNER_FINAL_DECISION",
+                        "name": "Vítěz do rozhodnutí",
+                        "subTabs": [],
+                        "offerCompetitionAnnuals": [
+                            {
+                                "id": 249904,
+                                "competitionId": 23,
+                                "name": "NBA, Basketbal - muži",
+                                "matches": [
+                                    {
+                                        "id": 8442783,
+                                        "nameFull": "Toronto Raptors - Miami Heat",
+                                        "url": "/kurzy/zapas/basketbal-toronto-raptors-miami-heat/8442783",
+                                        "participantHome": "Toronto Raptors",
+                                        "participantVisiting": "Miami Heat",
+                                        # Match-level start (the real payload shape) wins over
+                                        # the per-opp fallback.
+                                        "dateClosed": "2026-08-30T22:07:00.000+02:00",
+                                        "oppRows": [
+                                            {
+                                                "oppsTab": [
+                                                    {
+                                                        "id": 1,
+                                                        "eventId": 9,
+                                                        "label": "Toronto",
+                                                        "type": "1",
+                                                        "odd": 2.58,
+                                                        "bettingEnabled": True,
+                                                        "dateClosed": "2026-08-31T00:00:00.000+02:00",
+                                                    },
+                                                    {
+                                                        "id": 2,
+                                                        "eventId": 9,
+                                                        "label": "Miami",
+                                                        "type": "2",
+                                                        "odd": 1.53,
+                                                        "bettingEnabled": True,
+                                                        "dateClosed": "2026-08-31T00:00:00.000+02:00",
+                                                    },
+                                                ]
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     }
     snapshots = scraper.parse_response(data, NBA)
     expected = datetime(2026, 8, 30, 20, 7, tzinfo=timezone.utc)  # 22:07+02:00

@@ -76,14 +76,16 @@ def test_scheduler_preflight_warns_when_browser_unavailable(monkeypatch, caplog)
     async def fake_unavailable():
         return False, "BrowserType.launch: Executable doesn't exist"
 
-    monkeypatch.setattr("oddsiq.pipeline.scheduler.chromium_available", fake_unavailable)
+    monkeypatch.setattr(
+        "oddsiq.pipeline.scheduler.chromium_available", fake_unavailable
+    )
 
     with caplog.at_level(logging.WARNING, logger="oddsiq.pipeline.scheduler"):
         asyncio.run(sch._check_browser_preflight())
 
-    assert any(
-        "Browser preflight FAILED" in r.getMessage() for r in caplog.records
-    ), f"expected a loud preflight warning, got: {[r.getMessage() for r in caplog.records]}"
+    assert any("Browser preflight FAILED" in r.getMessage() for r in caplog.records), (
+        f"expected a loud preflight warning, got: {[r.getMessage() for r in caplog.records]}"
+    )
 
 
 def test_scheduler_preflight_skipped_without_browser_books(monkeypatch):
@@ -103,4 +105,6 @@ def test_scheduler_preflight_skipped_without_browser_books(monkeypatch):
 
     asyncio.run(sch._check_browser_preflight())
 
-    assert called["v"] is False, "preflight must be skipped when no browser book is enabled"
+    assert called["v"] is False, (
+        "preflight must be skipped when no browser book is enabled"
+    )

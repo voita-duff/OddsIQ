@@ -1,47 +1,55 @@
 """SportProfile registry. Each profile bundles every sport-specific constant
 so scrapers/engine/scheduler can become sport-agnostic."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from oddsiq.sports.teams import (
-    NBA_TEAMS, NBA_TIPSPORT_ALIASES,
-    NHL_TEAMS, NHL_TIPSPORT_ALIASES,
-    MLB_TEAMS, MLB_TIPSPORT_ALIASES,
-    WNBA_TEAMS, WNBA_TIPSPORT_ALIASES,
-    NFL_TEAMS, NFL_TIPSPORT_ALIASES,
+    NBA_TEAMS,
+    NBA_TIPSPORT_ALIASES,
+    NHL_TEAMS,
+    NHL_TIPSPORT_ALIASES,
+    MLB_TEAMS,
+    MLB_TIPSPORT_ALIASES,
+    WNBA_TEAMS,
+    WNBA_TIPSPORT_ALIASES,
+    NFL_TEAMS,
+    NFL_TIPSPORT_ALIASES,
 )
 
 
 @dataclass(frozen=True)
 class SportProfile:
-    key: str                          # internal id + DB value (e.g. "nba")
-    display_name: str                 # e.g. "NBA"
-    odds_api_key: str                 # The Odds API sport key (Pinnacle /odds + /scores)
-    tipsport_competition_id: int      # Tipsport offer-API competition id
-    tipsport_sport_slug: str          # Tipsport URL sport slug (e.g. "basketbal")
-    tipsport_super_sport_id: int      # Tipsport superSportId; required when the moneyline
-                                      # matchView needs an explicit filter (e.g. NHL)
-    canonical_teams: frozenset[str]   # canonical team names for this sport
-    team_mappings: dict[str, str]     # Tipsport label -> canonical name
-    live_backstop_hours: float        # game-LIFECYCLE window after tipoff (zombie-game
-                                      # detection, /scores refresh scoping) — post-tipoff
-                                      # games are never polled (live tier removed 2026-08-27)
-    market_rule: str                  # reserved descriptor (e.g. "winner_incl_ot_2way"); the
-                                      # active 2-way selection is tipsport_moneyline_matchview
-    tipsport_league_slug: str         # Tipsport URL league slug (e.g. "nba")
-    tipsport_moneyline_matchview: str # Tipsport tab for the 2-way moneyline
-    tipsport_gender_slug: str = "muzi"  # Tipsport URL category segment between sport and
-                                        # league ({sport_slug}-muzi / {sport_slug}-zeny);
-                                        # only the warmup/Referer URL uses it
-    use_canonical_set: bool = True    # RESERVED (not yet read by normalize_team):
-                                      # False -> trust source names + fuzzy (college, later)
+    key: str  # internal id + DB value (e.g. "nba")
+    display_name: str  # e.g. "NBA"
+    odds_api_key: str  # The Odds API sport key (Pinnacle /odds + /scores)
+    tipsport_competition_id: int  # Tipsport offer-API competition id
+    tipsport_sport_slug: str  # Tipsport URL sport slug (e.g. "basketbal")
+    tipsport_super_sport_id: int  # Tipsport superSportId; required when the moneyline
+    # matchView needs an explicit filter (e.g. NHL)
+    canonical_teams: frozenset[str]  # canonical team names for this sport
+    team_mappings: dict[str, str]  # Tipsport label -> canonical name
+    live_backstop_hours: float  # game-LIFECYCLE window after tipoff (zombie-game
+    # detection, /scores refresh scoping) — post-tipoff
+    # games are never polled (live tier removed 2026-08-27)
+    market_rule: str  # reserved descriptor (e.g. "winner_incl_ot_2way"); the
+    # active 2-way selection is tipsport_moneyline_matchview
+    tipsport_league_slug: str  # Tipsport URL league slug (e.g. "nba")
+    tipsport_moneyline_matchview: str  # Tipsport tab for the 2-way moneyline
+    tipsport_gender_slug: str = (
+        "muzi"  # Tipsport URL category segment between sport and
+    )
+    # league ({sport_slug}-muzi / {sport_slug}-zeny);
+    # only the warmup/Referer URL uses it
+    use_canonical_set: bool = True  # RESERVED (not yet read by normalize_team):
+    # False -> trust source names + fuzzy (college, later)
     shadow_far_detection: bool = False  # Fetch Pinnacle + detect edges in the FAR tier
-                                        # (2-6h) as SHADOW data: rows carry tier='far',
-                                        # get CLV at kickoff, and the betting engine skips
-                                        # them (tier_not_bettable). NFL only (2026-09-06):
-                                        # its lines move all week, so the MLB-tuned 2h
-                                        # window may miss where NFL edges actually live.
+    # (2-6h) as SHADOW data: rows carry tier='far',
+    # get CLV at kickoff, and the betting engine skips
+    # them (tier_not_bettable). NFL only (2026-09-06):
+    # its lines move all week, so the MLB-tuned 2h
+    # window may miss where NFL edges actually live.
 
 
 NBA = SportProfile(
@@ -50,7 +58,7 @@ NBA = SportProfile(
     odds_api_key="basketball_nba",
     tipsport_competition_id=23,
     tipsport_sport_slug="basketbal",
-    tipsport_super_sport_id=7,    # REQUIRED for the WINNER_FINAL_DECISION filter
+    tipsport_super_sport_id=7,  # REQUIRED for the WINNER_FINAL_DECISION filter
     canonical_teams=NBA_TEAMS,
     team_mappings=NBA_TIPSPORT_ALIASES,
     live_backstop_hours=3.0,
@@ -71,7 +79,7 @@ NHL = SportProfile(
     odds_api_key="icehockey_nhl",
     tipsport_competition_id=22,
     tipsport_sport_slug="ledni-hokej",
-    tipsport_super_sport_id=23,   # confirmed; REQUIRED for the WINNER_FINAL_DECISION request
+    tipsport_super_sport_id=23,  # confirmed; REQUIRED for the WINNER_FINAL_DECISION request
     canonical_teams=NHL_TEAMS,
     team_mappings=NHL_TIPSPORT_ALIASES,
     live_backstop_hours=2.5,
@@ -88,7 +96,7 @@ MLB = SportProfile(
     odds_api_key="baseball_mlb",
     tipsport_competition_id=5795,
     tipsport_sport_slug="baseball",
-    tipsport_super_sport_id=6,    # unused for moneyline (default [] request); kept for correctness
+    tipsport_super_sport_id=6,  # unused for moneyline (default [] request); kept for correctness
     canonical_teams=MLB_TEAMS,
     team_mappings=MLB_TIPSPORT_ALIASES,
     live_backstop_hours=4.0,
@@ -103,12 +111,12 @@ WNBA = SportProfile(
     key="wnba",
     display_name="WNBA",
     odds_api_key="basketball_wnba",
-    tipsport_competition_id=10,   # recon 2026-06-11: /kurzy/basketbal/basketbal-zeny/wnba-10
+    tipsport_competition_id=10,  # recon 2026-06-11: /kurzy/basketbal/basketbal-zeny/wnba-10
     tipsport_sport_slug="basketbal",
-    tipsport_super_sport_id=7,    # basketball superSport (same as NBA); REQUIRED for the WINNER_FINAL_DECISION filter
+    tipsport_super_sport_id=7,  # basketball superSport (same as NBA); REQUIRED for the WINNER_FINAL_DECISION filter
     canonical_teams=WNBA_TEAMS,
     team_mappings=WNBA_TIPSPORT_ALIASES,
-    live_backstop_hours=2.5,      # 4x10min format runs ~2h real time; NHL-style buffer
+    live_backstop_hours=2.5,  # 4x10min format runs ~2h real time; NHL-style buffer
     market_rule="winner_incl_ot_2way",
     tipsport_league_slug="wnba",
     # Same basketball engine as NBA: WHOLE_MATCH = regulation 3-way legs, so the
@@ -125,11 +133,11 @@ NFL = SportProfile(
     odds_api_key="americanfootball_nfl",
     tipsport_competition_id=5748,  # recon 2026-08-25: /kurzy/americky-fotbal/americky-fotbal-muzi/nfl-5748
     tipsport_sport_slug="americky-fotbal",
-    tipsport_super_sport_id=2,    # captured from Tipsport's own offer API 2026-08-25;
-                                  # REQUIRED for the WINNER_FINAL_DECISION filter
+    tipsport_super_sport_id=2,  # captured from Tipsport's own offer API 2026-08-25;
+    # REQUIRED for the WINNER_FINAL_DECISION filter
     canonical_teams=NFL_TEAMS,
     team_mappings=NFL_TIPSPORT_ALIASES,
-    live_backstop_hours=3.5,      # NFL games run ~3h10m; OT buffer
+    live_backstop_hours=3.5,  # NFL games run ~3h10m; OT buffer
     market_rule="winner_incl_ot_2way",
     tipsport_league_slug="nfl",
     # American football's WHOLE_MATCH tab carries the regulation 3-way legs
@@ -141,11 +149,15 @@ NFL = SportProfile(
     tipsport_moneyline_matchview="WINNER_FINAL_DECISION",
     tipsport_gender_slug="muzi",
     use_canonical_set=True,
-    shadow_far_detection=True,    # far-tier shadow rows (see field comment); review after 4 weeks
+    shadow_far_detection=True,  # far-tier shadow rows (see field comment); review after 4 weeks
 )
 
 SPORTS: dict[str, SportProfile] = {
-    NBA.key: NBA, NHL.key: NHL, MLB.key: MLB, WNBA.key: WNBA, NFL.key: NFL,
+    NBA.key: NBA,
+    NHL.key: NHL,
+    MLB.key: MLB,
+    WNBA.key: WNBA,
+    NFL.key: NFL,
 }
 
 # 2026-08-08: MLB-only during the northern off-season (quota strategy).

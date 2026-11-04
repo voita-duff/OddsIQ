@@ -13,6 +13,7 @@ Tests:
                                            poll cycle; the other scraper's odds
                                            are still persisted.
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -36,6 +37,7 @@ from oddsiq.sports.profiles import NBA
 @pytest.fixture(autouse=True)
 def _silence_telegram(monkeypatch):
     """Suppress outbound Telegram for every test in this file."""
+
     async def _noop(_text: str) -> None:
         return None
 
@@ -45,7 +47,9 @@ def _silence_telegram(monkeypatch):
 @pytest.fixture(autouse=True)
 def _hermetic_bookmaker_flags(monkeypatch):
     """Pin bookmaker flags to production defaults so local .env doesn't bleed in."""
-    monkeypatch.setattr("oddsiq.scrapers.registry.config.BOOKMAKER_TIPSPORT_ENABLED", True)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.registry.config.BOOKMAKER_TIPSPORT_ENABLED", True
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -79,14 +83,22 @@ def _pin_pair(
     roughly 1.636 / 2.139 — Tipsport home @ 2.05 exceeds that by >3%."""
     return [
         OddsSnapshot(
-            game_id=0, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=home_odds,
-            _home_team=home, _away_team=away,
+            game_id=0,
+            bookmaker="pinnacle",
+            market_type="moneyline",
+            selection="home",
+            odds=home_odds,
+            _home_team=home,
+            _away_team=away,
         ),
         OddsSnapshot(
-            game_id=0, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=away_odds,
-            _home_team=home, _away_team=away,
+            game_id=0,
+            bookmaker="pinnacle",
+            market_type="moneyline",
+            selection="away",
+            odds=away_odds,
+            _home_team=home,
+            _away_team=away,
         ),
     ]
 
@@ -101,26 +113,46 @@ def _tip_snap(
     line: float | None = None,
 ) -> OddsSnapshot:
     return OddsSnapshot(
-        game_id=0, bookmaker="tipsport", market_type=market_type,
-        selection=selection, odds=odds, line=line,
-        _home_team=home, _away_team=away,
+        game_id=0,
+        bookmaker="tipsport",
+        market_type=market_type,
+        selection=selection,
+        odds=odds,
+        line=line,
+        _home_team=home,
+        _away_team=away,
         _commence_time=datetime.now(timezone.utc) + timedelta(minutes=10),
     )
 
 
 def _pin_total_pair(
-    home: str, away: str, *, line: float, over_odds: float = 1.91, under_odds: float = 1.91
+    home: str,
+    away: str,
+    *,
+    line: float,
+    over_odds: float = 1.91,
+    under_odds: float = 1.91,
 ) -> list[OddsSnapshot]:
     return [
         OddsSnapshot(
-            game_id=0, bookmaker="pinnacle", market_type="total",
-            selection="over", odds=over_odds, line=line,
-            _home_team=home, _away_team=away,
+            game_id=0,
+            bookmaker="pinnacle",
+            market_type="total",
+            selection="over",
+            odds=over_odds,
+            line=line,
+            _home_team=home,
+            _away_team=away,
         ),
         OddsSnapshot(
-            game_id=0, bookmaker="pinnacle", market_type="total",
-            selection="under", odds=under_odds, line=line,
-            _home_team=home, _away_team=away,
+            game_id=0,
+            bookmaker="pinnacle",
+            market_type="total",
+            selection="under",
+            odds=under_odds,
+            line=line,
+            _home_team=home,
+            _away_team=away,
         ),
     ]
 
@@ -185,12 +217,16 @@ async def test_moneyline_full_lifecycle(store: Store):
     pin = next(s for s in sch._scrapers if s.name == "pinnacle")
     tip = next(s for s in sch._scrapers if s.name == "tipsport")
     pin.fetch_odds = AsyncMock(return_value=_pin_pair(game.home_team, game.away_team))
-    tip.fetch_odds = AsyncMock(return_value=[
-        _tip_snap(game.home_team, game.away_team, selection="home", odds=2.05),
-    ])
+    tip.fetch_odds = AsyncMock(
+        return_value=[
+            _tip_snap(game.home_team, game.away_team, selection="home", odds=2.05),
+        ]
+    )
 
     # --- Phase 1: poll detects edge ---
-    await sch._poll_coordinator.poll(NBA, [game], sch._schedule.games, datetime.now(timezone.utc))
+    await sch._poll_coordinator.poll(
+        NBA, [game], sch._schedule.games, datetime.now(timezone.utc)
+    )
 
     cursor = await store._db.execute(
         "SELECT bookmaker, market_type, selection, entry_odds, edge_pct, tier "
@@ -213,20 +249,34 @@ async def test_moneyline_full_lifecycle(store: Store):
     # within the default CLOSING_FRESHNESS_MINUTES=30 window.
     tipoff = game.scheduled_at
     captured_at = tipoff - timedelta(minutes=5)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.70, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=2.20, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.70,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=2.20,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     cursor = await store._db.execute(
@@ -294,24 +344,34 @@ async def _setup_total_bet(
     tip = next(s for s in sch._scrapers if s.name == "tipsport")
     # Pinnacle total pair — balanced (~2.0 vig-removed fair on each side).
     pin.fetch_odds = AsyncMock(
-        return_value=_pin_total_pair(home, away, line=line, over_odds=1.91, under_odds=1.91)
+        return_value=_pin_total_pair(
+            home, away, line=line, over_odds=1.91, under_odds=1.91
+        )
     )
     # Tipsport mispriced on the selected side.
     tip.fetch_odds = AsyncMock(
-        return_value=[_tip_snap(home, away, selection=tip_selection, odds=tip_odds,
-                                market_type="total", line=line)]
+        return_value=[
+            _tip_snap(
+                home,
+                away,
+                selection=tip_selection,
+                odds=tip_odds,
+                market_type="total",
+                line=line,
+            )
+        ]
     )
 
-    await sch._poll_coordinator.poll(NBA, [game], sch._schedule.games, datetime.now(timezone.utc))
+    await sch._poll_coordinator.poll(
+        NBA, [game], sch._schedule.games, datetime.now(timezone.utc)
+    )
 
     # Verify the value bet was created.
     cursor = await store._db.execute(
         "SELECT id, selection, line FROM value_bets WHERE game_id=?", (game.id,)
     )
     rows = await cursor.fetchall()
-    assert len(rows) == 1, (
-        f"expected 1 total value_bet, got {[dict(r) for r in rows]}"
-    )
+    assert len(rows) == 1, f"expected 1 total value_bet, got {[dict(r) for r in rows]}"
     assert rows[0]["selection"] == tip_selection
     assert rows[0]["line"] == line
 
@@ -319,21 +379,37 @@ async def _setup_total_bet(
     tipoff = game.scheduled_at
     captured_at = tipoff - timedelta(minutes=5)
     # Use the actual tip_odds that were fetched (and produced the edge).
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="total",
-            selection=tip_selection, odds=tip_odds, line=line,
-            captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="total",
-            selection="over", odds=1.91, line=line, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="total",
-            selection="under", odds=1.91, line=line, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="total",
+                selection=tip_selection,
+                odds=tip_odds,
+                line=line,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="total",
+                selection="over",
+                odds=1.91,
+                line=line,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="total",
+                selection="under",
+                odds=1.91,
+                line=line,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     return sch, game
@@ -356,7 +432,9 @@ async def test_total_over_win(store: Store):
         "SELECT clv_pct, result FROM value_bets WHERE game_id=?", (game.id,)
     )
     row = await cursor.fetchone()
-    assert row["result"] == "win", f"over 220.5 should win with 223 total; got {row['result']}"
+    assert row["result"] == "win", (
+        f"over 220.5 should win with 223 total; got {row['result']}"
+    )
     assert row["clv_pct"] is not None, "CLV must be computed for a total bet"
     await sch._schedule._schedule_source.close()
 
@@ -378,7 +456,9 @@ async def test_total_over_loss(store: Store):
         "SELECT result FROM value_bets WHERE game_id=?", (game.id,)
     )
     row = await cursor.fetchone()
-    assert row["result"] == "loss", f"over 220.5 should lose with 219 total; got {row['result']}"
+    assert row["result"] == "loss", (
+        f"over 220.5 should lose with 219 total; got {row['result']}"
+    )
     await sch._schedule._schedule_source.close()
 
 
@@ -399,7 +479,9 @@ async def test_total_over_push(store: Store):
         "SELECT result FROM value_bets WHERE game_id=?", (game.id,)
     )
     row = await cursor.fetchone()
-    assert row["result"] == "push", f"over 220.0 should push with 220 total; got {row['result']}"
+    assert row["result"] == "push", (
+        f"over 220.0 should push with 220 total; got {row['result']}"
+    )
     await sch._schedule._schedule_source.close()
 
 
@@ -407,8 +489,11 @@ async def test_total_over_push(store: Store):
 async def test_total_under_win(store: Store):
     """Tipsport 'under 220.5' bet wins when total points (105+112=217) < line."""
     sch, game = await _setup_total_bet(
-        store, external_id="total_under_win", tip_selection="under",
-        tip_odds=2.10, line=220.5
+        store,
+        external_id="total_under_win",
+        tip_selection="under",
+        tip_odds=2.10,
+        line=220.5,
     )
     game.home_score = 112
     game.away_score = 105  # total 217 < 220.5 → under wins
@@ -421,7 +506,9 @@ async def test_total_under_win(store: Store):
         "SELECT clv_pct, result FROM value_bets WHERE game_id=?", (game.id,)
     )
     row = await cursor.fetchone()
-    assert row["result"] == "win", f"under 220.5 should win with 217 total; got {row['result']}"
+    assert row["result"] == "win", (
+        f"under 220.5 should win with 217 total; got {row['result']}"
+    )
     assert row["clv_pct"] is not None, "CLV must be computed for under bet"
     await sch._schedule._schedule_source.close()
 
@@ -447,8 +534,10 @@ async def test_scraper_error_does_not_abort_cycle(store: Store):
 
     home, away = "Denver Nuggets", "Phoenix Suns"
     game = await _make_hot_game(
-        store, external_id="scraper_isolation_001",
-        home_team=home, away_team=away,
+        store,
+        external_id="scraper_isolation_001",
+        home_team=home,
+        away_team=away,
     )
     sch._schedule._games = [game]
 
@@ -456,12 +545,16 @@ async def test_scraper_error_does_not_abort_cycle(store: Store):
     pin = next(s for s in sch._scrapers if s.name == "pinnacle")
     tip = next(s for s in sch._scrapers if s.name == "tipsport")
     pin.fetch_odds = AsyncMock(side_effect=RuntimeError("simulated pinnacle outage"))
-    tip.fetch_odds = AsyncMock(return_value=[
-        _tip_snap(home, away, selection="home", odds=2.05),
-    ])
+    tip.fetch_odds = AsyncMock(
+        return_value=[
+            _tip_snap(home, away, selection="home", odds=2.05),
+        ]
+    )
 
     # Must not raise.
-    await sch._poll_coordinator.poll(NBA, [game], sch._schedule.games, datetime.now(timezone.utc))
+    await sch._poll_coordinator.poll(
+        NBA, [game], sch._schedule.games, datetime.now(timezone.utc)
+    )
 
     # Pinnacle was attempted.
     assert pin.fetch_odds.await_count == 1
@@ -490,8 +583,10 @@ async def test_tipsport_error_does_not_abort_cycle(store: Store):
 
     home, away = "Boston Celtics", "Miami Heat"
     game = await _make_hot_game(
-        store, external_id="scraper_isolation_002",
-        home_team=home, away_team=away,
+        store,
+        external_id="scraper_isolation_002",
+        home_team=home,
+        away_team=away,
     )
     sch._schedule._games = [game]
 
@@ -503,7 +598,9 @@ async def test_tipsport_error_does_not_abort_cycle(store: Store):
     )
 
     # Must not raise.
-    await sch._poll_coordinator.poll(NBA, [game], sch._schedule.games, datetime.now(timezone.utc))
+    await sch._poll_coordinator.poll(
+        NBA, [game], sch._schedule.games, datetime.now(timezone.utc)
+    )
 
     assert tip.fetch_odds.await_count == 1
 

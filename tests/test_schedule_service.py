@@ -67,13 +67,17 @@ async def schedule_service(store):
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
-    live_game = Game(external_id="nba_live_1", home_team="Boston Celtics",
-                     away_team="Los Angeles Lakers",
-                     scheduled_at=datetime.now(timezone.utc) - timedelta(hours=1),
-                     status="live")
+    live_game = Game(
+        external_id="nba_live_1",
+        home_team="Boston Celtics",
+        away_team="Los Angeles Lakers",
+        scheduled_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        status="live",
+    )
     live_game.id = await store.upsert_game(live_game)
     svc._games = [live_game]
     yield svc
@@ -87,20 +91,31 @@ async def test_check_completed_games_does_not_cross_sports(store, monkeypatch):
     monkeypatch.setattr("oddsiq.notifications.telegram.send_telegram", AsyncMock())
     src = AsyncMock()
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
-    nba_live = Game(external_id="collision", sport="nba",
-                    home_team="Boston Celtics", away_team="Los Angeles Lakers",
-                    scheduled_at=datetime.now(timezone.utc) - timedelta(hours=1),
-                    status="live")
+    nba_live = Game(
+        external_id="collision",
+        sport="nba",
+        home_team="Boston Celtics",
+        away_team="Los Angeles Lakers",
+        scheduled_at=datetime.now(timezone.utc) - timedelta(hours=1),
+        status="live",
+    )
     nba_live.id = await store.upsert_game(nba_live)
     svc._games = [nba_live]
     # The fresh fetch returns a DIFFERENT sport's final game sharing the id.
-    mlb_final = Game(external_id="collision", sport="mlb",
-                     home_team="New York Yankees", away_team="Boston Red Sox",
-                     scheduled_at=datetime.now(timezone.utc) - timedelta(hours=3),
-                     status="final", home_score=5, away_score=2)
+    mlb_final = Game(
+        external_id="collision",
+        sport="mlb",
+        home_team="New York Yankees",
+        away_team="Boston Red Sox",
+        scheduled_at=datetime.now(timezone.utc) - timedelta(hours=3),
+        status="final",
+        home_score=5,
+        away_score=2,
+    )
     src.fetch_games = AsyncMock(return_value=[mlb_final])
     svc._last_completion_check = None  # bypass the 5-min throttle
 
@@ -110,7 +125,9 @@ async def test_check_completed_games_does_not_cross_sports(store, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_check_completed_games_throttled_within_window(schedule_service: ScheduleService):
+async def test_check_completed_games_throttled_within_window(
+    schedule_service: ScheduleService,
+):
     """Repeated main-loop invocations must not re-fetch the Odds API within
     the completion-check window."""
     for _ in range(10):
@@ -120,7 +137,9 @@ async def test_check_completed_games_throttled_within_window(schedule_service: S
 
 
 @pytest.mark.asyncio
-async def test_check_completed_games_refetches_after_window(schedule_service: ScheduleService):
+async def test_check_completed_games_refetches_after_window(
+    schedule_service: ScheduleService,
+):
     """Once the completion-check throttle window elapses, the next invocation
     fetches again."""
     await schedule_service.check_completed_games()
@@ -146,33 +165,44 @@ async def test_check_completed_games_window_is_config_driven(
     assert schedule_service._schedule_source.fetch_games.call_count == 1
 
     # Inside the 60s window: throttled.
-    schedule_service._last_completion_check = datetime.now(timezone.utc) - timedelta(seconds=31)
+    schedule_service._last_completion_check = datetime.now(timezone.utc) - timedelta(
+        seconds=31
+    )
     await schedule_service.check_completed_games()
     assert schedule_service._schedule_source.fetch_games.call_count == 1
 
     # Past the 60s window: refetches (would still be throttled under a
     # hardcoded 300s).
-    schedule_service._last_completion_check = datetime.now(timezone.utc) - timedelta(seconds=61)
+    schedule_service._last_completion_check = datetime.now(timezone.utc) - timedelta(
+        seconds=61
+    )
     await schedule_service.check_completed_games()
     assert schedule_service._schedule_source.fetch_games.call_count == 2
 
 
 @pytest.mark.asyncio
-async def test_refresh_schedule_satisfies_completion_check_window(schedule_service: ScheduleService):
+async def test_refresh_schedule_satisfies_completion_check_window(
+    schedule_service: ScheduleService,
+):
     """A fresh schedule refresh should prevent an immediate duplicate fetch."""
     live_game = schedule_service._games[0]
     schedule_service._schedule_source.fetch_games.return_value = [live_game]
 
     await schedule_service.refresh()
     assert schedule_service._schedule_source.fetch_games.call_count == 1
-    assert schedule_service._last_completion_check == schedule_service._last_schedule_refresh
+    assert (
+        schedule_service._last_completion_check
+        == schedule_service._last_schedule_refresh
+    )
 
     await schedule_service.check_completed_games()
     assert schedule_service._schedule_source.fetch_games.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_check_completed_games_noop_without_live_games(schedule_service: ScheduleService):
+async def test_check_completed_games_noop_without_live_games(
+    schedule_service: ScheduleService,
+):
     """Guard: skip entirely when no game is in live status, so throttle stays unset."""
     schedule_service._games[0].status = "scheduled"
     await schedule_service.check_completed_games()
@@ -191,16 +221,24 @@ async def test_final_transition_resolves_each_pending_bet(
     for sel, odds in (("home", 1.95), ("away", 2.10)):
         await store.insert_value_bet(
             ValueBet(
-                game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-                selection=sel, entry_odds=odds, fair_odds=1.90, edge_pct=4.2,
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection=sel,
+                entry_odds=odds,
+                fair_odds=1.90,
+                edge_pct=4.2,
             )
         )
 
     final_game = Game(
         external_id=game.external_id,
-        home_team=game.home_team, away_team=game.away_team,
+        home_team=game.home_team,
+        away_team=game.away_team,
         scheduled_at=game.scheduled_at,
-        status="final", home_score=112, away_score=105,
+        status="final",
+        home_score=112,
+        away_score=105,
     )
     schedule_service._schedule_source.fetch_games.return_value = [final_game]
 
@@ -230,7 +268,8 @@ async def test_process_live_transitions_marks_game_handled_on_success(
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
 
@@ -247,7 +286,9 @@ async def test_process_live_transitions_marks_game_handled_on_success(
     await svc.process_live_transitions(datetime.now(timezone.utc))
 
     assert handled == [game.id], "handler should run once for a live game"
-    assert game.id in svc._handled_live, "game.id should be marked handled after success"
+    assert game.id in svc._handled_live, (
+        "game.id should be marked handled after success"
+    )
 
     await svc.process_live_transitions(datetime.now(timezone.utc))
     assert handled == [game.id], "second pass must not re-handle the same game"
@@ -261,7 +302,8 @@ async def test_process_live_transitions_skips_handled_set_on_handler_failure(
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
 
@@ -297,7 +339,8 @@ async def test_process_live_transitions_isolates_failing_game(
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
 
@@ -327,7 +370,8 @@ async def test_refresh_schedule_keeps_existing_games_on_fetch_failure(store: Sto
     src = AsyncMock()
     src.fetch_games = AsyncMock(side_effect=ScheduleFetchError("boom"))
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     hot_game = await _make_game(store, external_id="nba_hot", seconds_to_tipoff=600)
@@ -365,10 +409,17 @@ async def test_refresh_schedule_recovers_already_final_pending_bet_after_restart
         status="live",
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=1.95, fair_odds=1.90, edge_pct=2.6,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=1.95,
+            fair_odds=1.90,
+            edge_pct=2.6,
+        )
+    )
     final_game = Game(
         external_id=game.external_id,
         home_team=game.home_team,
@@ -380,7 +431,8 @@ async def test_refresh_schedule_recovers_already_final_pending_bet_after_restart
     )
     src.fetch_games = AsyncMock(return_value=[final_game])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     sent = _capture_telegram(monkeypatch)
@@ -393,7 +445,9 @@ async def test_refresh_schedule_recovers_already_final_pending_bet_after_restart
     )
     row = await cursor.fetchone()
     assert row["result"] == "win"
-    assert sent == []  # paper bet resolves silently — no phone alert (2026-08-10 rebrand)
+    assert (
+        sent == []
+    )  # paper bet resolves silently — no phone alert (2026-08-10 rebrand)
 
 
 @pytest.mark.asyncio
@@ -411,25 +465,46 @@ async def test_refresh_schedule_recovers_final_game_clv_before_result(
         status="live",
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.05, fair_odds=1.95, edge_pct=5.1,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.05,
+            fair_odds=1.95,
+            edge_pct=5.1,
+        )
+    )
     captured_at = tipoff - timedelta(minutes=5)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=2.05, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.95,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     final_game = Game(
         external_id=game.external_id,
         home_team=game.home_team,
@@ -441,7 +516,8 @@ async def test_refresh_schedule_recovers_final_game_clv_before_result(
     )
     src.fetch_games = AsyncMock(return_value=[final_game])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     sent = _capture_telegram(monkeypatch)
@@ -478,10 +554,17 @@ async def test_refresh_schedule_final_recovery_does_not_duplicate_result_alerts(
         status="live",
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="away", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="away",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+        )
+    )
     final_game = Game(
         external_id=game.external_id,
         home_team=game.home_team,
@@ -493,7 +576,8 @@ async def test_refresh_schedule_final_recovery_does_not_duplicate_result_alerts(
     )
     src.fetch_games = AsyncMock(return_value=[final_game])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     sent = _capture_telegram(monkeypatch)
@@ -518,14 +602,17 @@ async def test_fetch_fresh_games_filters_to_requested_sports(store, monkeypatch)
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
 
     await svc.fetch_fresh_games(sports={"mlb"})
 
     called_keys = [c.args[0] for c in src.fetch_games.call_args_list]
-    assert called_keys == ["baseball_mlb"], "only the requested sport's /scores is fetched"
+    assert called_keys == ["baseball_mlb"], (
+        "only the requested sport's /scores is fetched"
+    )
 
 
 @pytest.mark.asyncio
@@ -535,7 +622,8 @@ async def test_fetch_fresh_games_default_fetches_all_enabled(store, monkeypatch)
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
 
@@ -553,20 +641,27 @@ async def test_partial_refresh_merges_keeping_other_sports(store, monkeypatch):
     monkeypatch.setattr("oddsiq.sports.profiles.ENABLED_SPORTS", ["nba", "mlb"])
     src = AsyncMock()
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     nba_game = Game(
-        external_id="nba_keep", sport="nba", home_team="Boston Celtics",
+        external_id="nba_keep",
+        sport="nba",
+        home_team="Boston Celtics",
         away_team="Los Angeles Lakers",
-        scheduled_at=datetime.now(timezone.utc) + timedelta(hours=5), status="scheduled",
+        scheduled_at=datetime.now(timezone.utc) + timedelta(hours=5),
+        status="scheduled",
     )
     nba_game.id = await store.upsert_game(nba_game)
     svc._games = [nba_game]
     mlb_game = Game(
-        external_id="mlb_new", sport="mlb", home_team="New York Yankees",
+        external_id="mlb_new",
+        sport="mlb",
+        home_team="New York Yankees",
         away_team="Boston Red Sox",
-        scheduled_at=datetime.now(timezone.utc) + timedelta(hours=1), status="scheduled",
+        scheduled_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        status="scheduled",
     )
     src.fetch_games = AsyncMock(return_value=[mlb_game])
 
@@ -578,35 +673,44 @@ async def test_partial_refresh_merges_keeping_other_sports(store, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_maybe_refresh_fetches_only_active_sports_between_full_sweeps(store, monkeypatch):
+async def test_maybe_refresh_fetches_only_active_sports_between_full_sweeps(
+    store, monkeypatch
+):
     """During an active window, between hourly full sweeps, maybe_refresh fetches
     /scores only for sports with a pollable game; idle sports are skipped."""
     monkeypatch.setattr("oddsiq.sports.profiles.ENABLED_SPORTS", ["nba", "mlb"])
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     now = datetime.now(timezone.utc)
     mlb_hot = Game(
-        external_id="mlb_hot", sport="mlb", home_team="New York Yankees",
+        external_id="mlb_hot",
+        sport="mlb",
+        home_team="New York Yankees",
         away_team="Boston Red Sox",
-        scheduled_at=now + timedelta(minutes=30), commence_time=now + timedelta(minutes=30),
+        scheduled_at=now + timedelta(minutes=30),
+        commence_time=now + timedelta(minutes=30),
         status="scheduled",
     )
     mlb_hot.id = await store.upsert_game(mlb_hot)
     nba_idle = Game(
-        external_id="nba_idle", sport="nba", home_team="Boston Celtics",
+        external_id="nba_idle",
+        sport="nba",
+        home_team="Boston Celtics",
         away_team="Los Angeles Lakers",
-        scheduled_at=now + timedelta(hours=8), commence_time=now + timedelta(hours=8),
+        scheduled_at=now + timedelta(hours=8),
+        commence_time=now + timedelta(hours=8),
         status="scheduled",
     )
     nba_idle.id = await store.upsert_game(nba_idle)
     svc._games = [mlb_hot, nba_idle]
     # A full sweep happened recently (within the hour) so the next refresh is partial.
     svc._last_schedule_refresh = now - timedelta(seconds=1000)  # > 900s active interval
-    svc._last_full_sweep = now - timedelta(seconds=1000)        # < 3600s -> no full sweep due
+    svc._last_full_sweep = now - timedelta(seconds=1000)  # < 3600s -> no full sweep due
     src.fetch_games.reset_mock()
 
     await svc.maybe_refresh(now)
@@ -625,14 +729,18 @@ async def test_maybe_refresh_does_full_sweep_when_interval_elapsed(store, monkey
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     now = datetime.now(timezone.utc)
     mlb_hot = Game(
-        external_id="mlb_hot2", sport="mlb", home_team="New York Yankees",
+        external_id="mlb_hot2",
+        sport="mlb",
+        home_team="New York Yankees",
         away_team="Boston Red Sox",
-        scheduled_at=now + timedelta(minutes=30), commence_time=now + timedelta(minutes=30),
+        scheduled_at=now + timedelta(minutes=30),
+        commence_time=now + timedelta(minutes=30),
         status="scheduled",
     )
     mlb_hot.id = await store.upsert_game(mlb_hot)
@@ -646,7 +754,9 @@ async def test_maybe_refresh_does_full_sweep_when_interval_elapsed(store, monkey
     await svc.maybe_refresh(now)
 
     called_keys = sorted(c.args[0] for c in src.fetch_games.call_args_list)
-    assert called_keys == ["baseball_mlb", "basketball_nba"], "full sweep hits all sports"
+    assert called_keys == ["baseball_mlb", "basketball_nba"], (
+        "full sweep hits all sports"
+    )
 
 
 @pytest.mark.asyncio
@@ -658,18 +768,26 @@ async def test_check_completed_games_fetches_only_live_sports(store, monkeypatch
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[])
     svc = ScheduleService(
-        schedule_source=src, store=store,
+        schedule_source=src,
+        store=store,
         settlement=SettlementService(store=store, stats=SessionStats()),
     )
     now = datetime.now(timezone.utc)
     mlb_live = Game(
-        external_id="mlb_live", sport="mlb", home_team="New York Yankees",
-        away_team="Boston Red Sox", scheduled_at=now - timedelta(hours=1), status="live",
+        external_id="mlb_live",
+        sport="mlb",
+        home_team="New York Yankees",
+        away_team="Boston Red Sox",
+        scheduled_at=now - timedelta(hours=1),
+        status="live",
     )
     mlb_live.id = await store.upsert_game(mlb_live)
     nba_sched = Game(
-        external_id="nba_sched", sport="nba", home_team="Boston Celtics",
-        away_team="Los Angeles Lakers", scheduled_at=now + timedelta(hours=2),
+        external_id="nba_sched",
+        sport="nba",
+        home_team="Boston Celtics",
+        away_team="Los Angeles Lakers",
+        scheduled_at=now + timedelta(hours=2),
         status="scheduled",
     )
     nba_sched.id = await store.upsert_game(nba_sched)
@@ -702,8 +820,11 @@ async def test_game_final_emits_log(schedule_service: ScheduleService, caplog):
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.schedule_service")
     await schedule_service.check_completed_games()
 
-    msgs = [r.getMessage() for r in caplog.records
-            if r.getMessage().startswith("game_final:")]
+    msgs = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("game_final:")
+    ]
     assert len(msgs) == 1
     line = msgs[0]
     assert f"game_id={game.id}" in line
@@ -717,22 +838,37 @@ async def test_refresh_isolates_per_game_recovery_failure(store: Store):
     later games still recover and the in-memory slate still updates (an
     unguarded raise here left the slate stale until the error cleared)."""
     now = datetime.now(timezone.utc)
-    g1 = Game(external_id="nba_f1", home_team="A", away_team="B",
-              scheduled_at=now - timedelta(hours=4), status="final",
-              home_score=100, away_score=90)
-    g2 = Game(external_id="nba_f2", home_team="C", away_team="D",
-              scheduled_at=now - timedelta(hours=4), status="final",
-              home_score=80, away_score=95)
+    g1 = Game(
+        external_id="nba_f1",
+        home_team="A",
+        away_team="B",
+        scheduled_at=now - timedelta(hours=4),
+        status="final",
+        home_score=100,
+        away_score=90,
+    )
+    g2 = Game(
+        external_id="nba_f2",
+        home_team="C",
+        away_team="D",
+        scheduled_at=now - timedelta(hours=4),
+        status="final",
+        home_score=80,
+        away_score=95,
+    )
     src = AsyncMock()
     src.fetch_games = AsyncMock(return_value=[g1, g2])
     settlement = AsyncMock()
     settlement.recover_finalized_game = AsyncMock(
-        side_effect=[RuntimeError("boom"), None])
+        side_effect=[RuntimeError("boom"), None]
+    )
     svc = ScheduleService(schedule_source=src, store=store, settlement=settlement)
 
     await svc.refresh()
 
     assert settlement.recover_finalized_game.await_count == 2, (
-        "second game's recovery must still run after the first raised")
+        "second game's recovery must still run after the first raised"
+    )
     assert {g.external_id for g in svc.games} == {"nba_f1", "nba_f2"}, (
-        "slate must still be assigned after a per-game recovery failure")
+        "slate must still be assigned after a per-game recovery failure"
+    )

@@ -16,18 +16,21 @@ def test_save_raw_response_writes_utf8(tmp_path, monkeypatch):
     path = scraper._save_raw_response({"team": "Sparta Praha č"}, date(2026, 6, 9))
     assert path is not None
     from pathlib import Path
+
     raw = Path(path).read_text(encoding="utf-8")
     assert "Sparta" in raw
 
 
 def test_log_handler_uses_utf8(monkeypatch, tmp_path):
     import oddsiq.cli as cli  # also imports logging.handlers
+
     monkeypatch.setattr(config, "LOG_FILE", tmp_path / "oddsiq.log")
     root = logging.getLogger()
     pre = list(root.handlers)
     cli._install_rotating_file_handler()
     added = [
-        h for h in root.handlers
+        h
+        for h in root.handlers
         if h not in pre and isinstance(h, logging.handlers.RotatingFileHandler)
     ]
     try:
@@ -41,8 +44,10 @@ def test_log_handler_uses_utf8(monkeypatch, tmp_path):
 
 def test_backup_dir_default_is_repo_relative(monkeypatch):
     import importlib
+
     monkeypatch.delenv("BACKUP_DIR", raising=False)
     import oddsiq.config as cfg
+
     importlib.reload(cfg)
     try:
         assert "Desktop" not in str(cfg.BACKUP_DIR)
@@ -74,7 +79,9 @@ def test_install_signal_handlers_posix(monkeypatch):
 def test_install_signal_handlers_windows(monkeypatch):
     monkeypatch.setattr(cli_mod.sys, "platform", "win32")
     registered = []
-    monkeypatch.setattr(cli_mod.signal, "signal", lambda sig, handler: registered.append(sig))
+    monkeypatch.setattr(
+        cli_mod.signal, "signal", lambda sig, handler: registered.append(sig)
+    )
 
     class FakeLoop:
         def add_signal_handler(self, *a, **k):
@@ -90,6 +97,7 @@ def test_install_signal_handlers_windows(monkeypatch):
 @pytest.mark.asyncio
 async def test_store_sets_busy_timeout(tmp_path):
     from oddsiq.db.store import Store
+
     store = Store(tmp_path / "t.db")
     await store.initialize()
     try:
@@ -102,5 +110,9 @@ async def test_store_sets_busy_timeout(tmp_path):
 
 def test_chromium_launch_args_include_no_sandbox():
     from oddsiq.scrapers import cloudflare
+
     assert "--no-sandbox" in cloudflare._CHROMIUM_LAUNCH_ARGS
-    assert "--disable-blink-features=AutomationControlled" in cloudflare._CHROMIUM_LAUNCH_ARGS
+    assert (
+        "--disable-blink-features=AutomationControlled"
+        in cloudflare._CHROMIUM_LAUNCH_ARGS
+    )

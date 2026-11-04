@@ -46,10 +46,12 @@ def _moneyline_filters(profile) -> list:
     # which only populates when requested explicitly with the superSportId.
     if profile.tipsport_moneyline_matchview == "WINNER_WHOLE_MATCH":
         return []
-    return [{
-        "matchView": profile.tipsport_moneyline_matchview,
-        "id": {"superSportId": profile.tipsport_super_sport_id},
-    }]
+    return [
+        {
+            "matchView": profile.tipsport_moneyline_matchview,
+            "id": {"superSportId": profile.tipsport_super_sport_id},
+        }
+    ]
 
 
 class TipsportMarketUnavailable(Exception):
@@ -63,7 +65,9 @@ class TipsportMarketUnavailable(Exception):
 class TipsportScraper(BaseScraper):
     """Fetch odds from Tipsport.cz via reverse-engineered API."""
 
-    SESSION_MAX_AGE: float = 1200.0  # 20 minutes — refresh before CF cookies expire (~30 min)
+    SESSION_MAX_AGE: float = (
+        1200.0  # 20 minutes — refresh before CF cookies expire (~30 min)
+    )
 
     def __init__(self) -> None:
         self._client: AsyncSession | None = None
@@ -90,9 +94,13 @@ class TipsportScraper(BaseScraper):
             resp = await self._client.get(_warmup_url(profile))
             self._session_warmed_at = time.monotonic()
             if resp.status_code == 403:
-                logger.info("Tipsport: warmup blocked; will retry POST and may fall back")
+                logger.info(
+                    "Tipsport: warmup blocked; will retry POST and may fall back"
+                )
             else:
-                logger.info("Tipsport: session warm-up complete (status %d)", resp.status_code)
+                logger.info(
+                    "Tipsport: session warm-up complete (status %d)", resp.status_code
+                )
         return self._client
 
     @staticmethod
@@ -157,7 +165,9 @@ class TipsportScraper(BaseScraper):
         try:
             await closeable.close()
         except Exception as e:  # defensive: best-effort teardown
-            logger.warning("Tipsport: error closing %s: %s", type(closeable).__name__, e)
+            logger.warning(
+                "Tipsport: error closing %s: %s", type(closeable).__name__, e
+            )
 
     async def _reset_session(self) -> None:
         """Destroy current sessions so next call creates fresh ones."""
@@ -189,10 +199,21 @@ class TipsportScraper(BaseScraper):
             # Well-formed response, market simply not offered this cycle. NOT a
             # session failure — don't count it toward MAX_CONSECUTIVE_FAILURES or
             # churn the shared Cloudflare session the other sports are using.
-            logger.info("Tipsport %s: no moneyline market offered this cycle (%s)", profile.key, e)
+            logger.info(
+                "Tipsport %s: no moneyline market offered this cycle (%s)",
+                profile.key,
+                e,
+            )
             return []
-        except (ConnectionError, OSError, KeyError, IndexError, TypeError, ValueError,
-                PlaywrightError) as e:
+        except (
+            ConnectionError,
+            OSError,
+            KeyError,
+            IndexError,
+            TypeError,
+            ValueError,
+            PlaywrightError,
+        ) as e:
             # PlaywrightError covers the Cloudflare fallback path (page.evaluate,
             # context.cookies) raising on a destroyed/closed browser context — it
             # subclasses Exception, not OSError, so without this it would escape
@@ -201,7 +222,9 @@ class TipsportScraper(BaseScraper):
             self._consecutive_failures += 1
             logger.error(
                 "Tipsport %s fetch failed (consecutive: %d): %s",
-                profile.key, self._consecutive_failures, e,
+                profile.key,
+                self._consecutive_failures,
+                e,
             )
             if self._consecutive_failures >= config.MAX_CONSECUTIVE_FAILURES:
                 await self._reset_session()
@@ -218,29 +241,43 @@ class TipsportScraper(BaseScraper):
         captured_at = datetime.now(timezone.utc)
         resp = await client.post(api_url, json=body, headers=headers)
         if resp.status_code >= 400:
-            logger.info("Tipsport: curl_cffi %d on %s, syncing browser API session",
-                        resp.status_code, profile.key)
+            logger.info(
+                "Tipsport: curl_cffi %d on %s, syncing browser API session",
+                resp.status_code,
+                profile.key,
+            )
             force_new = resp.status_code == 401 and self._client_has_api_session(client)
-            await self._copy_browser_api_session_to_client(client, profile, force_new_browser=force_new)
+            await self._copy_browser_api_session_to_client(
+                client, profile, force_new_browser=force_new
+            )
             captured_at = datetime.now(timezone.utc)
             resp = await client.post(api_url, json=body, headers=headers)
 
         if resp.status_code >= 400:
-            logger.info("Tipsport: curl_cffi %d on %s after session sync, using Playwright",
-                        resp.status_code, profile.key)
+            logger.info(
+                "Tipsport: curl_cffi %d on %s after session sync, using Playwright",
+                resp.status_code,
+                profile.key,
+            )
             cf = await self._get_cf_session(profile)
             captured_at = datetime.now(timezone.utc)
             try:
                 data = await asyncio.wait_for(cf.post(api_url, json=body), timeout=60)
             except asyncio.TimeoutError:
-                raise ConnectionError(f"Tipsport: Playwright timed out after 60s for {profile.key}")
+                raise ConnectionError(
+                    f"Tipsport: Playwright timed out after 60s for {profile.key}"
+                )
         else:
             data = resp.json()
 
         raw_path = await asyncio.to_thread(self._save_raw_response, data, game_date)
         snapshots = self.parse_response(data, profile, raw_path, captured_at)
-        logger.info("Tipsport %s: fetched %d odds from %d matches",
-                    profile.key, len(snapshots), self._count_matches(data, profile))
+        logger.info(
+            "Tipsport %s: fetched %d odds from %d matches",
+            profile.key,
+            len(snapshots),
+            self._count_matches(data, profile),
+        )
         return snapshots
 
     def _build_request_body(self, profile) -> dict:
@@ -294,8 +331,10 @@ class TipsportScraper(BaseScraper):
                 home_team = normalize_team(raw_home, "tipsport", profile.key)
                 away_team = normalize_team(raw_away, "tipsport", profile.key)
                 if home_team is None or away_team is None:
-                    logger.debug("Tipsport: skipping match '%s' — could not normalize teams",
-                                 match.get("nameFull", ""))
+                    logger.debug(
+                        "Tipsport: skipping match '%s' — could not normalize teams",
+                        match.get("nameFull", ""),
+                    )
                     continue
                 opp_rows = match.get("oppRows", [])
                 if not opp_rows:
@@ -308,30 +347,36 @@ class TipsportScraper(BaseScraper):
                         continue
                     odds = self._parse_odds(opp.get("odd"))
                     if odds is None:
-                        logger.debug("Tipsport: skipping invalid odds %r for %s in '%s'",
-                                     opp.get("odd"), selection, match.get("nameFull", ""))
+                        logger.debug(
+                            "Tipsport: skipping invalid odds %r for %s in '%s'",
+                            opp.get("odd"),
+                            selection,
+                            match.get("nameFull", ""),
+                        )
                         continue
-                    snapshots.append(OddsSnapshot(
-                        game_id=0,
-                        bookmaker="tipsport",
-                        market_type="moneyline",
-                        selection=selection,
-                        odds=odds,
-                        line=None,
-                        raw_response_path=raw_response_path,
-                        captured_at=now,
-                        sport=profile.key,
-                        _home_team=home_team,
-                        _away_team=away_team,
-                        # The listing's OWN start time — game attribution
-                        # requires it (see _parse_match_start).
-                        _commence_time=match_start,
-                        # Execution identity (transient — persisted only on
-                        # value_bets at detection, migration 009).
-                        _tipsport_match_id=match_id,
-                        _tipsport_opp_id=opp.get("id"),
-                        _tipsport_url=match_url,
-                    ))
+                    snapshots.append(
+                        OddsSnapshot(
+                            game_id=0,
+                            bookmaker="tipsport",
+                            market_type="moneyline",
+                            selection=selection,
+                            odds=odds,
+                            line=None,
+                            raw_response_path=raw_response_path,
+                            captured_at=now,
+                            sport=profile.key,
+                            _home_team=home_team,
+                            _away_team=away_team,
+                            # The listing's OWN start time — game attribution
+                            # requires it (see _parse_match_start).
+                            _commence_time=match_start,
+                            # Execution identity (transient — persisted only on
+                            # value_bets at detection, migration 009).
+                            _tipsport_match_id=match_id,
+                            _tipsport_opp_id=opp.get("id"),
+                            _tipsport_url=match_url,
+                        )
+                    )
         return snapshots
 
     @staticmethod
@@ -394,10 +439,19 @@ class TipsportScraper(BaseScraper):
             tabs = data["offerSuperSports"][0]["tabs"]
         except (KeyError, IndexError):
             return 0
-        tab = next((t for t in tabs if t.get("matchView") == profile.tipsport_moneyline_matchview), None)
+        tab = next(
+            (
+                t
+                for t in tabs
+                if t.get("matchView") == profile.tipsport_moneyline_matchview
+            ),
+            None,
+        )
         if tab is None:
             return 0
-        return sum(len(c.get("matches", [])) for c in tab.get("offerCompetitionAnnuals", []))
+        return sum(
+            len(c.get("matches", [])) for c in tab.get("offerCompetitionAnnuals", [])
+        )
 
     async def close(self) -> None:
         # Guard each independently: a failing curl close must not skip the

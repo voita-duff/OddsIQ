@@ -12,13 +12,20 @@ _PIN_EVENT = {
     "home_team": "Boston Celtics",
     "away_team": "Los Angeles Lakers",
     "commence_time": "2026-06-09T00:00:00Z",
-    "bookmakers": [{
-        "key": "pinnacle",
-        "markets": [{"key": "h2h", "outcomes": [
-            {"name": "Boston Celtics", "price": 1.8},
-            {"name": "Los Angeles Lakers", "price": 2.1},
-        ]}],
-    }],
+    "bookmakers": [
+        {
+            "key": "pinnacle",
+            "markets": [
+                {
+                    "key": "h2h",
+                    "outcomes": [
+                        {"name": "Boston Celtics", "price": 1.8},
+                        {"name": "Los Angeles Lakers", "price": 2.1},
+                    ],
+                }
+            ],
+        }
+    ],
 }
 
 

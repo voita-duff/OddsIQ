@@ -17,6 +17,7 @@ selection) opportunity can have separate warm/hot/legacy rows; the value-bet
 sections read a deduped derived table (one row per opportunity) so counts and
 CLV don't double-count.
 """
+
 from __future__ import annotations
 
 import json
@@ -60,11 +61,17 @@ async def run_audit(
 ) -> dict[str, list[dict[str, Any]]]:
     """Run all five audit sections and return them as a dict of section-name -> rows."""
     return {
-        "snapshot_volumes": await _snapshot_volumes(store, bookmaker=bookmaker, since=since),
+        "snapshot_volumes": await _snapshot_volumes(
+            store, bookmaker=bookmaker, since=since
+        ),
         "value_bets": await _value_bets(store, bookmaker=bookmaker, since=since),
         "clv_by_bucket": await _clv_by_bucket(store, bookmaker=bookmaker, since=since),
-        "closing_quality": await _closing_quality(store, bookmaker=bookmaker, since=since),
-        "coverage_gap_proxy": await _coverage_gap_proxy(store, bookmaker=bookmaker, since=since),
+        "closing_quality": await _closing_quality(
+            store, bookmaker=bookmaker, since=since
+        ),
+        "coverage_gap_proxy": await _coverage_gap_proxy(
+            store, bookmaker=bookmaker, since=since
+        ),
     }
 
 
@@ -110,13 +117,15 @@ async def _snapshot_volumes(
     for row in rows:
         total = row["total_games"]
         rate = 100.0 * row["games_matched"] / total if total else 0.0
-        out.append({
-            "bookmaker": row["bookmaker"],
-            "snapshots": row["snapshots"],
-            "games_matched": row["games_matched"],
-            "total_games": total,
-            "match_rate": round(rate, 1),
-        })
+        out.append(
+            {
+                "bookmaker": row["bookmaker"],
+                "snapshots": row["snapshots"],
+                "games_matched": row["games_matched"],
+                "total_games": total,
+                "match_rate": round(rate, 1),
+            }
+        )
     return out
 
 
@@ -188,24 +197,30 @@ async def _value_bets(
         clv_values = [r["clv_pct"] for r in await clv_cursor.fetchall()]
         if clv_values:
             mid = len(clv_values) // 2
-            median = clv_values[mid] if len(clv_values) % 2 else (clv_values[mid - 1] + clv_values[mid]) / 2.0
+            median = (
+                clv_values[mid]
+                if len(clv_values) % 2
+                else (clv_values[mid - 1] + clv_values[mid]) / 2.0
+            )
         else:
             median = None
 
         pos_pct = (
-            100.0 * row["pos_clv_count"] / row["with_clv"]
-            if row["with_clv"]
-            else 0.0
+            100.0 * row["pos_clv_count"] / row["with_clv"] if row["with_clv"] else 0.0
         )
-        out.append({
-            "bookmaker": row["bookmaker"],
-            "total": row["total"],
-            "with_clv": row["with_clv"],
-            "with_result": row["with_result"],
-            "avg_clv": round(row["avg_clv"], 2) if row["avg_clv"] is not None else None,
-            "median_clv": round(median, 2) if median is not None else None,
-            "pos_clv_pct": round(pos_pct, 1),
-        })
+        out.append(
+            {
+                "bookmaker": row["bookmaker"],
+                "total": row["total"],
+                "with_clv": row["with_clv"],
+                "with_result": row["with_result"],
+                "avg_clv": round(row["avg_clv"], 2)
+                if row["avg_clv"] is not None
+                else None,
+                "median_clv": round(median, 2) if median is not None else None,
+                "pos_clv_pct": round(pos_pct, 1),
+            }
+        )
     return out
 
 
@@ -245,15 +260,21 @@ async def _clv_by_bucket(
     rows = await cursor.fetchall()
     out: list[dict[str, Any]] = []
     for row in rows:
-        pos_pct = 100.0 * row["pos_count"] / row["clv_count"] if row["clv_count"] else 0.0
-        out.append({
-            "bookmaker": row["bookmaker"],
-            "edge_bucket": row["edge_bucket"],
-            "bets": row["bets"],
-            "avg_edge": round(row["avg_edge"], 2),
-            "avg_clv": round(row["avg_clv"], 2) if row["avg_clv"] is not None else None,
-            "pos_clv_pct": round(pos_pct, 1),
-        })
+        pos_pct = (
+            100.0 * row["pos_count"] / row["clv_count"] if row["clv_count"] else 0.0
+        )
+        out.append(
+            {
+                "bookmaker": row["bookmaker"],
+                "edge_bucket": row["edge_bucket"],
+                "bets": row["bets"],
+                "avg_edge": round(row["avg_edge"], 2),
+                "avg_clv": round(row["avg_clv"], 2)
+                if row["avg_clv"] is not None
+                else None,
+                "pos_clv_pct": round(pos_pct, 1),
+            }
+        )
     return out
 
 
@@ -288,14 +309,20 @@ async def _closing_quality(
     rows = await cursor.fetchall()
     out: list[dict[str, Any]] = []
     for row in rows:
-        pct = 100.0 * row["with_closing"] / row["bets_resolved"] if row["bets_resolved"] else 0.0
-        out.append({
-            "bookmaker": row["bookmaker"],
-            "bets_resolved": row["bets_resolved"],
-            "with_closing": row["with_closing"],
-            "stale_skipped": row["stale_skipped"],
-            "pct_clean": round(pct, 1),
-        })
+        pct = (
+            100.0 * row["with_closing"] / row["bets_resolved"]
+            if row["bets_resolved"]
+            else 0.0
+        )
+        out.append(
+            {
+                "bookmaker": row["bookmaker"],
+                "bets_resolved": row["bets_resolved"],
+                "with_closing": row["with_closing"],
+                "stale_skipped": row["stale_skipped"],
+                "pct_clean": round(pct, 1),
+            }
+        )
     return out
 
 
@@ -327,16 +354,19 @@ async def _coverage_gap_proxy(
     cursor = await store._db.execute(sql, params)
     rows = await cursor.fetchall()
     return [
-        {"bookmaker": row["bookmaker"], "resolved_without_clv": row["resolved_without_clv"]}
+        {
+            "bookmaker": row["bookmaker"],
+            "resolved_without_clv": row["resolved_without_clv"],
+        }
         for row in rows
     ]
 
 
 _SECTION_TITLES = [
-    ("snapshot_volumes",   "Section 1 — Snapshot volumes per book"),
-    ("value_bets",         "Section 2 — Value bets per book"),
-    ("clv_by_bucket",      "Section 3 — CLV by edge bucket"),
-    ("closing_quality",    "Section 4 — Closing snapshot quality"),
+    ("snapshot_volumes", "Section 1 — Snapshot volumes per book"),
+    ("value_bets", "Section 2 — Value bets per book"),
+    ("clv_by_bucket", "Section 3 — CLV by edge bucket"),
+    ("closing_quality", "Section 4 — Closing snapshot quality"),
     ("coverage_gap_proxy", "Section 5 — Coverage gap proxy"),
 ]
 

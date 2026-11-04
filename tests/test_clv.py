@@ -32,42 +32,90 @@ def test_clv_zero():
 
 
 def test_resolve_moneyline_win():
-    result = resolve_bet_result(market_type="moneyline", selection="home", line=None, home_score=110, away_score=105)
+    result = resolve_bet_result(
+        market_type="moneyline",
+        selection="home",
+        line=None,
+        home_score=110,
+        away_score=105,
+    )
     assert result == "win"
 
 
 def test_resolve_moneyline_loss():
-    result = resolve_bet_result(market_type="moneyline", selection="home", line=None, home_score=100, away_score=105)
+    result = resolve_bet_result(
+        market_type="moneyline",
+        selection="home",
+        line=None,
+        home_score=100,
+        away_score=105,
+    )
     assert result == "loss"
 
 
 def test_resolve_spread_win():
-    result = resolve_bet_result(market_type="spread", selection="home", line=-4.5, home_score=110, away_score=100)
+    result = resolve_bet_result(
+        market_type="spread",
+        selection="home",
+        line=-4.5,
+        home_score=110,
+        away_score=100,
+    )
     assert result == "win"
 
 
 def test_resolve_spread_loss():
-    result = resolve_bet_result(market_type="spread", selection="home", line=-4.5, home_score=103, away_score=100)
+    result = resolve_bet_result(
+        market_type="spread",
+        selection="home",
+        line=-4.5,
+        home_score=103,
+        away_score=100,
+    )
     assert result == "loss"
 
 
 def test_resolve_spread_push():
-    result = resolve_bet_result(market_type="spread", selection="home", line=-5.0, home_score=105, away_score=100)
+    result = resolve_bet_result(
+        market_type="spread",
+        selection="home",
+        line=-5.0,
+        home_score=105,
+        away_score=100,
+    )
     assert result == "push"
 
 
 def test_resolve_total_over_win():
-    result = resolve_bet_result(market_type="total", selection="over", line=215.5, home_score=110, away_score=108)
+    result = resolve_bet_result(
+        market_type="total",
+        selection="over",
+        line=215.5,
+        home_score=110,
+        away_score=108,
+    )
     assert result == "win"
 
 
 def test_resolve_total_under_win():
-    result = resolve_bet_result(market_type="total", selection="under", line=220.5, home_score=110, away_score=108)
+    result = resolve_bet_result(
+        market_type="total",
+        selection="under",
+        line=220.5,
+        home_score=110,
+        away_score=108,
+    )
     assert result == "win"
 
 
 def test_resolve_total_push():
-    result = resolve_bet_result(market_type="total", selection="over", line=218.0, home_score=110, away_score=108)
+    result = resolve_bet_result(
+        market_type="total",
+        selection="over",
+        line=218.0,
+        home_score=110,
+        away_score=108,
+    )
     assert result == "push"
 
 

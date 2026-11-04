@@ -12,6 +12,7 @@ fixtures drop from the feed and surface here as ``scheduled`` until they age out
 of the slate. The scheduler's ``postponed`` exclusion branches are therefore
 inert for this source (kept as defensive no-ops).
 """
+
 from __future__ import annotations
 
 import logging
@@ -137,7 +138,10 @@ class OddsApiScheduleSource:
         if home is None or away is None:
             logger.debug(
                 "OddsApiScheduleSource: skipping scores event %s — team normalization failed "
-                "(%r, %r)", event_id, home_raw, away_raw,
+                "(%r, %r)",
+                event_id,
+                home_raw,
+                away_raw,
             )
             return None
 

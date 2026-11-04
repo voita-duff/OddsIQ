@@ -75,29 +75,51 @@ async def test_calculate_clv_backfills_already_resolved_bet(store: Store):
         away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+        )
+    )
     # Mark the bet as already resolved without CLV — simulates the stuck state.
     await store._db.execute(
-        "UPDATE value_bets SET result='win' WHERE game_id=?", (game.id,),
+        "UPDATE value_bets SET result='win' WHERE game_id=?",
+        (game.id,),
     )
     captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.91, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=1.91, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     await svc.calculate_clv_for_pending_bets(game)
@@ -124,31 +146,64 @@ async def test_clv_arg_order_pinned_by_asymmetric_favorite_pair(store: Store):
     tipoff = datetime.now(timezone.utc) - timedelta(hours=2)
     game = Game(
         external_id="nba_clv_asym",
-        home_team="Boston Celtics", away_team="Los Angeles Lakers",
-        scheduled_at=tipoff, status="final", home_score=112, away_score=105,
+        home_team="Boston Celtics",
+        away_team="Los Angeles Lakers",
+        scheduled_at=tipoff,
+        status="final",
+        home_score=112,
+        away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=1.30, fair_odds=1.27, edge_pct=2.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=1.30,
+            fair_odds=1.27,
+            edge_pct=2.0,
+        )
+    )
     await store._db.execute(
-        "UPDATE value_bets SET result='win' WHERE game_id=?", (game.id,))
+        "UPDATE value_bets SET result='win' WHERE game_id=?", (game.id,)
+    )
     captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-                     selection="home", odds=1.30, captured_at=captured_at),
-        OddsSnapshot(game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-                     selection="home", odds=1.25, captured_at=captured_at),
-        OddsSnapshot(game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-                     selection="away", odds=4.50, captured_at=captured_at),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=1.30,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.25,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=4.50,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     await svc.calculate_clv_for_pending_bets(game)
 
     cursor = await store._db.execute(
-        "SELECT clv_pct FROM value_bets WHERE game_id=?", (game.id,))
+        "SELECT clv_pct FROM value_bets WHERE game_id=?", (game.id,)
+    )
     clv_pct = (await cursor.fetchone())["clv_pct"]
 
     # Correct: fair from the bet side (home) first.
@@ -178,46 +233,50 @@ async def test_calculate_clv_for_spread_uses_opposite_signed_pinnacle_line(
         status="live",
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id,
-        bookmaker="tipsport",
-        market_type="spread",
-        selection="home",
-        line=-4.5,
-        entry_odds=2.10,
-        fair_odds=1.95,
-        edge_pct=7.7,
-    ))
-    captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
+    await store.insert_value_bet(
+        ValueBet(
             game_id=game.id,
             bookmaker="tipsport",
             market_type="spread",
             selection="home",
             line=-4.5,
-            odds=2.05,
-            captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id,
-            bookmaker="pinnacle",
-            market_type="spread",
-            selection="home",
-            line=-4.5,
-            odds=1.91,
-            captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id,
-            bookmaker="pinnacle",
-            market_type="spread",
-            selection="away",
-            line=4.5,
-            odds=1.91,
-            captured_at=captured_at,
-        ),
-    ])
+            entry_odds=2.10,
+            fair_odds=1.95,
+            edge_pct=7.7,
+        )
+    )
+    captured_at = tipoff - timedelta(minutes=2)
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="spread",
+                selection="home",
+                line=-4.5,
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="spread",
+                selection="home",
+                line=-4.5,
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="spread",
+                selection="away",
+                line=4.5,
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     await svc.calculate_clv_for_pending_bets(game)
@@ -254,25 +313,46 @@ async def test_recover_historical_bets_backfills_aged_out_game(
         away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+        )
+    )
     captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.91, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=1.91, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+        ]
+    )
 
     await svc.recover_historical_bets()
 
@@ -300,32 +380,52 @@ async def test_clv_emits_structured_log(store: Store, caplog, monkeypatch):
         away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+        )
+    )
     captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.91, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=1.91, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
 
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
     await svc.calculate_clv_for_pending_bets(game)
 
-    msgs = [r.getMessage() for r in caplog.records
-            if r.getMessage().startswith("clv:")]
+    msgs = [r.getMessage() for r in caplog.records if r.getMessage().startswith("clv:")]
     assert len(msgs) >= 1, f"expected at least 1 clv: log line, got: {msgs}"
     line = msgs[0]
     for key in ("bookmaker=", "game_id=", "market=", "selection=", "line=", "clv_pct="):
@@ -352,20 +452,35 @@ async def test_result_emits_structured_log(store, caplog):
         away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+        )
+    )
 
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
     await svc.resolve_bets(game)
 
-    msgs = [r.getMessage() for r in caplog.records
-            if r.getMessage().startswith("result:")]
+    msgs = [
+        r.getMessage() for r in caplog.records if r.getMessage().startswith("result:")
+    ]
     assert len(msgs) >= 1
     line = msgs[0]
-    for key in ("bookmaker=", "game_id=", "market=", "selection=", "line=",
-                "result=", "clv_pct="):
+    for key in (
+        "bookmaker=",
+        "game_id=",
+        "market=",
+        "selection=",
+        "line=",
+        "result=",
+        "clv_pct=",
+    ):
         assert key in line, f"missing key {key!r} in: {line}"
 
 
@@ -386,8 +501,11 @@ async def test_game_live_emits_log(store: Store, caplog):
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
     await svc.handle_game_live(game)
 
-    msgs = [r.getMessage() for r in caplog.records
-            if r.getMessage().startswith("game_live:")]
+    msgs = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("game_live:")
+    ]
     assert len(msgs) == 1
     line = msgs[0]
     assert f"game_id={game.id}" in line
@@ -395,8 +513,9 @@ async def test_game_live_emits_log(store: Store, caplog):
     assert f'home="{game.home_team}"' in line
 
 
-async def _seed_final_game_with_closing(store, *, excluded_reason=None,
-                                        external_id="excl_settle", tier="hot"):
+async def _seed_final_game_with_closing(
+    store, *, excluded_reason=None, external_id="excl_settle", tier="hot"
+):
     """Final game + one moneyline value bet (optionally excluded, optionally in
     a given tier) with a complete closing pair so CLV is computable."""
     tipoff = datetime.now(timezone.utc) - timedelta(hours=2)
@@ -410,33 +529,57 @@ async def _seed_final_game_with_closing(store, *, excluded_reason=None,
         away_score=105,
     )
     game.id = await store.upsert_game(game)
-    await store.insert_value_bet(ValueBet(
-        game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-        selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-        excluded_reason=excluded_reason, tier=tier,
-    ))
+    await store.insert_value_bet(
+        ValueBet(
+            game_id=game.id,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.10,
+            fair_odds=2.00,
+            edge_pct=5.0,
+            excluded_reason=excluded_reason,
+            tier=tier,
+        )
+    )
     captured_at = tipoff - timedelta(minutes=2)
-    await store.insert_odds_snapshots_batch([
-        OddsSnapshot(
-            game_id=game.id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=2.05, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.91, captured_at=captured_at,
-        ),
-        OddsSnapshot(
-            game_id=game.id, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=1.91, captured_at=captured_at,
-        ),
-    ])
+    await store.insert_odds_snapshots_batch(
+        [
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=2.05,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+            OddsSnapshot(
+                game_id=game.id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="away",
+                odds=1.91,
+                captured_at=captured_at,
+            ),
+        ]
+    )
     await store.mark_closing_snapshots(game.id, freshness_minutes=30)
     return game
 
 
 @pytest.mark.asyncio
 async def test_excluded_bet_clv_written_but_no_telegram_or_stats(
-    store: Store, caplog, monkeypatch,
+    store: Store,
+    caplog,
+    monkeypatch,
 ):
     """A bet stamped excluded_reason at detection was never alerted as a
     VALUE BET — settlement must mirror that: CLV is still computed and written
@@ -447,14 +590,17 @@ async def test_excluded_bet_clv_written_but_no_telegram_or_stats(
     stats = SessionStats()
     svc = SettlementService(store=store, stats=stats)
     game = await _seed_final_game_with_closing(
-        store, excluded_reason="incoherent_book_pregame", tier="far",
+        store,
+        excluded_reason="incoherent_book_pregame",
+        tier="far",
     )
 
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
     await svc.calculate_clv_for_pending_bets(game)
 
     cursor = await store._db.execute(
-        "SELECT clv_pct FROM value_bets WHERE game_id=?", (game.id,),
+        "SELECT clv_pct FROM value_bets WHERE game_id=?",
+        (game.id,),
     )
     row = await cursor.fetchone()
     assert row["clv_pct"] is not None, "CLV must still be written to the DB"
@@ -465,13 +611,17 @@ async def test_excluded_bet_clv_written_but_no_telegram_or_stats(
     msgs = [r.getMessage() for r in caplog.records]
     susp = [m for m in msgs if m.startswith("clv_suspect:")]
     assert len(susp) == 1 and "tier=far" in susp[0], susp
-    assert not any(m.startswith("clv_shadow:") for m in msgs)   # suspect wins the continue
+    assert not any(
+        m.startswith("clv_shadow:") for m in msgs
+    )  # suspect wins the continue
     assert not any(m.startswith("clv:") for m in msgs)
 
 
 @pytest.mark.asyncio
 async def test_excluded_bet_result_written_but_no_telegram(
-    store: Store, caplog, monkeypatch,
+    store: Store,
+    caplog,
+    monkeypatch,
 ):
     """Result resolution for an excluded bet writes the result (and settles any
     linked placed bet) but sends no WIN/LOSS Telegram."""
@@ -479,7 +629,8 @@ async def test_excluded_bet_result_written_but_no_telegram(
     monkeypatch.setattr("oddsiq.notifications.telegram.send_telegram", sent)
     svc = SettlementService(store=store, stats=SessionStats())
     game = await _seed_final_game_with_closing(
-        store, excluded_reason="implausible_edge_pregame",
+        store,
+        excluded_reason="implausible_edge_pregame",
         external_id="excl_result",
     )
 
@@ -487,7 +638,8 @@ async def test_excluded_bet_result_written_but_no_telegram(
     await svc.resolve_bets(game)
 
     cursor = await store._db.execute(
-        "SELECT result FROM value_bets WHERE game_id=?", (game.id,),
+        "SELECT result FROM value_bets WHERE game_id=?",
+        (game.id,),
     )
     row = await cursor.fetchone()
     assert row["result"] == "win", "result must still be written to the DB"
@@ -500,7 +652,9 @@ async def test_excluded_bet_result_written_but_no_telegram(
 
 @pytest.mark.asyncio
 async def test_shadow_far_bet_clv_written_but_kept_out_of_session_stats(
-    store: Store, caplog, monkeypatch,
+    store: Store,
+    caplog,
+    monkeypatch,
 ):
     """NFL far-tier SHADOW rows (tier='far') exist to be CLV'd — that IS the
     experiment — but they must not blend into the shutdown summary's warm/hot
@@ -511,7 +665,9 @@ async def test_shadow_far_bet_clv_written_but_kept_out_of_session_stats(
     stats = SessionStats()
     svc = SettlementService(store=store, stats=stats)
     game = await _seed_final_game_with_closing(
-        store, tier="far", external_id="shadow_clv",
+        store,
+        tier="far",
+        external_id="shadow_clv",
     )
 
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
@@ -519,7 +675,8 @@ async def test_shadow_far_bet_clv_written_but_kept_out_of_session_stats(
     await svc.calculate_clv_for_pending_bets(game)
 
     cursor = await store._db.execute(
-        "SELECT clv_pct FROM value_bets WHERE game_id=?", (game.id,),
+        "SELECT clv_pct FROM value_bets WHERE game_id=?",
+        (game.id,),
     )
     row = await cursor.fetchone()
     assert row["clv_pct"] is not None, "shadow CLV must still be written to the DB"
@@ -540,14 +697,17 @@ async def test_shadow_far_bet_clv_written_but_kept_out_of_session_stats(
 
 @pytest.mark.asyncio
 async def test_shadow_far_bet_result_resolves_and_logs_normally(
-    store: Store, caplog,
+    store: Store,
+    caplog,
 ):
     """The shadow carve-out is CLV-stats-only. `resolve_bets` has no session-
     stats side effects at all, so a far-tier row must keep resolving and
     logging `result:` — the 4-week shadow review reads exactly those rows."""
     svc = SettlementService(store=store, stats=SessionStats())
     game = await _seed_final_game_with_closing(
-        store, tier="far", external_id="shadow_result",
+        store,
+        tier="far",
+        external_id="shadow_result",
     )
 
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.settlement_service")
@@ -555,7 +715,8 @@ async def test_shadow_far_bet_result_resolves_and_logs_normally(
     await svc.resolve_bets(game)
 
     cursor = await store._db.execute(
-        "SELECT result FROM value_bets WHERE game_id=?", (game.id,),
+        "SELECT result FROM value_bets WHERE game_id=?",
+        (game.id,),
     )
     row = await cursor.fetchone()
     assert row["result"] == "win"
@@ -580,9 +741,9 @@ async def test_clean_paper_bet_settles_silently(store: Store, monkeypatch):
         "SELECT clv_pct, result FROM value_bets WHERE game_id=?", (game.id,)
     )
     row = await cursor.fetchone()
-    assert row["clv_pct"] is not None   # computed + stored...
-    assert row["result"] == "win"       # ...and resolved...
-    sent.assert_not_awaited()           # ...but never phoned.
+    assert row["clv_pct"] is not None  # computed + stored...
+    assert row["result"] == "win"  # ...and resolved...
+    sent.assert_not_awaited()  # ...but never phoned.
 
 
 @pytest.mark.asyncio
@@ -595,10 +756,17 @@ async def test_placed_bet_sends_one_result_telegram(store: Store, monkeypatch):
     svc = SettlementService(store=store, stats=SessionStats())
     game = await _seed_final_game_with_closing(store, external_id="placed_settle")
     vb = (await store.get_pending_value_bets(game.id))[0]
-    await store.insert_placed_bet(PlacedBet(
-        value_bet_id=vb.id, game_id=game.id, sport="nba", status="placed",
-        stake_czk=10.0, requested_odds=vb.entry_odds, accepted_odds=2.05,
-    ))
+    await store.insert_placed_bet(
+        PlacedBet(
+            value_bet_id=vb.id,
+            game_id=game.id,
+            sport="nba",
+            status="placed",
+            stake_czk=10.0,
+            requested_odds=vb.entry_odds,
+            accepted_odds=2.05,
+        )
+    )
 
     await svc.calculate_clv_for_pending_bets(game)
     await svc.resolve_bets(game)
@@ -606,5 +774,3 @@ async def test_placed_bet_sends_one_result_telegram(store: Store, monkeypatch):
     assert sent.await_count == 1, "one result Telegram for the placed bet, no CLV"
     text = sent.await_args_list[0].args[0]
     assert "WON" in text and "Total:" in text
-
-

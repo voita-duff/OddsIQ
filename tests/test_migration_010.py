@@ -38,11 +38,25 @@ def test_migration_010_creates_placed_bets(tmp_path: Path):
     try:
         cols = _columns(conn, "placed_bets")
         assert {
-            "id", "value_bet_id", "game_id", "sport", "status", "skip_reason",
-            "stake_czk", "requested_odds", "min_odds", "accepted_odds",
-            "receipt_id", "error", "balance_after_czk", "commanded_at",
-            "resolved_at", "latency_detect_ms", "latency_place_ms",
-            "settled_pl_czk", "created_at",
+            "id",
+            "value_bet_id",
+            "game_id",
+            "sport",
+            "status",
+            "skip_reason",
+            "stake_czk",
+            "requested_odds",
+            "min_odds",
+            "accepted_odds",
+            "receipt_id",
+            "error",
+            "balance_after_czk",
+            "commanded_at",
+            "resolved_at",
+            "latency_detect_ms",
+            "latency_place_ms",
+            "settled_pl_czk",
+            "created_at",
         } <= cols
     finally:
         conn.close()

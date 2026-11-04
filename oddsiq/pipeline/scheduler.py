@@ -80,10 +80,10 @@ class Scheduler:
                 placement_timeout=config.BETTING_PLACEMENT_TIMEOUT_SECONDS,
                 on_login_change=self._on_login_change,
             )
-            self._betting = BettingService(
-                store=store, executor=self._betting_bridge)
+            self._betting = BettingService(store=store, executor=self._betting_bridge)
         self._edge_service = EdgeService(
-            store=store, stats=self._stats, betting=self._betting)
+            store=store, stats=self._stats, betting=self._betting
+        )
         self._settlement = SettlementService(store=store, stats=self._stats)
         # Coverage-gap tracking:
         # - _coverage owns the match timestamps, alert-dedup, and gap checks.
@@ -91,11 +91,16 @@ class Scheduler:
         #   cadence (no false alerts when polling is intentionally slowed).
         self._coverage = CoverageMonitor(governor=self._budget_governor)
         self._poll_coordinator = PollCoordinator(
-            scrapers=self._scrapers, store=store, stats=self._stats,
-            edge_service=self._edge_service, coverage=self._coverage,
+            scrapers=self._scrapers,
+            store=store,
+            stats=self._stats,
+            edge_service=self._edge_service,
+            coverage=self._coverage,
         )
         self._schedule = ScheduleService(
-            schedule_source=OddsApiScheduleSource(), store=store, settlement=self._settlement,
+            schedule_source=OddsApiScheduleSource(),
+            store=store,
+            settlement=self._settlement,
         )
 
     async def _on_login_change(self, event: str) -> None:
@@ -124,7 +129,9 @@ class Scheduler:
         try:
             await self._budget_governor.probe()
         except Exception:
-            logger.exception("Startup budget probe failed; continuing with last-known budget")
+            logger.exception(
+                "Startup budget probe failed; continuing with last-known budget"
+            )
         try:
             await self._schedule.refresh()
         except Exception:
@@ -135,7 +142,8 @@ class Scheduler:
             except Exception:
                 logger.exception(
                     "Betting bridge failed to start; betting stays inactive "
-                    "(state 'disconnected') — polling is unaffected")
+                    "(state 'disconnected') — polling is unaffected"
+                )
         # After refresh has settled any in-window finals, flag genuinely stranded
         # games (older than the scores window, still non-final).
         await self._warn_stranded_games()
@@ -161,7 +169,9 @@ class Scheduler:
 
                 if pollable and self._running:
                     now_poll = datetime.now(timezone.utc)
-                    if await self._poll_due_sports(now, now_poll, pollable, sport_min_interval):
+                    if await self._poll_due_sports(
+                        now, now_poll, pollable, sport_min_interval
+                    ):
                         await self._budget_governor.persist(now)
                     # A long sequential multi-sport poll can outlast the heartbeat
                     # cadence; re-emit so the dashboard doesn't read "stale".
@@ -169,7 +179,9 @@ class Scheduler:
 
                 if self._running:
                     await self._schedule.check_completed_games()
-                    await self._coverage.check_gaps(self._schedule.games, self._scrapers, datetime.now(timezone.utc))
+                    await self._coverage.check_gaps(
+                        self._schedule.games, self._scrapers, datetime.now(timezone.utc)
+                    )
                     # Sleep 30s but wake immediately on stop()
                     try:
                         await asyncio.wait_for(self._stop_event.wait(), timeout=30)
@@ -215,7 +227,8 @@ class Scheduler:
                 logger.warning(
                     "%d game(s) stuck non-final >%.0fh past tipoff (cannot auto-settle "
                     "— past the Odds API scores window): %s",
-                    len(stranded), self._STRANDED_MIN_AGE_HOURS,
+                    len(stranded),
+                    self._STRANDED_MIN_AGE_HOURS,
                     ", ".join(f"{g.external_id}({g.status})" for g in stranded[:20]),
                 )
         except Exception:
@@ -233,7 +246,9 @@ class Scheduler:
         dashboard + the dead-man ping."""
         healthy = await self._schedule.health_check()
         if not healthy:
-            logger.warning("Odds API schedule health check failed — schedule may be unavailable")
+            logger.warning(
+                "Odds API schedule health check failed — schedule may be unavailable"
+            )
 
     async def _check_browser_preflight(self) -> None:
         """One-shot startup probe: confirm Playwright Chromium can launch when
@@ -298,7 +313,11 @@ class Scheduler:
                 continue
             last = self._last_poll_time.get(profile.key)
             mi = sport_min_interval.get(profile.key)
-            if last is not None and mi is not None and (now - last).total_seconds() < mi:
+            if (
+                last is not None
+                and mi is not None
+                and (now - last).total_seconds() < mi
+            ):
                 continue
             sport_slate = [g for g in self._schedule.games if g.sport == profile.key]
             # Per-sport isolation: the fetch fan-out inside poll() is already
@@ -306,7 +325,9 @@ class Scheduler:
             # post-fetch phase (matching/persist/detect) would otherwise skip
             # every sport after this one in profile order — every cycle.
             try:
-                await self._poll_coordinator.poll(profile, sport_pollable, sport_slate, now_poll)
+                await self._poll_coordinator.poll(
+                    profile, sport_pollable, sport_slate, now_poll
+                )
             except Exception:
                 logger.exception(
                     "Poll failed for sport=%s; continuing with remaining sports",
@@ -343,7 +364,8 @@ class Scheduler:
             if (now - latest_poll).total_seconds() < config.SCHEDULER_HEARTBEAT_SECONDS:
                 return "polling"
         active = [
-            g for g in self._schedule.games
+            g
+            for g in self._schedule.games
             if g.status == "scheduled"
             and tiers.get_poll_interval(tiers.time_to_tipoff(g, now)) is not None
         ]
@@ -374,13 +396,17 @@ class Scheduler:
             latest_poll = self._latest_poll_time()
             seconds_since_last_poll = (
                 int((now - latest_poll).total_seconds())
-                if latest_poll is not None else -1
+                if latest_poll is not None
+                else -1
             )
             level = self._budget_governor.throttle_level(now)
             logger.info(
                 "heartbeat: state=%s games_tracked=%d seconds_since_last_poll=%d "
                 "budget_throttle=%d betting=%s",
-                state, len(self._schedule.games), seconds_since_last_poll, level,
+                state,
+                len(self._schedule.games),
+                seconds_since_last_poll,
+                level,
                 self._betting_state,
             )
             self._last_heartbeat = now
@@ -421,7 +447,9 @@ class Scheduler:
                 or (now - self._last_heartbeat_ping_warning).total_seconds() >= 600
             ):
                 self._last_heartbeat_ping_warning = now
-                logger.warning("Heartbeat ping failed (suppressing repeats 10 min): %s", e)
+                logger.warning(
+                    "Heartbeat ping failed (suppressing repeats 10 min): %s", e
+                )
 
     async def _maybe_periodic_backup(self, now: datetime) -> None:
         """Periodic in-process DB backup every ``BACKUP_INTERVAL_HOURS``.
@@ -486,11 +514,11 @@ class Scheduler:
                 self._budget_alert_throttle3_sent = True
                 logger.warning(
                     "Odds API budget throttle at max (level 3): %s remaining. "
-                    "Pinnacle cadence is now conservative.", remaining,
+                    "Pinnacle cadence is now conservative.",
+                    remaining,
                 )
         else:
             self._budget_alert_throttle3_sent = False
-
 
     def print_summary(self) -> None:
         used, remaining, total = self._budget_governor.snapshot()
@@ -520,9 +548,7 @@ class Scheduler:
                     if book_clv_count
                     else ", no CLV"
                 )
-                print(
-                    f"  {book}: {book_count} (edge {book_avg_edge:+.1f}%{clv_part})"
-                )
+                print(f"  {book}: {book_count} (edge {book_avg_edge:+.1f}%{clv_part})")
         else:
             avg_edge = (
                 self._stats.total_edge / self._stats.value_bets_flagged * 100
@@ -539,7 +565,9 @@ class Scheduler:
             print(f"CLV: {avg_clv:+.1f}% ({self._stats.clv_count} bets)")
 
         if used is not None and remaining is not None:
-            print(f"Odds API budget: {used} used / {remaining} remaining ({total} total)")
+            print(
+                f"Odds API budget: {used} used / {remaining} remaining ({total} total)"
+            )
         else:
             print("Odds API budget: unknown")
 
@@ -590,4 +618,6 @@ class Scheduler:
             try:
                 await scraper.close()
             except Exception:
-                logger.exception("Shutdown: %s close failed", getattr(scraper, "name", scraper))
+                logger.exception(
+                    "Shutdown: %s close failed", getattr(scraper, "name", scraper)
+                )

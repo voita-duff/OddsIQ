@@ -1,5 +1,5 @@
 # OddsIQ — common tasks. Run `make help` for the list.
-.PHONY: help install test lint run dashboard audit clean start push
+.PHONY: help install test lint format run dashboard audit clean start push
 
 # Prefer the project venv interpreter so `make test` / `make audit` work
 # without an activated shell. The docs audit shells out to pytest for its
@@ -15,8 +15,12 @@ install:  ## Editable install (pip install -e .)
 test:  ## Run the full test suite
 	$(PYTHON) -m pytest tests/
 
-lint:  ## Lint with ruff (pyflakes + pycodestyle errors; no autoformat)
+lint:  ## Lint and check formatting with ruff
 	$(PYTHON) -m ruff check oddsiq/ tests/ scripts/
+	$(PYTHON) -m ruff format --check oddsiq/ tests/ scripts/
+
+format:  ## Format the Python code with ruff
+	$(PYTHON) -m ruff format oddsiq/ tests/ scripts/
 
 run:  ## Run the pipeline (entry point)
 	oddsiq

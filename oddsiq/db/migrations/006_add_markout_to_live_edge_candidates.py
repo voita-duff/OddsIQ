@@ -13,12 +13,20 @@ import sqlite3
 
 
 def apply(conn: sqlite3.Connection) -> None:
-    cols = {row[1] for row in conn.execute(
-        "PRAGMA table_info(live_edge_candidates)").fetchall()}
+    cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(live_edge_candidates)").fetchall()
+    }
     if "markout_status" not in cols:
-        conn.execute("ALTER TABLE live_edge_candidates ADD COLUMN markout_fair_odds REAL")
-        conn.execute("ALTER TABLE live_edge_candidates ADD COLUMN markout_edge_pct REAL")
-        conn.execute("ALTER TABLE live_edge_candidates ADD COLUMN markout_captured_at TIMESTAMP")
+        conn.execute(
+            "ALTER TABLE live_edge_candidates ADD COLUMN markout_fair_odds REAL"
+        )
+        conn.execute(
+            "ALTER TABLE live_edge_candidates ADD COLUMN markout_edge_pct REAL"
+        )
+        conn.execute(
+            "ALTER TABLE live_edge_candidates ADD COLUMN markout_captured_at TIMESTAMP"
+        )
         conn.execute(
             "ALTER TABLE live_edge_candidates "
             "ADD COLUMN markout_status TEXT NOT NULL DEFAULT 'pending'"

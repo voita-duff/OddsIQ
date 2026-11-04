@@ -38,7 +38,9 @@ def _hermetic_bookmaker_flags(monkeypatch):
 
     The fixture pins the flag to its production default.
     """
-    monkeypatch.setattr("oddsiq.scrapers.registry.config.BOOKMAKER_TIPSPORT_ENABLED", True)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.registry.config.BOOKMAKER_TIPSPORT_ENABLED", True
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -137,7 +139,9 @@ async def test_console_value_and_result_lines_include_timestamp_and_game_id(
 @pytest.mark.asyncio
 async def test_print_summary_includes_scraper_session_stats(store: Store, capsys):
     sch = Scheduler(store)
-    game = await _make_game(store, external_id="nba_summary_scrapers", seconds_to_tipoff=600)
+    game = await _make_game(
+        store, external_id="nba_summary_scrapers", seconds_to_tipoff=600
+    )
     sch._schedule._games = [game]
     seen = datetime(2026, 5, 27, 0, 39, 37, tzinfo=timezone.utc)
     sch._coverage._last_game_coverage_success[(game.id, "tipsport")] = seen
@@ -172,10 +176,15 @@ async def test_heartbeat_emitted_at_cadence(store: Store, caplog, monkeypatch):
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.scheduler")
     now = datetime(2026, 5, 28, 1, 0, 0, tzinfo=timezone.utc)
     sch._maybe_emit_heartbeat(now)
-    sch._maybe_emit_heartbeat(now + timedelta(milliseconds=500))  # within cadence — suppressed
+    sch._maybe_emit_heartbeat(
+        now + timedelta(milliseconds=500)
+    )  # within cadence — suppressed
     sch._maybe_emit_heartbeat(now + timedelta(seconds=2))
-    msgs = [r.getMessage() for r in caplog.records
-            if r.getMessage().startswith("heartbeat:")]
+    msgs = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("heartbeat:")
+    ]
     assert len(msgs) == 2  # middle call suppressed
     assert "state=" in msgs[0]
     assert "games_tracked=" in msgs[0]
@@ -206,7 +215,9 @@ async def test_throttle_level_widens_effective_min_interval(store: Store):
     # the effective interval widens to 900 (so the sport is not-yet-due sooner).
     sch = Scheduler(store)
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
-    warm = await _make_game(store, external_id="nba_throttle", seconds_to_tipoff=90 * 60)
+    warm = await _make_game(
+        store, external_id="nba_throttle", seconds_to_tipoff=90 * 60
+    )
     # Anchor scheduled_at to the fixed `now` so time_to_tipoff is deterministic.
     warm.scheduled_at = now + timedelta(seconds=90 * 60)
     sch._schedule._games = [warm]
@@ -236,18 +247,29 @@ async def test_poll_gating_is_per_sport(store: Store):
     sch._budget_governor.throttle_level = lambda _n: 0
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 
-    nba = Game(external_id="nba_hot", home_team="Boston Celtics",
-               away_team="Miami Heat",
-               scheduled_at=now + timedelta(minutes=30), status="scheduled", sport="nba")
+    nba = Game(
+        external_id="nba_hot",
+        home_team="Boston Celtics",
+        away_team="Miami Heat",
+        scheduled_at=now + timedelta(minutes=30),
+        status="scheduled",
+        sport="nba",
+    )
     nba.id = 1
-    nhl = Game(external_id="nhl_warm", home_team="Bruins", away_team="Rangers",
-               scheduled_at=now + timedelta(minutes=90), status="scheduled", sport="nhl")
+    nhl = Game(
+        external_id="nhl_warm",
+        home_team="Bruins",
+        away_team="Rangers",
+        scheduled_at=now + timedelta(minutes=90),
+        status="scheduled",
+        sport="nhl",
+    )
     nhl.id = 2
     sch._schedule._games = [nba, nhl]
 
     pollable, smi = sch._compute_pollable(now)
-    assert smi["nba"] == config.POLL_TIER_HOT    # 90
-    assert smi["nhl"] == config.POLL_TIER_WARM   # 300
+    assert smi["nba"] == config.POLL_TIER_HOT  # 90
+    assert smi["nhl"] == config.POLL_TIER_WARM  # 300
 
     # First cycle: neither has polled yet → both poll.
     assert await sch._poll_due_sports(now, now, pollable, smi) is True
@@ -290,8 +312,14 @@ async def test_run_loop_polls_due_sport_then_stops_promptly(store: Store, monkey
     sch._poll_coordinator.poll = poll
 
     now = datetime.now(timezone.utc)
-    hot = Game(external_id="run_nba", home_team="Boston Celtics", away_team="Miami Heat",
-               scheduled_at=now + timedelta(minutes=30), status="scheduled", sport="nba")
+    hot = Game(
+        external_id="run_nba",
+        home_team="Boston Celtics",
+        away_team="Miami Heat",
+        scheduled_at=now + timedelta(minutes=30),
+        status="scheduled",
+        sport="nba",
+    )
     hot.id = 1
     sch._schedule._games = [hot]
 
@@ -320,8 +348,9 @@ async def test_heartbeat_state_between_game_windows(store: Store):
     )
     g.id = 1
     sch._schedule._games = [g]
-    assert sch._derive_pipeline_state(datetime.now(timezone.utc)) == "between-game-windows"
-
+    assert (
+        sch._derive_pipeline_state(datetime.now(timezone.utc)) == "between-game-windows"
+    )
 
 
 @pytest.mark.asyncio
@@ -336,13 +365,23 @@ async def test_poll_failure_in_one_sport_does_not_block_others(store: Store, cap
     sch._budget_governor.throttle_level = lambda _n: 0
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
 
-    nba = Game(external_id="nba_boom", home_team="Boston Celtics",
-               away_team="Miami Heat",
-               scheduled_at=now + timedelta(minutes=30), status="scheduled", sport="nba")
+    nba = Game(
+        external_id="nba_boom",
+        home_team="Boston Celtics",
+        away_team="Miami Heat",
+        scheduled_at=now + timedelta(minutes=30),
+        status="scheduled",
+        sport="nba",
+    )
     nba.id = 1
-    mlb = Game(external_id="mlb_ok", home_team="New York Yankees",
-               away_team="Boston Red Sox",
-               scheduled_at=now + timedelta(minutes=90), status="scheduled", sport="mlb")
+    mlb = Game(
+        external_id="mlb_ok",
+        home_team="New York Yankees",
+        away_team="Boston Red Sox",
+        scheduled_at=now + timedelta(minutes=90),
+        status="scheduled",
+        sport="mlb",
+    )
     mlb.id = 2
     sch._schedule._games = [nba, mlb]
 
@@ -395,10 +434,12 @@ async def test_heartbeat_ping_fired_when_url_configured(store, monkeypatch):
     the heartbeat cadence (healthchecks.io-style — missing pings page the
     operator). Skipped entirely when unset."""
     from unittest.mock import AsyncMock
+
     ping = AsyncMock()
     monkeypatch.setattr("oddsiq.pipeline.scheduler._send_heartbeat_ping", ping)
-    monkeypatch.setattr("oddsiq.pipeline.scheduler.config.HEARTBEAT_PING_URL",
-                        "https://hc-ping.com/abc")
+    monkeypatch.setattr(
+        "oddsiq.pipeline.scheduler.config.HEARTBEAT_PING_URL", "https://hc-ping.com/abc"
+    )
     sch = Scheduler(store)
     now = datetime.now(timezone.utc)
     await sch._maybe_ping_heartbeat_url(now)
@@ -413,8 +454,11 @@ async def test_heartbeat_ping_fired_when_url_configured(store, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_heartbeat_ping_skipped_when_unset_and_failure_swallowed(store, monkeypatch):
+async def test_heartbeat_ping_skipped_when_unset_and_failure_swallowed(
+    store, monkeypatch
+):
     from unittest.mock import AsyncMock
+
     ping = AsyncMock()
     monkeypatch.setattr("oddsiq.pipeline.scheduler._send_heartbeat_ping", ping)
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.HEARTBEAT_PING_URL", "")
@@ -423,8 +467,9 @@ async def test_heartbeat_ping_skipped_when_unset_and_failure_swallowed(store, mo
     ping.assert_not_awaited()
 
     # A failing ping must never propagate into the poll loop.
-    monkeypatch.setattr("oddsiq.pipeline.scheduler.config.HEARTBEAT_PING_URL",
-                        "https://hc-ping.com/abc")
+    monkeypatch.setattr(
+        "oddsiq.pipeline.scheduler.config.HEARTBEAT_PING_URL", "https://hc-ping.com/abc"
+    )
     ping.side_effect = RuntimeError("network down")
     await sch._maybe_ping_heartbeat_url(datetime.now(timezone.utc))  # must not raise
     await sch._schedule._schedule_source.close()
@@ -444,23 +489,25 @@ async def test_periodic_backup_fires_after_interval(store, monkeypatch):
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BACKUP_INTERVAL_HOURS", 24.0)
     sch = Scheduler(store)
     now = datetime.now(timezone.utc)
-    await sch._maybe_periodic_backup(now)              # arms the clock
+    await sch._maybe_periodic_backup(now)  # arms the clock
     assert ran == []
     await sch._maybe_periodic_backup(now + timedelta(hours=1))
-    assert ran == []                                    # within interval
+    assert ran == []  # within interval
     await sch._maybe_periodic_backup(now + timedelta(hours=25))
-    assert len(ran) == 1                                # past interval — backs up
+    assert len(ran) == 1  # past interval — backs up
     # Pin the moment literal to the set backup.py actually accepts: a drifting
     # spelling here is invisible until a real periodic tick raises ValueError.
     assert ran[0][2] == "periodic"
     assert ran[0][2] in backup._VALID_MOMENTS
     await sch._maybe_periodic_backup(now + timedelta(hours=26))
-    assert len(ran) == 1                                # clock reset — suppressed again
+    assert len(ran) == 1  # clock reset — suppressed again
     await sch._schedule._schedule_source.close()
 
 
 @pytest.mark.asyncio
-async def test_periodic_backup_failure_never_costs_a_poll_cycle(store, monkeypatch, caplog):
+async def test_periodic_backup_failure_never_costs_a_poll_cycle(
+    store, monkeypatch, caplog
+):
     """A raising backup used to escape into the main loop's blanket handler,
     which logs, sleeps 10 s and SKIPS the REST of that iteration — budget alert,
     schedule refresh, polling, finals. On an armed NFL Sunday a lost cycle can
@@ -478,14 +525,14 @@ async def test_periodic_backup_failure_never_costs_a_poll_cycle(store, monkeypat
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BACKUP_INTERVAL_HOURS", 24.0)
     sch = Scheduler(store)
     now = datetime.now(timezone.utc)
-    await sch._maybe_periodic_backup(now)              # arms the clock
+    await sch._maybe_periodic_backup(now)  # arms the clock
     armed_at = sch._last_periodic_backup
     assert calls == []
 
     due = now + timedelta(hours=25)
     caplog.clear()
     with caplog.at_level(logging.ERROR):
-        await sch._maybe_periodic_backup(due)          # must NOT raise
+        await sch._maybe_periodic_backup(due)  # must NOT raise
     assert len(calls) == 1
     assert "periodic_backup raised" in caplog.text
 
@@ -516,7 +563,9 @@ async def test_periodic_backup_disabled(store, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_heartbeat_reports_betting_off_when_disabled(store: Store, caplog, monkeypatch):
+async def test_heartbeat_reports_betting_off_when_disabled(
+    store: Store, caplog, monkeypatch
+):
     monkeypatch.setattr(config, "SCHEDULER_HEARTBEAT_SECONDS", 1)
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BETTING_ENABLED", False)
     sch = Scheduler(store)
@@ -524,12 +573,18 @@ async def test_heartbeat_reports_betting_off_when_disabled(store: Store, caplog,
     sch._schedule._games = []
     caplog.set_level(logging.INFO, logger="oddsiq.pipeline.scheduler")
     sch._maybe_emit_heartbeat(datetime.now(timezone.utc))
-    msgs = [r.getMessage() for r in caplog.records if r.getMessage().startswith("heartbeat:")]
+    msgs = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("heartbeat:")
+    ]
     assert msgs and "betting=off" in msgs[0]
 
 
 @pytest.mark.asyncio
-async def test_betting_enabled_without_token_refuses_to_start(store: Store, monkeypatch):
+async def test_betting_enabled_without_token_refuses_to_start(
+    store: Store, monkeypatch
+):
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BETTING_ENABLED", True)
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BETTING_BRIDGE_TOKEN", "")
     with pytest.raises(ValueError, match="BETTING_BRIDGE_TOKEN"):
@@ -537,9 +592,13 @@ async def test_betting_enabled_without_token_refuses_to_start(store: Store, monk
 
 
 @pytest.mark.asyncio
-async def test_betting_enabled_constructs_engine_and_reports_state(store: Store, monkeypatch):
+async def test_betting_enabled_constructs_engine_and_reports_state(
+    store: Store, monkeypatch
+):
     monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BETTING_ENABLED", True)
-    monkeypatch.setattr("oddsiq.pipeline.scheduler.config.BETTING_BRIDGE_TOKEN", "t0k3n")
+    monkeypatch.setattr(
+        "oddsiq.pipeline.scheduler.config.BETTING_BRIDGE_TOKEN", "t0k3n"
+    )
     sch = Scheduler(store)
     assert sch._betting is not None and sch._betting_bridge is not None
     # No extension connected -> state 'disconnected' regardless of armed flag.

@@ -82,9 +82,7 @@ def _install_secrets_filter() -> None:
         if isinstance(handler, logging.StreamHandler) and not isinstance(
             handler, logging.FileHandler
         ):
-            if not any(
-                isinstance(f, _SecretsRedactingFilter) for f in handler.filters
-            ):
+            if not any(isinstance(f, _SecretsRedactingFilter) for f in handler.filters):
                 handler.addFilter(_SecretsRedactingFilter())
 
 
@@ -132,10 +130,12 @@ def _install_rotating_file_handler() -> None:
         backupCount=config.LOG_FILE_BACKUP_COUNT,
         encoding="utf-8",
     )
-    handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S %z",
-    ))
+    handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S %z",
+        )
+    )
     handler.setLevel(logging.INFO)
     handler.addFilter(_SecretsRedactingFilter())
     root.addHandler(handler)
@@ -220,14 +220,22 @@ async def cleanup_closing_flags(dry_run: bool = False) -> int:
             if before != after or before > 0:
                 logger.info(
                     "%sgame_id=%d (%s @ %s, %s): is_closing rows %d -> %d",
-                    prefix, game.id, game.away_team, game.home_team,
-                    game.scheduled_at.date().isoformat(), before, after,
+                    prefix,
+                    game.id,
+                    game.away_team,
+                    game.home_team,
+                    game.scheduled_at.date().isoformat(),
+                    before,
+                    after,
                 )
 
         logger.info(
             "%sTotals across %d final game(s): is_closing=1 rows %d -> %d "
             "(games left with no fresh closing: %d)",
-            prefix, len(final_games), total_before, total_after,
+            prefix,
+            len(final_games),
+            total_before,
+            total_after,
             games_with_no_fresh_closing,
         )
     finally:
@@ -236,7 +244,11 @@ async def cleanup_closing_flags(dry_run: bool = False) -> int:
 
 
 async def mark_excluded(
-    *, sports: str, from_iso: str, until_iso: str, reason: str,
+    *,
+    sports: str,
+    from_iso: str,
+    until_iso: str,
+    reason: str,
     dry_run: bool = False,
 ) -> int:
     """One-shot: stamp `excluded_reason` on value_bets
@@ -293,14 +305,20 @@ async def mark_excluded(
     await store.initialize()
     try:
         counts = await store.mark_rows_excluded(
-            sports=sport_list, from_iso=from_utc, until_iso=until_utc,
-            reason=reason, dry_run=dry_run,
+            sports=sport_list,
+            from_iso=from_utc,
+            until_iso=until_utc,
+            reason=reason,
+            dry_run=dry_run,
         )
         prefix = "[DRY-RUN] " if dry_run else ""
         logger.info(
-            "%smark-excluded: sports=%s window=[%s, %s) reason=%s -> "
-            "value_bets=%d",
-            prefix, ",".join(sport_list), from_utc, until_utc, reason,
+            "%smark-excluded: sports=%s window=[%s, %s) reason=%s -> value_bets=%d",
+            prefix,
+            ",".join(sport_list),
+            from_utc,
+            until_utc,
+            reason,
             counts["value_bets"],
         )
     finally:
@@ -354,7 +372,10 @@ def _find_zombie_scheduled_games(games, now, grace_days: int):
 
 
 async def delete_zombie_games(
-    *, grace_days: int = 3, dry_run: bool = False, include_scheduled: bool = False,
+    *,
+    grace_days: int = 3,
+    dry_run: bool = False,
+    include_scheduled: bool = False,
 ) -> int:
     """One-shot: DELETE games permanently stuck ``status='live'`` (see
     ``_find_zombie_live_games``) together with every dependent row —
@@ -400,8 +421,14 @@ async def delete_zombie_games(
             tipoff = g.commence_time or g.scheduled_at
             logger.info(
                 "%szombie game_id=%d external_id=%s status=%s sport=%s %s @ %s tipoff=%s",
-                prefix, g.id, g.external_id, g.status, g.sport,
-                g.away_team, g.home_team, tipoff.isoformat(),
+                prefix,
+                g.id,
+                g.external_id,
+                g.status,
+                g.sport,
+                g.away_team,
+                g.home_team,
+                tipoff.isoformat(),
             )
         counts = await store.delete_games_with_children(
             [g.id for g in zombies], dry_run=dry_run
@@ -409,7 +436,11 @@ async def delete_zombie_games(
         logger.info(
             "%sdelete-zombie-games: grace_days=%d -> games=%d (live=%d scheduled=%d) "
             "odds_snapshots=%d value_bets=%d placed_bets=%d",
-            prefix, grace_days, counts["games"], n_live, n_scheduled,
+            prefix,
+            grace_days,
+            counts["games"],
+            n_live,
+            n_scheduled,
             counts["odds_snapshots"],
             counts["value_bets"],
             counts["placed_bets"],
@@ -491,13 +522,20 @@ async def betting_control(
     await store.initialize()
     try:
         if reconcile_id is None and any(
-            value is not None for value in (reconcile_as, accepted_odds, receipt_id, reason)
+            value is not None
+            for value in (reconcile_as, accepted_odds, receipt_id, reason)
         ):
-            print("Reconciliation options require --reconcile PLACED_BET_ID.", file=sys.stderr)
+            print(
+                "Reconciliation options require --reconcile PLACED_BET_ID.",
+                file=sys.stderr,
+            )
             return 2
         if reconcile_id is not None:
             if reconcile_as is None:
-                print("Reconciliation requires --as-placed or --as-rejected.", file=sys.stderr)
+                print(
+                    "Reconciliation requires --as-placed or --as-rejected.",
+                    file=sys.stderr,
+                )
                 return 2
             if reconcile_as == "placed" and (
                 accepted_odds is None or not receipt_id or not receipt_id.strip()
@@ -523,7 +561,11 @@ async def betting_control(
                 return 2
             if not changed:
                 current = await store.get_placed_bet(reconcile_id)
-                detail = "not found" if current is None else f"current status={current.status}"
+                detail = (
+                    "not found"
+                    if current is None
+                    else f"current status={current.status}"
+                )
                 print(
                     f"Reconciliation refused for placed_bet id={reconcile_id}: {detail}.",
                     file=sys.stderr,
@@ -532,16 +574,23 @@ async def betting_control(
             was_armed = (await store.get_meta("betting_armed")) == "1"
             await store.set_meta("betting_armed", "0")
             await store.set_meta(
-                "betting_disarm_reason", f"operator_reconciliation_{reconcile_id}",
+                "betting_disarm_reason",
+                f"operator_reconciliation_{reconcile_id}",
             )
             logger.warning(
                 "bet_reconciled: placed_bet_id=%d status=%s receipt=%s reason=%s",
-                reconcile_id, reconcile_as, receipt_id, reason,
+                reconcile_id,
+                reconcile_as,
+                receipt_id,
+                reason,
             )
             print(
                 f"Reconciled placed_bet id={reconcile_id} as {reconcile_as}. "
-                + ("Engine disarmed (was armed)" if was_armed
-                   else "Engine remains disarmed")
+                + (
+                    "Engine disarmed (was armed)"
+                    if was_armed
+                    else "Engine remains disarmed"
+                )
                 + " — re-arm explicitly when ready."
             )
         elif arm:
@@ -554,6 +603,7 @@ async def betting_control(
             print("Auto-betting DISARMED.")
 
         from oddsiq.pipeline.betting_service import parse_betting_sports
+
         armed = (await store.get_meta("betting_armed")) == "1"
         # Print the EFFECTIVE parsed gate, not the raw meta — what the engine
         # enforces is what the operator must see (matches the dashboard chip).
@@ -566,19 +616,24 @@ async def betting_control(
         # must not read back as if it were in force.
         stake = _effective_money_knob(
             await store.get_meta("betting_flat_stake_czk"),
-            20.0, config.BETTING_MAX_STAKE_CZK,
+            20.0,
+            config.BETTING_MAX_STAKE_CZK,
         )
         max_day = _effective_money_knob(
             await store.get_meta("betting_max_bets_per_day"),
-            10, config.BETTING_MAX_BETS_PER_DAY, as_int=True,
+            10,
+            config.BETTING_MAX_BETS_PER_DAY,
+            as_int=True,
         )
         max_open = _effective_money_knob(
             await store.get_meta("betting_max_open_stakes_czk"),
-            500.0, config.BETTING_MAX_OPEN_STAKES_CZK,
+            500.0,
+            config.BETTING_MAX_OPEN_STAKES_CZK,
         )
         loss_limit = _effective_money_knob(
             await store.get_meta("betting_daily_loss_limit_czk"),
-            300.0, config.BETTING_MAX_DAILY_LOSS_CZK,
+            300.0,
+            config.BETTING_MAX_DAILY_LOSS_CZK,
         )
         disarm_reason = await store.get_meta("betting_disarm_reason")
         today = datetime.now(timezone.utc).date().isoformat()
@@ -586,7 +641,9 @@ async def betting_control(
 
         print("Auto-betting status")
         print("=" * 40)
-        print(f"BETTING_ENABLED (env):  {'1' if config.BETTING_ENABLED else '0 (engine not constructed)'}")
+        print(
+            f"BETTING_ENABLED (env):  {'1' if config.BETTING_ENABLED else '0 (engine not constructed)'}"
+        )
         print(f"Armed:                  {'YES' if armed else 'no'}")
         print(f"Betting sports:         {betting_sports}")
         if disarm_reason:
@@ -597,11 +654,15 @@ async def betting_control(
         print(f"Daily loss limit (Kč):  {loss_limit}")
         print(f"Hard stake ceiling (Kč): {config.BETTING_MAX_STAKE_CZK:.0f} (env)")
         print(f"Hard bets/day ceiling:   {config.BETTING_MAX_BETS_PER_DAY} (env)")
-        print(f"Hard open ceiling (Kč):  {config.BETTING_MAX_OPEN_STAKES_CZK:.0f} (env)")
+        print(
+            f"Hard open ceiling (Kč):  {config.BETTING_MAX_OPEN_STAKES_CZK:.0f} (env)"
+        )
         print(f"Hard loss ceiling (Kč):  {config.BETTING_MAX_DAILY_LOSS_CZK:.0f} (env)")
-        print(f"Today ({today}): commanded={stats['bets_commanded']} "
-              f"open={stats['open_stakes_czk']:.0f} Kč "
-              f"realized={stats['realized_pl_czk']:+.0f} Kč")
+        print(
+            f"Today ({today}): commanded={stats['bets_commanded']} "
+            f"open={stats['open_stakes_czk']:.0f} Kč "
+            f"realized={stats['realized_pl_czk']:+.0f} Kč"
+        )
         return 0
     finally:
         await store.close()
@@ -623,6 +684,7 @@ async def audit_bookmakers(
     # and silently drop in-window rows).
     if since is not None:
         from datetime import datetime as _dt, timezone as _tz
+
         try:
             since_dt = _dt.fromisoformat(since)
         except ValueError:
@@ -642,10 +704,12 @@ async def audit_bookmakers(
     store = Store(config.DATABASE_PATH)
     await store.initialize()
     try:
-        audit = await audit_module.run_audit(
-            store, bookmaker=bookmaker, since=since
+        audit = await audit_module.run_audit(store, bookmaker=bookmaker, since=since)
+        text = (
+            audit_module.format_json(audit)
+            if as_json
+            else audit_module.format_text(audit)
         )
-        text = audit_module.format_json(audit) if as_json else audit_module.format_text(audit)
         print(text)
         return 0
     finally:
@@ -668,12 +732,16 @@ async def tipsport_smoke(sport: str = "nba") -> int:
     from datetime import date, datetime, timezone
     from oddsiq.scrapers.tipsport import TipsportScraper
     from oddsiq.sports.profiles import get_profile, SPORTS
+
     setup_logging()
     logger = logging.getLogger("oddsiq")
     try:
         profile = get_profile(sport)
     except KeyError:
-        print(f"Unknown sport '{sport}'. Valid: {', '.join(sorted(SPORTS))}", file=sys.stderr)
+        print(
+            f"Unknown sport '{sport}'. Valid: {', '.join(sorted(SPORTS))}",
+            file=sys.stderr,
+        )
         return 1
 
     scraper = TipsportScraper()
@@ -707,7 +775,9 @@ async def tipsport_smoke(sport: str = "nba") -> int:
         events.setdefault(key, {})[snap.selection] = snap.odds
 
     if not events:
-        print("(no moneyline events parsed — Tipsport may have returned an empty listing)")
+        print(
+            "(no moneyline events parsed — Tipsport may have returned an empty listing)"
+        )
     else:
         print(f"First {min(3, len(events))} moneyline events:")
         for i, ((home, away), odds) in enumerate(list(events.items())[:3], start=1):
@@ -724,8 +794,10 @@ async def tipsport_smoke(sport: str = "nba") -> int:
         )
         if sums:
             avg = sum(sums) / len(sums)
-            print(f"Two-way overround: avg {avg:.3f} across {len(sums)} event(s) "
-                  f"(min {sums[0]:.3f}, max {sums[-1]:.3f})")
+            print(
+                f"Two-way overround: avg {avg:.3f} across {len(sums)} event(s) "
+                f"(min {sums[0]:.3f}, max {sums[-1]:.3f})"
+            )
 
     await scraper.close()
 
@@ -742,7 +814,8 @@ async def tipsport_smoke(sport: str = "nba") -> int:
             f"odd moneyline snapshot count {moneyline_count}; expected home + away pairs"
         )
     out_of_range = sorted(
-        s.odds for s in snapshots
+        s.odds
+        for s in snapshots
         if s.odds < _TIPSPORT_SMOKE_MIN_ODDS or s.odds > _TIPSPORT_SMOKE_MAX_ODDS
     )
     if out_of_range:
@@ -794,7 +867,8 @@ async def audit_missed_gamedays(store: Store) -> None:
         logger.warning(
             "Pipeline has %d historical final game(s) with zero snapshots: %s "
             "(recorded as known; Telegram suppressed)",
-            len(missed), summary,
+            len(missed),
+            summary,
         )
         await store.set_meta(
             _MISSED_GAMEDAY_AUDIT_META_KEY,
@@ -820,7 +894,8 @@ async def audit_missed_gamedays(store: Store) -> None:
     new_summary = _format_missed_games(newly_missed)
     logger.warning(
         "Pipeline missed %d new final game(s) with zero snapshots: %s",
-        len(newly_missed), new_summary,
+        len(newly_missed),
+        new_summary,
     )
     # Logged only; no phone alert (2026-08-10 rebrand — only placed/won/lost).
     await store.set_meta(
@@ -835,6 +910,7 @@ def _format_missed_games(games: list[object]) -> str:
     # rejected. html.escape is an identity transform for normal names, so the
     # reused plain-text log line is unaffected in practice.
     from html import escape
+
     return ", ".join(
         f"{escape(str(g.external_id))} ({escape(g.away_team)} @ {escape(g.home_team)}, "
         f"{g.scheduled_at.date().isoformat()})"
@@ -869,8 +945,10 @@ def _install_signal_handlers(loop, on_signal) -> None:
     enables the native-Windows fallback.
     """
     if sys.platform == "win32":
+
         def _win_handler(signum, frame):  # pragma: no cover - invoked by the OS
             loop.call_soon_threadsafe(on_signal)
+
         for sig in (signal.SIGINT, signal.SIGTERM):
             signal.signal(sig, _win_handler)
     else:
@@ -981,7 +1059,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     cleanup.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Show what would change without writing.",
     )
     mark = subparsers.add_parser(
@@ -994,23 +1073,30 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     mark.add_argument(
-        "--sports", required=True,
+        "--sports",
+        required=True,
         help="Comma-separated sport keys (e.g. 'nba,wnba')",
     )
     mark.add_argument(
-        "--from", dest="from_iso", required=True,
+        "--from",
+        dest="from_iso",
+        required=True,
         help="Window start, ISO-8601, inclusive (naive = UTC)",
     )
     mark.add_argument(
-        "--until", dest="until_iso", required=True,
+        "--until",
+        dest="until_iso",
+        required=True,
         help="Window end, ISO-8601, exclusive (naive = UTC)",
     )
     mark.add_argument(
-        "--reason", required=True,
+        "--reason",
+        required=True,
         help="Slug stored in excluded_reason (e.g. 'basketball_3way_matchview_2026_06')",
     )
     mark.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Show per-table counts without writing.",
     )
     zombies = subparsers.add_parser(
@@ -1023,18 +1109,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     zombies.add_argument(
-        "--grace-days", type=int, default=3,
+        "--grace-days",
+        type=int,
+        default=3,
         help=(
             "Days past tipoff+backstop before a live game counts as a zombie "
             "(default 3 — the Odds API scores window)"
         ),
     )
     zombies.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Report what would be deleted without writing.",
     )
     zombies.add_argument(
-        "--include-scheduled", action="store_true",
+        "--include-scheduled",
+        action="store_true",
         help=(
             "Also delete dropped/postponed fixtures stuck status='scheduled' "
             "past the same tipoff + backstop + grace-days age rule (the Odds "
@@ -1051,21 +1141,34 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     betting_mode = betting.add_mutually_exclusive_group()
-    betting_mode.add_argument("--arm", action="store_true",
-                              help="Arm the engine (allow real placements).")
-    betting_mode.add_argument("--disarm", action="store_true",
-                              help="Disarm the engine (no further placements).")
     betting_mode.add_argument(
-        "--reconcile", dest="reconcile_id", type=int, metavar="PLACED_BET_ID",
+        "--arm", action="store_true", help="Arm the engine (allow real placements)."
+    )
+    betting_mode.add_argument(
+        "--disarm",
+        action="store_true",
+        help="Disarm the engine (no further placements).",
+    )
+    betting_mode.add_argument(
+        "--reconcile",
+        dest="reconcile_id",
+        type=int,
+        metavar="PLACED_BET_ID",
         help="Resolve one pending/unknown decision after checking Tipsport history.",
     )
     reconcile_outcome = betting.add_mutually_exclusive_group()
     reconcile_outcome.add_argument(
-        "--as-placed", dest="reconcile_as", action="store_const", const="placed",
+        "--as-placed",
+        dest="reconcile_as",
+        action="store_const",
+        const="placed",
         help="Confirm the wager exists (requires accepted odds and receipt id).",
     )
     reconcile_outcome.add_argument(
-        "--as-rejected", dest="reconcile_as", action="store_const", const="rejected",
+        "--as-rejected",
+        dest="reconcile_as",
+        action="store_const",
+        const="rejected",
         help="Confirm no wager exists (requires --reason).",
     )
     betting.add_argument("--accepted-odds", type=float)
@@ -1073,20 +1176,28 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     betting.add_argument(
         "--reason",
         help="Operator reconciliation evidence/note: REQUIRED with --as-rejected, "
-             "optional with --as-placed.",
+        "optional with --as-placed.",
     )
     audit = subparsers.add_parser(
         "audit-bookmakers",
         help="Per-bookmaker audit report: snapshot volumes, value bets, CLV stats, closing quality, coverage-gap proxy.",
     )
-    audit.add_argument("--bookmaker", default=None, help="Restrict to one bookmaker (e.g., 'tipsport')")
-    audit.add_argument("--since", default=None, help="YYYY-MM-DD; restrict the audit window")
-    audit.add_argument("--json", dest="as_json", action="store_true", help="Emit machine-readable JSON")
+    audit.add_argument(
+        "--bookmaker", default=None, help="Restrict to one bookmaker (e.g., 'tipsport')"
+    )
+    audit.add_argument(
+        "--since", default=None, help="YYYY-MM-DD; restrict the audit window"
+    )
+    audit.add_argument(
+        "--json", dest="as_json", action="store_true", help="Emit machine-readable JSON"
+    )
     smoke = subparsers.add_parser(
         "tipsport-smoke",
         help="Pre-flight: run TipsportScraper once outside the scheduler and print results. Does not write to the DB.",
     )
-    smoke.add_argument("--sport", default="nba", help="Sport key (nba|nhl|mlb|wnba|nfl)")
+    smoke.add_argument(
+        "--sport", default="nba", help="Sport key (nba|nhl|mlb|wnba|nfl)"
+    )
     dash = subparsers.add_parser(
         "dashboard",
         help=(
@@ -1094,10 +1205,10 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Reads oddsiq.db (WAL — concurrent readers OK) and tails logs/oddsiq.log."
         ),
     )
-    dash.add_argument("--host", default="127.0.0.1",
-                      help="Bind host (default 127.0.0.1)")
-    dash.add_argument("--port", type=int, default=8080,
-                      help="Bind port (default 8080)")
+    dash.add_argument(
+        "--host", default="127.0.0.1", help="Bind host (default 127.0.0.1)"
+    )
+    dash.add_argument("--port", type=int, default=8080, help="Bind port (default 8080)")
     return parser.parse_args(argv)
 
 
@@ -1106,39 +1217,62 @@ def main() -> None:
     if args.command == "cleanup-closing-flags":
         sys.exit(asyncio.run(cleanup_closing_flags(dry_run=args.dry_run)))
     if args.command == "mark-excluded":
-        sys.exit(asyncio.run(mark_excluded(
-            sports=args.sports, from_iso=args.from_iso,
-            until_iso=args.until_iso, reason=args.reason,
-            dry_run=args.dry_run,
-        )))
+        sys.exit(
+            asyncio.run(
+                mark_excluded(
+                    sports=args.sports,
+                    from_iso=args.from_iso,
+                    until_iso=args.until_iso,
+                    reason=args.reason,
+                    dry_run=args.dry_run,
+                )
+            )
+        )
     if args.command == "delete-zombie-games":
-        sys.exit(asyncio.run(delete_zombie_games(
-            grace_days=args.grace_days, dry_run=args.dry_run,
-            include_scheduled=args.include_scheduled,
-        )))
+        sys.exit(
+            asyncio.run(
+                delete_zombie_games(
+                    grace_days=args.grace_days,
+                    dry_run=args.dry_run,
+                    include_scheduled=args.include_scheduled,
+                )
+            )
+        )
     if args.command == "betting":
-        sys.exit(asyncio.run(betting_control(
-            arm=args.arm,
-            disarm=args.disarm,
-            reconcile_id=args.reconcile_id,
-            reconcile_as=args.reconcile_as,
-            accepted_odds=args.accepted_odds,
-            receipt_id=args.receipt_id,
-            reason=args.reason,
-        )))
+        sys.exit(
+            asyncio.run(
+                betting_control(
+                    arm=args.arm,
+                    disarm=args.disarm,
+                    reconcile_id=args.reconcile_id,
+                    reconcile_as=args.reconcile_as,
+                    accepted_odds=args.accepted_odds,
+                    receipt_id=args.receipt_id,
+                    reason=args.reason,
+                )
+            )
+        )
     if args.command == "audit-bookmakers":
-        sys.exit(asyncio.run(audit_bookmakers(
-            bookmaker=args.bookmaker, since=args.since, as_json=args.as_json,
-        )))
+        sys.exit(
+            asyncio.run(
+                audit_bookmakers(
+                    bookmaker=args.bookmaker,
+                    since=args.since,
+                    as_json=args.as_json,
+                )
+            )
+        )
     if args.command == "tipsport-smoke":
         sys.exit(asyncio.run(tipsport_smoke(sport=args.sport)))
     if args.command == "dashboard":
         from oddsiq.dashboard.server import run_dashboard
+
         setup_logging()
         if args.host != "127.0.0.1":
             logging.getLogger("oddsiq").warning(
                 "Dashboard binding to non-loopback host %s — no auth, only do this "
-                "if you know what you're doing.", args.host,
+                "if you know what you're doing.",
+                args.host,
             )
         sys.exit(run_dashboard(host=args.host, port=args.port))
     if args.check_budget:

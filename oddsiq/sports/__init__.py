@@ -12,6 +12,14 @@ from oddsiq.sports.profiles import (
 )
 
 __all__ = [
-    "SportProfile", "NBA", "NHL", "MLB", "WNBA", "NFL", "SPORTS",
-    "ENABLED_SPORTS", "get_profile", "enabled_profiles",
+    "SportProfile",
+    "NBA",
+    "NHL",
+    "MLB",
+    "WNBA",
+    "NFL",
+    "SPORTS",
+    "ENABLED_SPORTS",
+    "get_profile",
+    "enabled_profiles",
 ]

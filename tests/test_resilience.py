@@ -10,14 +10,17 @@ from oddsiq.pipeline.schedule_service import ScheduleService
 
 class _FakeSource:
     async def fetch_games(self, sport_key):
-        return [Game(
-            external_id=f"e-{sport_key}", home_team="Boston Celtics",
-            away_team="Los Angeles Lakers",
-            scheduled_at=datetime(2026, 6, 9, tzinfo=timezone.utc), sport="nba",
-        )]
+        return [
+            Game(
+                external_id=f"e-{sport_key}",
+                home_team="Boston Celtics",
+                away_team="Los Angeles Lakers",
+                scheduled_at=datetime(2026, 6, 9, tzinfo=timezone.utc),
+                sport="nba",
+            )
+        ]
 
-    async def close(self):
-        ...
+    async def close(self): ...
 
 
 class _FakeStore:
@@ -33,14 +36,15 @@ class _FakeStore:
 
 
 class _FakeSettlement:
-    async def recover_finalized_game(self, game):
-        ...
+    async def recover_finalized_game(self, game): ...
 
 
 @pytest.mark.asyncio
 async def test_refresh_prunes_handled_live_to_slate():
     svc = ScheduleService(
-        schedule_source=_FakeSource(), store=_FakeStore(), settlement=_FakeSettlement(),
+        schedule_source=_FakeSource(),
+        store=_FakeStore(),
+        settlement=_FakeSettlement(),
     )
     svc._handled_live = {1, 2, 999}  # 999 is not in the new slate
     await svc.refresh()

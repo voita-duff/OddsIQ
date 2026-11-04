@@ -37,6 +37,7 @@ Checks:
      never reads, or at a name no longer in DELETED_IDENTIFIERS — it fails
      the audit until deleted.
 """
+
 from __future__ import annotations
 
 import re
@@ -75,9 +76,9 @@ def strip_code(text: str) -> str:
 
 # --- 1. Wikilinks -----------------------------------------------------------
 
-    # Match Obsidian wikilinks. Pipe alias accepts both `|` (Obsidian default)
-    # and `\|` (escaped form used inside markdown tables, where `|` is the
-    # column delimiter). Section anchors (`#X`) are normalized away.
+# Match Obsidian wikilinks. Pipe alias accepts both `|` (Obsidian default)
+# and `\|` (escaped form used inside markdown tables, where `|` is the
+# column delimiter). Section anchors (`#X`) are normalized away.
 WIKILINK_RE = re.compile(
     r"\[\[(?P<target>[^\]|#\\]+)(?:#[^\]|\\]+)?(?:\\?\|[^\]]+)?\]\]"
 )
@@ -214,37 +215,76 @@ BANNED_PATTERNS: list[tuple[re.Pattern[str], str]] = [
     # Stale test counts
     (re.compile(r"~166 tests"), "stale test count (~166)"),
     (re.compile(r"\b138 tests\b"), "stale test count (138)"),
-    (re.compile(r"\b14 test files\b"), "stale file count (14; run pytest --collect-only -q for the current number)"),
+    (
+        re.compile(r"\b14 test files\b"),
+        "stale file count (14; run pytest --collect-only -q for the current number)",
+    ),
     # Tipsport per-game wording (actually per-cycle)
     (re.compile(r"3 POSTs? per game"), "Tipsport is per-cycle, not per-game"),
     (re.compile(r"POST requests? per game"), "Tipsport is per-cycle, not per-game"),
     # Dead wikilinks (notes that were never written)
-    (re.compile(r"\[\[Decision Framework\]\]"), "Decision Framework note doesn't exist; use HANDBOOK § CLV gating"),
-    (re.compile(r"\[\[Bankroll Management\]\]"), "Bankroll Management note doesn't exist"),
-    (re.compile(r"\[\[Open Questions(?:#[^\]]*)?\]\]"), "Open Questions note doesn't exist"),
+    (
+        re.compile(r"\[\[Decision Framework\]\]"),
+        "Decision Framework note doesn't exist; use HANDBOOK § CLV gating",
+    ),
+    (
+        re.compile(r"\[\[Bankroll Management\]\]"),
+        "Bankroll Management note doesn't exist",
+    ),
+    (
+        re.compile(r"\[\[Open Questions(?:#[^\]]*)?\]\]"),
+        "Open Questions note doesn't exist",
+    ),
     # Deleted top-level docs
     (re.compile(r"docs/ROADMAP\.md"), "docs/ROADMAP.md was deleted"),
     (re.compile(r"docs/VALIDATION\.md"), "docs/VALIDATION.md was deleted"),
     # ForFuture rename
-    (re.compile(r"docs/ForFuture - 1\. Markets\.md"), "renamed to docs/Decisions/Markets.md"),
+    (
+        re.compile(r"docs/ForFuture - 1\. Markets\.md"),
+        "renamed to docs/Decisions/Markets.md",
+    ),
     # Pre-migration bootstrap claims
-    (re.compile(r"CREATE TABLE IF NOT EXISTS for all tables"), "tables come from migrations now"),
+    (
+        re.compile(r"CREATE TABLE IF NOT EXISTS for all tables"),
+        "tables come from migrations now",
+    ),
     # Basketball matchView (corrected 2026-06-12): only MLB uses WHOLE_MATCH
-    (re.compile(r"NBA and MLB use `?WINNER_WHOLE_MATCH"), "NBA/WNBA use WINNER_FINAL_DECISION since 2026-06-12; only MLB rides WHOLE_MATCH"),
+    (
+        re.compile(r"NBA and MLB use `?WINNER_WHOLE_MATCH"),
+        "NBA/WNBA use WINNER_FINAL_DECISION since 2026-06-12; only MLB rides WHOLE_MATCH",
+    ),
     # Old shutdown terminology
     (re.compile(r"_running\s*=\s*False"), "shutdown uses scheduler.stop() now"),
     # Legacy 200-bet manual gate (specific framing)
-    (re.compile(r"200 manually placed bets with proven positive CLV"), "legacy 200-bet gate is dead under evaluation mode"),
+    (
+        re.compile(r"200 manually placed bets with proven positive CLV"),
+        "legacy 200-bet gate is dead under evaluation mode",
+    ),
     # Tier 2/3 hidden internals — `_opposite()` wrapper that doesn't exist
-    (re.compile(r"\b_opposite\(\)"), "function is `_opposite_selection()` not `_opposite()`"),
+    (
+        re.compile(r"\b_opposite\(\)"),
+        "function is `_opposite_selection()` not `_opposite()`",
+    ),
     # Multi-book + post-Phase-1 drift (added by the 2026-05-31 vault refresh)
     (re.compile(r"[Tt]hree migrations"), "seven migrations have shipped (000-006)"),
-    (re.compile(r"only runs during the hot tier"), "edge detection runs in warm AND hot tiers (<=2h)"),
-    (re.compile(r"\bthree tables\b"), "DB has 6 tables (games, odds_snapshots, value_bets, placed_bets, meta, schema_version)"),
+    (
+        re.compile(r"only runs during the hot tier"),
+        "edge detection runs in warm AND hot tiers (<=2h)",
+    ),
+    (
+        re.compile(r"\bthree tables\b"),
+        "DB has 6 tables (games, odds_snapshots, value_bets, placed_bets, meta, schema_version)",
+    ),
     # ("eight subcommand" ban removed 2026-07-10: delete-zombie-games made
     # eight named subcommands true again)
-    (re.compile(r"\b(six|seven) (named )?subcommands\b"), "CLI has 8 named subcommands since delete-zombie-games (2026-07-10)"),
-    (re.compile(r"Once, on entry"), "warm-tier Pinnacle is polled every cycle, not once-on-entry"),
+    (
+        re.compile(r"\b(six|seven) (named )?subcommands\b"),
+        "CLI has 8 named subcommands since delete-zombie-games (2026-07-10)",
+    ),
+    (
+        re.compile(r"Once, on entry"),
+        "warm-tier Pinnacle is polled every cycle, not once-on-entry",
+    ),
     (re.compile(r"\./raw_responses"), "RAW_DATA_DIR default is ./data/raw"),
     (re.compile(r"Desktop/OddsIQ"), "repo root is ~/dev/OddsIQ, not ~/Desktop/OddsIQ"),
 ]
@@ -284,16 +324,34 @@ DELETED_IDENTIFIERS: list[tuple[str, str]] = [
     # 2026-08-10 Telegram rebrand: the phone carries real-money events only.
     ("format_value_bet", "deleted 2026-08-10; detections are log-only (`value_bet:`)"),
     ("format_clv", "deleted 2026-08-10; CLV is log-only (`clv:`) + dashboard"),
-    ("format_session_summary", "deleted 2026-08-10; the summary is console-only via Scheduler.print_summary()"),
+    (
+        "format_session_summary",
+        "deleted 2026-08-10; the summary is console-only via Scheduler.print_summary()",
+    ),
     ("format_coverage_gap", "deleted 2026-08-10; coverage gaps are a WARNING log"),
-    ("format_health_ping", "deleted 2026-08-10; liveness is the HEARTBEAT_PING_URL dead-man ping"),
+    (
+        "format_health_ping",
+        "deleted 2026-08-10; liveness is the HEARTBEAT_PING_URL dead-man ping",
+    ),
     # Deleted 2026-08-10 with the rebrand (e5270bd), ahead of the 2026-08-27
     # removal of the live-edge subsystem it reported on.
-    ("format_live_edge", "deleted 2026-08-10; the live-edge subsystem it alerted for was removed 2026-08-27"),
-    ("TELEGRAM_HEARTBEAT_ENABLED", "removed 2026-08-10; superseded by the HEARTBEAT_PING_URL dead-man ping"),
-    ("TELEGRAM_HEARTBEAT_INTERVAL_MINUTES", "removed 2026-08-10 with the Telegram health ping; the dead-man ping rides SCHEDULER_HEARTBEAT_SECONDS"),
+    (
+        "format_live_edge",
+        "deleted 2026-08-10; the live-edge subsystem it alerted for was removed 2026-08-27",
+    ),
+    (
+        "TELEGRAM_HEARTBEAT_ENABLED",
+        "removed 2026-08-10; superseded by the HEARTBEAT_PING_URL dead-man ping",
+    ),
+    (
+        "TELEGRAM_HEARTBEAT_INTERVAL_MINUTES",
+        "removed 2026-08-10 with the Telegram health ping; the dead-man ping rides SCHEDULER_HEARTBEAT_SECONDS",
+    ),
     # 2026-08-27 live-edge removal: migration 011 dropped live_edge_candidates.
-    ("resolve_live_candidate_results", "deleted 2026-08-27 with the live-edge subsystem; only resolve_bet_result() survives"),
+    (
+        "resolve_live_candidate_results",
+        "deleted 2026-08-27 with the live-edge subsystem; only resolve_bet_result() survives",
+    ),
 ]
 
 # Root-level files scanned for deleted identifiers on top of the active docs
@@ -320,7 +378,9 @@ DELETED_IDENTIFIER_EXEMPTIONS: dict[str, set[str]] = {
     # store function that carried the draw branch. The subsystem died 2026-08-27
     # but the post-mortem is a dated record of what was fixed, not a live claim —
     # post-mortems are never rewritten.
-    "docs/Known Issues/Fixed - Moneyline Tie Not Handled.md": {"resolve_live_candidate_results"},
+    "docs/Known Issues/Fixed - Moneyline Tie Not Handled.md": {
+        "resolve_live_candidate_results"
+    },
 }
 
 
@@ -358,7 +418,9 @@ def check_stale_exemptions(active: list[Path]) -> list[str]:
     the reader has to edit.
     """
     issues: list[str] = []
-    scanned = {p.relative_to(ROOT).as_posix() for p in deleted_identifier_scan_set(active)}
+    scanned = {
+        p.relative_to(ROOT).as_posix() for p in deleted_identifier_scan_set(active)
+    }
     known = {name for name, _ in DELETED_IDENTIFIERS}
     for rel, names in sorted(DELETED_IDENTIFIER_EXEMPTIONS.items()):
         path = ROOT / rel
@@ -403,7 +465,9 @@ def check_deleted_identifiers(active: list[Path]) -> list[str]:
             if m is None:
                 continue
             line_no = text[: m.start()].count("\n") + 1
-            issues.append(f"{rel}:{line_no}: '{name}' no longer exists in oddsiq/ — {msg}")
+            issues.append(
+                f"{rel}:{line_no}: '{name}' no longer exists in oddsiq/ — {msg}"
+            )
     issues.extend(check_stale_exemptions(active))
     return issues
 
@@ -422,9 +486,13 @@ def main() -> int:
     # active docs, so the banner would otherwise undercount what was scanned.
     extra = len(deleted_identifier_scan_set(active)) - len(active)
     extra_note = (
-        f" (+ {extra} root file{'s' if extra != 1 else ''} for deleted identifiers)" if extra else ""
+        f" (+ {extra} root file{'s' if extra != 1 else ''} for deleted identifiers)"
+        if extra
+        else ""
     )
-    print(f"Auditing {len(active)} active docs (excluding {sorted(SKIP_DIRS)}){extra_note}...\n")
+    print(
+        f"Auditing {len(active)} active docs (excluding {sorted(SKIP_DIRS)}){extra_note}...\n"
+    )
 
     sections: list[tuple[str, Callable[[list[Path]], list[str]]]] = [
         ("Wikilink resolution", check_wikilinks),

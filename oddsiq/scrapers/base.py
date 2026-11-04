@@ -52,12 +52,10 @@ def prune_raw_responses(root: Path, keep_days: int) -> None:
 class BaseScraper(ABC):
     @property
     @abstractmethod
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @abstractmethod
-    async def fetch_odds(self, game_date: date, profile) -> list[OddsSnapshot]:
-        ...
+    async def fetch_odds(self, game_date: date, profile) -> list[OddsSnapshot]: ...
 
     async def close(self) -> None:
         pass

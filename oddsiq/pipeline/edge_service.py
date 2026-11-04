@@ -7,6 +7,7 @@ never alerted — since the 2026-08-10 rebrand only real-money events notify.
 moneyline-only in practice.) Extracted from the old monolithic scheduler's
 pregame poll block.
 """
+
 from __future__ import annotations
 
 import logging
@@ -48,7 +49,10 @@ class EdgeService:
         self._betting = betting
 
     async def detect_pregame_edges(
-        self, game: Game, game_snapshots: dict[str, list[OddsSnapshot]], tier: str,
+        self,
+        game: Game,
+        game_snapshots: dict[str, list[OddsSnapshot]],
+        tier: str,
     ) -> list[PendingBet]:
         """For a pregame game with Pinnacle present, flag +EV soft-book lines,
         stamp them with the given polling tier (opaque to this service), and
@@ -104,8 +108,15 @@ class EdgeService:
                     logger.info(
                         "value_bet_suspect: bookmaker=%s game_id=%d market=%s selection=%s "
                         "edge_pct=%.2f entry_odds=%.2f fair_odds=%.2f tier=%s reason=%s",
-                        vb.bookmaker, game.id, vb.market_type, vb.selection,
-                        vb.edge_pct, vb.entry_odds, vb.fair_odds, vb.tier, vb.excluded_reason,
+                        vb.bookmaker,
+                        game.id,
+                        vb.market_type,
+                        vb.selection,
+                        vb.edge_pct,
+                        vb.entry_odds,
+                        vb.fair_odds,
+                        vb.tier,
+                        vb.excluded_reason,
                     )
                     continue
 
@@ -126,21 +137,29 @@ class EdgeService:
                 logger.info(
                     "value_bet: bookmaker=%s game_id=%d market=%s selection=%s line=%s "
                     "edge_pct=%.2f entry_odds=%.2f fair_odds=%.2f tier=%s",
-                    vb.bookmaker, game.id, vb.market_type, vb.selection,
+                    vb.bookmaker,
+                    game.id,
+                    vb.market_type,
+                    vb.selection,
                     "" if vb.line is None else f"{vb.line}",
-                    vb.edge_pct, vb.entry_odds, vb.fair_odds, vb.tier,
+                    vb.edge_pct,
+                    vb.entry_odds,
+                    vb.fair_odds,
+                    vb.tier,
                 )
                 # Detections are recorded + logged but no longer alerted to the
                 # phone (2026-08-10 rebrand — only real placed/won/lost notify).
                 # Auto-betting: every clean bet becomes a pending bet; the
                 # coordinator dispatches the cycle's pending bets afterwards
                 # (see dispatch_pending). Suspect bets exited above.
-                pending.append(PendingBet(
-                    game,
-                    vb,
-                    edge_info["sharp_observed_at"],
-                    edge_info["sharp_source_updated_at"],
-                ))
+                pending.append(
+                    PendingBet(
+                        game,
+                        vb,
+                        edge_info["sharp_observed_at"],
+                        edge_info["sharp_source_updated_at"],
+                    )
+                )
         return pending
 
     async def dispatch_pending(self, pending: list[PendingBet]) -> None:
@@ -167,7 +186,10 @@ class EdgeService:
                 # rest of a kickoff wave with it. (CancelledError is a
                 # BaseException and still propagates — shutdown aborts the wave.)
                 logger.exception(
-                    "bet_dispatch_failed: value_bet_id=%s game_id=%s", pb.vb.id, pb.game.id)
+                    "bet_dispatch_failed: value_bet_id=%s game_id=%s",
+                    pb.vb.id,
+                    pb.game.id,
+                )
 
     def _print_value_bet(self, game: Game, vb: ValueBet, suspect: bool = False) -> None:
         now = console_timestamp()
@@ -237,7 +259,9 @@ def _suspect_reason(edge_info: dict, book_odds: list[OddsSnapshot]) -> str | Non
     )
     if floor > 0 or require_complete:
         implied_sum = _book_two_way_implied_sum(
-            book_odds, edge_info["market_type"], edge_info["line"],
+            book_odds,
+            edge_info["market_type"],
+            edge_info["line"],
             tipsport_match_id=edge_info.get("tipsport_match_id"),
         )
         if implied_sum is None and require_complete:
@@ -248,8 +272,11 @@ def _suspect_reason(edge_info: dict, book_odds: list[OddsSnapshot]) -> str | Non
 
 
 def _book_two_way_implied_sum(
-    book_odds: list[OddsSnapshot], market_type: str, line: float | None,
-    *, tipsport_match_id: int | None = None,
+    book_odds: list[OddsSnapshot],
+    market_type: str,
+    line: float | None,
+    *,
+    tipsport_match_id: int | None = None,
 ) -> float | None:
     """Sum of 1/odds over the soft book's two sides of one market, or None
     when both sides aren't present. Lines are matched by abs() like
@@ -265,10 +292,17 @@ def _book_two_way_implied_sum(
     norm_line = abs(line) if line is not None else None
     seen: dict[str, float] = {}
     for snap in book_odds:
-        if tipsport_match_id is not None and snap._tipsport_match_id != tipsport_match_id:
+        if (
+            tipsport_match_id is not None
+            and snap._tipsport_match_id != tipsport_match_id
+        ):
             continue
         snap_line = abs(snap.line) if snap.line is not None else None
-        if snap.market_type == market_type and snap_line == norm_line and snap.selection in sides:
+        if (
+            snap.market_type == market_type
+            and snap_line == norm_line
+            and snap.selection in sides
+        ):
             seen[snap.selection] = snap.odds
     if len(seen) != 2:
         return None

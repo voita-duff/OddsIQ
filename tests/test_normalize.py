@@ -3,7 +3,9 @@ from oddsiq.scrapers.normalize import normalize_team
 
 
 def test_canonical_name_passthrough():
-    assert normalize_team("Los Angeles Lakers", "pinnacle", "nba") == "Los Angeles Lakers"
+    assert (
+        normalize_team("Los Angeles Lakers", "pinnacle", "nba") == "Los Angeles Lakers"
+    )
 
 
 def test_tipsport_alias_mapping_nba():
@@ -12,7 +14,9 @@ def test_tipsport_alias_mapping_nba():
 
 
 def test_fuzzy_match_fallback():
-    assert normalize_team("Los Angelees Lakers", "tipsport", "nba") == "Los Angeles Lakers"
+    assert (
+        normalize_team("Los Angelees Lakers", "tipsport", "nba") == "Los Angeles Lakers"
+    )
 
 
 def test_unknown_team_returns_none():
@@ -40,7 +44,10 @@ def test_unknown_name_still_logs_error(caplog):
 def test_tipsport_z_suffix_alias_mapping_wnba():
     # Tipsport suffixes women's teams with " Ž" (recon 2026-06-11).
     assert normalize_team("Indiana Fever Ž", "tipsport", "wnba") == "Indiana Fever"
-    assert normalize_team("Golden State Valkyries Ž", "tipsport", "wnba") == "Golden State Valkyries"
+    assert (
+        normalize_team("Golden State Valkyries Ž", "tipsport", "wnba")
+        == "Golden State Valkyries"
+    )
 
 
 def test_canonical_name_passthrough_wnba():
@@ -50,9 +57,17 @@ def test_canonical_name_passthrough_wnba():
 def test_canonical_name_passthrough_nfl():
     # Tipsport NFL labels match the Odds API canonicals (futures recon
     # 2026-08-25) — no aliases; exact passthrough must hold.
-    assert normalize_team("Kansas City Chiefs", "tipsport", "nfl") == "Kansas City Chiefs"
-    assert normalize_team("San Francisco 49ers", "tipsport", "nfl") == "San Francisco 49ers"
-    assert normalize_team("Washington Commanders", "pinnacle", "nfl") == "Washington Commanders"
+    assert (
+        normalize_team("Kansas City Chiefs", "tipsport", "nfl") == "Kansas City Chiefs"
+    )
+    assert (
+        normalize_team("San Francisco 49ers", "tipsport", "nfl")
+        == "San Francisco 49ers"
+    )
+    assert (
+        normalize_team("Washington Commanders", "pinnacle", "nfl")
+        == "Washington Commanders"
+    )
 
 
 def test_ambiguous_same_city_match_returns_none(caplog):

@@ -77,18 +77,20 @@ def test_runtime_slip_counter_counts_distinct_legs(selector_page):
 
 
 def test_runtime_stake_readback_normalizes_czech_number(selector_page):
-    selector_page.evaluate("document.querySelector('[data-atid=txtAmountPaid]').value = '1 234,5'")
+    selector_page.evaluate(
+        "document.querySelector('[data-atid=txtAmountPaid]').value = '1 234,5'"
+    )
     assert selector_page.evaluate("window.__ots.stakeAmount()") == 1234.5
 
 
 @pytest.mark.parametrize(
     ("field", "amount"),
     [
-        ("10 Kč", None),   # a currency suffix is NOT a number -> unreadable
-        ("", None),        # empty is unreadable, NOT Number("") == 0
-        ("   ", None),     # whitespace collapses to empty, same rule
+        ("10 Kč", None),  # a currency suffix is NOT a number -> unreadable
+        ("", None),  # empty is unreadable, NOT Number("") == 0
+        ("   ", None),  # whitespace collapses to empty, same rule
         ("abc", None),
-        ("10,50", 10.5),   # Czech decimal comma
+        ("10,50", 10.5),  # Czech decimal comma
         ("10", 10),
     ],
 )
@@ -99,19 +101,24 @@ def test_runtime_stake_reader_fails_closed(selector_page, field, amount):
     returns the field verbatim so the refusal says WHICH unreadable form it
     was."""
     selector_page.evaluate(
-        "(v) => { document.querySelector('[data-atid=txtAmountPaid]').value = v; }", field
+        "(v) => { document.querySelector('[data-atid=txtAmountPaid]').value = v; }",
+        field,
     )
     assert selector_page.evaluate("window.__ots.stakeAmount()") == amount
     assert selector_page.evaluate("window.__ots.stakeRaw()") == field
 
 
 def test_runtime_stake_raw_is_null_without_the_input(selector_page):
-    selector_page.evaluate("document.querySelector('[data-atid=txtAmountPaid]').remove()")
+    selector_page.evaluate(
+        "document.querySelector('[data-atid=txtAmountPaid]').remove()"
+    )
     assert selector_page.evaluate("window.__ots.stakeRaw()") is None
     assert selector_page.evaluate("window.__ots.stakeAmount()") is None
 
 
-def test_runtime_login_probe_needs_the_session_timer_not_avatars(browser, selector_page):
+def test_runtime_login_probe_needs_the_session_timer_not_avatars(
+    browser, selector_page
+):
     """The 2026-09-09 incident: /kurzy shows a feed of other users' avatars,
     so `[data-atid=profile-avatar]` is present while logged OUT. loggedIn()
     must ignore avatars entirely and key on the session timer alone."""
@@ -123,8 +130,10 @@ def test_runtime_login_probe_needs_the_session_timer_not_avatars(browser, select
             f'<div class="tip"><img data-atid="profile-avatar" alt="u{i}"><span>tip {i}</span></div>'
             for i in range(20)
         )
-        page.set_content(f"<header id='hdr'><span>Čas:&nbsp;<span>12:55:36</span></span>"
-                         f"<button>Přihlásit</button></header><section id='feed'>{feed}</section>")
+        page.set_content(
+            f"<header id='hdr'><span>Čas:&nbsp;<span>12:55:36</span></span>"
+            f"<button>Přihlásit</button></header><section id='feed'>{feed}</section>"
+        )
         page.add_script_tag(path=SELECTORS)
         assert page.evaluate("window.__ots.loggedIn()") is False
         markers = page.evaluate("window.__ots.loginMarkers()")
@@ -149,7 +158,8 @@ def test_runtime_session_refresh_retries_after_busy_tab(browser):
     # APIs are stubs; no socket, navigation, credentials, or placement is used.
     page = browser.new_page()
     try:
-        result = page.evaluate(r"""source => {
+        result = page.evaluate(
+            r"""source => {
                 let alarm;
                 const chrome = {
                     alarms: { get: (_, cb) => cb({periodInMinutes: 60}),
@@ -184,7 +194,9 @@ def test_runtime_session_refresh_retries_after_busy_tab(browser):
                         return {counts, probes, due: sessionRefreshDue};
                     })()
                 `);
-        }""", source)
+        }""",
+            source,
+        )
         assert result == {"counts": [0, 1, 1, 2], "probes": 2, "due": False}
     finally:
         page.close()
@@ -209,11 +221,18 @@ def test_runtime_click_point_scrolls_a_below_fold_control_into_view(browser):
         assert page.evaluate("window.scrollY") == 0
         found = page.evaluate("!!window.__ots.findOddButton('2681257493')")
         assert found is True
-        pt = page.evaluate("window.__ots.clickPoint(window.__ots.findOddButton('2681257493'))")
+        pt = page.evaluate(
+            "window.__ots.clickPoint(window.__ots.findOddButton('2681257493'))"
+        )
         assert pt is not None and 0 <= pt["y"] < 600 and 0 <= pt["x"] < 1280, pt
         assert page.evaluate("window.scrollY") > 2000
         # unsized / hidden -> never a click point; missing element -> null, no throw
-        assert page.evaluate("window.__ots.clickPoint(document.querectorAll ? null : document.querySelector('[data-atid^=\"content||ODD||777||\"]'))") is None
+        assert (
+            page.evaluate(
+                "window.__ots.clickPoint(document.querectorAll ? null : document.querySelector('[data-atid^=\"content||ODD||777||\"]'))"
+            )
+            is None
+        )
         assert page.evaluate("window.__ots.clickPoint(null)") is None
         diag = page.evaluate("window.__ots.oddDiagnostics('2681257493')")
         assert diag["nodes"] == 1 and diag["rects"][0]["h"] == 27, diag

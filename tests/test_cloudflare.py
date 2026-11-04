@@ -89,7 +89,9 @@ async def test_session_post_uses_page_evaluate():
         ],
     ]
     api_response = {"offerSuperSports": []}
-    factory, browser, page = _make_fake_playwright(cookies_poll, page_eval_result=api_response)
+    factory, browser, page = _make_fake_playwright(
+        cookies_poll, page_eval_result=api_response
+    )
 
     with patch("oddsiq.scrapers.cloudflare.async_playwright", factory):
         session = CloudflareSession("https://example.com", timeout=5.0)
@@ -131,7 +133,9 @@ async def test_post_raises_on_error_response():
         ],
     ]
     error_result = {"__error": True, "status": 403}
-    factory, browser, _ = _make_fake_playwright(cookies_poll, page_eval_result=error_result)
+    factory, browser, _ = _make_fake_playwright(
+        cookies_poll, page_eval_result=error_result
+    )
 
     with patch("oddsiq.scrapers.cloudflare.async_playwright", factory):
         session = CloudflareSession("https://example.com", timeout=5.0)

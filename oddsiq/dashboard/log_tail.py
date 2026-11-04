@@ -34,12 +34,13 @@ _TIMESTAMP_FMT = "%Y-%m-%d %H:%M:%S %z"
 @dataclass(frozen=True)
 class Heartbeat:
     """Parsed fields from a scheduler ``heartbeat:`` log line."""
+
     timestamp: datetime
     state: str
     games_tracked: int
     seconds_since_last_poll: int
     budget_throttle: int | None = None
-    betting: str | None = None   # off | disconnected | disarmed | armed (Phase 1+)
+    betting: str | None = None  # off | disconnected | disarmed | armed (Phase 1+)
 
 
 def tail_lines(path: Path, n: int) -> list[str]:
@@ -93,6 +94,7 @@ def latest_heartbeat(path: Path) -> Heartbeat | None:
 @dataclass(frozen=True)
 class ScraperHealth:
     """Parsed fields from a scheduler ``Scraper health:`` log line."""
+
     timestamp: datetime
     name: str
     duration_ms: int
@@ -206,6 +208,7 @@ class LogEvent:
     the body. Quoted values are unquoted so team names such as
     ``away="Miami Heat"`` survive as ``Miami Heat``.
     """
+
     timestamp: datetime
     level: str
     event_type: str
@@ -229,13 +232,19 @@ def _parse_kv_value(raw: str) -> str:
         return parsed if isinstance(parsed, str) else str(parsed)
     return raw
 
+
 # Prefixes recognised by the activity-feed parser. Order matters for
 # longest-match-first (e.g. ``value_bet_suspect:`` before ``value_bet:``).
 _EVENT_PREFIXES: tuple[str, ...] = (
-    "value_bet_suspect:", "value_bet:", "clv:", "result:",
-    "game_live:", "game_final:",
+    "value_bet_suspect:",
+    "value_bet:",
+    "clv:",
+    "result:",
+    "game_live:",
+    "game_final:",
     "heartbeat:",
-    "Scraper health:", "Coverage gap:",
+    "Scraper health:",
+    "Coverage gap:",
 )
 
 
@@ -259,15 +268,17 @@ def parse_event_lines(path: Path, *, n: int = 200) -> list[LogEvent]:
         if prefix is None:
             continue
         event_type = prefix.rstrip(":").lower().replace(" ", "_")
-        body = rest[len(prefix):].strip()
+        body = rest[len(prefix) :].strip()
         fields = {key: _parse_kv_value(value) for key, value in _KV_RE.findall(body)}
-        out.append(LogEvent(
-            timestamp=datetime.strptime(match.group("ts"), _TIMESTAMP_FMT),
-            level=match.group("level"),
-            event_type=event_type,
-            fields=fields,
-            raw=line,
-        ))
+        out.append(
+            LogEvent(
+                timestamp=datetime.strptime(match.group("ts"), _TIMESTAMP_FMT),
+                level=match.group("level"),
+                event_type=event_type,
+                fields=fields,
+                raw=line,
+            )
+        )
     return out
 
 
@@ -280,6 +291,7 @@ class BridgeState:
     object — it reconstructs the extension's state from the bridge's own
     log lines instead (connected / status / disconnected / supersede).
     """
+
     last_connected: datetime | None = None
     version: str | None = None
     logged_in: bool | None = None

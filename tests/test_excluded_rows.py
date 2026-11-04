@@ -50,26 +50,38 @@ async def store(tmp_path: Path):
 
 
 async def _seed_game(store: Store, *, external_id: str, sport: str) -> int:
-    return await store.upsert_game(Game(
-        external_id=external_id,
-        home_team="Home Team",
-        away_team="Away Team",
-        scheduled_at=_utc(2026, 6, 9, 0, 44),
-        status="final",
-        home_score=111,
-        away_score=115,
-        sport=sport,
-    ))
+    return await store.upsert_game(
+        Game(
+            external_id=external_id,
+            home_team="Home Team",
+            away_team="Away Team",
+            scheduled_at=_utc(2026, 6, 9, 0, 44),
+            status="final",
+            home_score=111,
+            away_score=115,
+            sport=sport,
+        )
+    )
 
 
 async def _seed_vb(
-    store: Store, game_id: int, *, sport: str, flagged_at: datetime,
+    store: Store,
+    game_id: int,
+    *,
+    sport: str,
+    flagged_at: datetime,
     edge_pct: float = 3.0,
 ) -> int:
     vb = ValueBet(
-        game_id=game_id, bookmaker="tipsport", market_type="moneyline",
-        selection="away", entry_odds=2.12, fair_odds=2.06, edge_pct=edge_pct,
-        tier="hot", sport=sport,
+        game_id=game_id,
+        bookmaker="tipsport",
+        market_type="moneyline",
+        selection="away",
+        entry_odds=2.12,
+        fair_odds=2.06,
+        edge_pct=edge_pct,
+        tier="hot",
+        sport=sport,
     )
     vb.flagged_at = flagged_at
     return await store.insert_value_bet(vb)
@@ -89,13 +101,22 @@ async def test_mark_rows_excluded_stamps_only_matching_sport_and_window(store):
     g_nba_post = await _seed_game(store, external_id="nba-post", sport="nba")
     g_mlb = await _seed_game(store, external_id="mlb-in", sport="mlb")
 
-    vb_in = await _seed_vb(store, g_nba_in, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
+    vb_in = await _seed_vb(
+        store, g_nba_in, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34)
+    )
     vb_old = await _seed_vb(store, g_nba_old, sport="nba", flagged_at=_utc(2026, 5, 20))
-    vb_post = await _seed_vb(store, g_nba_post, sport="nba", flagged_at=_utc(2026, 6, 12, 1, 0))
-    vb_mlb = await _seed_vb(store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34))
+    vb_post = await _seed_vb(
+        store, g_nba_post, sport="nba", flagged_at=_utc(2026, 6, 12, 1, 0)
+    )
+    vb_mlb = await _seed_vb(
+        store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34)
+    )
 
     counts = await store.mark_rows_excluded(
-        sports=["nba", "wnba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba", "wnba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
     assert counts == {"value_bets": 1}
 
@@ -111,7 +132,10 @@ async def test_mark_rows_excluded_dry_run_counts_without_writing(store):
     vb = await _seed_vb(store, g, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
 
     counts = await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
         dry_run=True,
     )
     assert counts == {"value_bets": 1}
@@ -124,11 +148,17 @@ async def test_mark_rows_excluded_skips_already_excluded_rows(store):
     await _seed_vb(store, g, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
 
     first = await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
     assert first == {"value_bets": 1}
     second = await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
     assert second == {"value_bets": 0}
 
@@ -143,7 +173,10 @@ async def test_dashboard_value_bet_aggregates_omit_excluded(store):
     await _seed_vb(store, g_nba, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
     await _seed_vb(store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34))
     await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
 
     big = await queries.big_numbers(store)
@@ -160,7 +193,10 @@ async def test_dashboard_recent_lists_omit_excluded(store):
     await _seed_vb(store, g_nba, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
     await _seed_vb(store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34))
     await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
 
     bets = await queries.recent_value_bets(store)
@@ -174,7 +210,10 @@ async def test_dashboard_activity_feed_omits_excluded(store):
     await _seed_vb(store, g_nba, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
     await _seed_vb(store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34))
     await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
 
     events = await queries.recent_db_events(store, limit=10)
@@ -192,7 +231,10 @@ async def test_audit_value_bets_section_omits_excluded(store):
     await _seed_vb(store, g_nba, sport="nba", flagged_at=_utc(2026, 6, 9, 0, 34))
     await _seed_vb(store, g_mlb, sport="mlb", flagged_at=_utc(2026, 6, 9, 0, 34))
     await store.mark_rows_excluded(
-        sports=["nba"], from_iso=FROM_ISO, until_iso=UNTIL_ISO, reason=REASON,
+        sports=["nba"],
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
     )
 
     audit = await bookmakers.run_audit(store)
@@ -236,8 +278,11 @@ async def test_cli_mark_excluded_stamps_rows(tmp_path, monkeypatch):
     vb = await _seed_minimal_contaminated_db(db_path)
 
     code = await cli.mark_excluded(
-        sports="nba,wnba", from_iso=FROM_ISO, until_iso=UNTIL_ISO,
-        reason=REASON, dry_run=False,
+        sports="nba,wnba",
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
+        dry_run=False,
     )
     assert code == 0
     assert _reason_via_sqlite(db_path, "value_bets", vb) == REASON
@@ -252,8 +297,11 @@ async def test_cli_mark_excluded_dry_run_writes_nothing(tmp_path, monkeypatch):
     vb = await _seed_minimal_contaminated_db(db_path)
 
     code = await cli.mark_excluded(
-        sports="nba,wnba", from_iso=FROM_ISO, until_iso=UNTIL_ISO,
-        reason=REASON, dry_run=True,
+        sports="nba,wnba",
+        from_iso=FROM_ISO,
+        until_iso=UNTIL_ISO,
+        reason=REASON,
+        dry_run=True,
     )
     assert code == 0
     assert _reason_via_sqlite(db_path, "value_bets", vb) is None
@@ -268,8 +316,11 @@ async def test_cli_mark_excluded_rejects_inverted_window(tmp_path, monkeypatch):
     vb = await _seed_minimal_contaminated_db(db_path)
 
     code = await cli.mark_excluded(
-        sports="nba", from_iso=UNTIL_ISO, until_iso=FROM_ISO,
-        reason=REASON, dry_run=False,
+        sports="nba",
+        from_iso=UNTIL_ISO,
+        until_iso=FROM_ISO,
+        reason=REASON,
+        dry_run=False,
     )
     assert code == 1
     assert _reason_via_sqlite(db_path, "value_bets", vb) is None

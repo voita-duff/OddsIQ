@@ -55,5 +55,3 @@ def test_value_bet_creation():
     assert vb.closing_odds is None
     assert vb.clv_pct is None
     assert vb.result is None
-
-

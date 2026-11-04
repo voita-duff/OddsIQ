@@ -12,7 +12,9 @@ _TABLES = ("games", "odds_snapshots", "value_bets", "live_edge_candidates")
 
 def apply(conn: sqlite3.Connection) -> None:
     for table in _TABLES:
-        columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        columns = {
+            row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
         if "sport" not in columns:
             conn.execute(
                 f"ALTER TABLE {table} ADD COLUMN sport TEXT NOT NULL DEFAULT 'nba'"

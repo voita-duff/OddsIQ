@@ -49,11 +49,18 @@ logger = logging.getLogger(__name__)
 
 
 class BettingBridge:
-    def __init__(self, *, host: str, port: int, token: str,
-                 placement_timeout: float, on_login_change=None,
-                 login_alert_debounce: float = 600.0,
-                 login_startup_grace: float = 1800.0,
-                 app_ping_interval: float = 20.0) -> None:
+    def __init__(
+        self,
+        *,
+        host: str,
+        port: int,
+        token: str,
+        placement_timeout: float,
+        on_login_change=None,
+        login_alert_debounce: float = 600.0,
+        login_startup_grace: float = 1800.0,
+        app_ping_interval: float = 20.0,
+    ) -> None:
         if not token:
             raise ValueError("BettingBridge requires a non-empty token")
         self._host = host
@@ -96,8 +103,11 @@ class BettingBridge:
 
     async def start(self) -> None:
         self._server = await websockets.serve(
-            self._handler, self._host, self._port,
-            ping_interval=20, ping_timeout=20,
+            self._handler,
+            self._host,
+            self._port,
+            ping_interval=20,
+            ping_timeout=20,
         )
         logger.info("betting_bridge: listening on %s:%d", self._host, self.port)
 
@@ -135,12 +145,14 @@ class BettingBridge:
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._pending[msg_id] = fut
         try:
-            await self._client.send(json.dumps(
-                {"type": "place_bet", "id": msg_id, **cmd}))
+            await self._client.send(
+                json.dumps({"type": "place_bet", "id": msg_id, **cmd})
+            )
             msg = await asyncio.wait_for(fut, timeout=self._timeout)
         except asyncio.TimeoutError:
             raise PlacementTimeout(
-                f"no placement result within {self._timeout}s") from None
+                f"no placement result within {self._timeout}s"
+            ) from None
         finally:
             self._pending.pop(msg_id, None)
         return PlacementResult(
@@ -180,7 +192,8 @@ class BettingBridge:
                 delay = self._login_startup_grace
             if self._pending_loss is None or self._pending_loss.done():
                 self._pending_loss = asyncio.get_running_loop().create_task(
-                    self._debounced_loss(delay))
+                    self._debounced_loss(delay)
+                )
 
     async def _debounced_loss(self, delay: float) -> None:
         try:
@@ -236,7 +249,8 @@ class BettingBridge:
         await ws.send(json.dumps({"type": "hello_ack", "protocol": 1}))
         logger.info(
             "betting_bridge: extension connected (version=%s logged_in=%s)",
-            hello.get("extension_version"), self._client_logged_in,
+            hello.get("extension_version"),
+            self._client_logged_in,
         )
         # Application-level keepalive for THIS client (see __init__) — a JSON
         # frame the worker actually sees, unlike protocol pings. The extension
@@ -258,7 +272,8 @@ class BettingBridge:
                         # budget is measured on real attempts, not guessed.
                         logger.info(
                             "betting_bridge: result_timings id=%s status=%s %s",
-                            msg.get("id"), msg.get("status"),
+                            msg.get("id"),
+                            msg.get("status"),
                             json.dumps(msg["timings"], sort_keys=True),
                         )
                     if msg.get("debug"):
@@ -280,7 +295,8 @@ class BettingBridge:
                         fut.set_result(msg)
                 elif mtype == "status":
                     self._apply_login_state(
-                        bool(msg.get("logged_in", False)), source="status")
+                        bool(msg.get("logged_in", False)), source="status"
+                    )
                     if msg.get("page"):
                         # 0.7.0: logged-out reports carry the page the probe
                         # saw — a drifted live page / interstitial diagnoses
@@ -291,8 +307,10 @@ class BettingBridge:
                             json.dumps(msg["page"], sort_keys=True),
                         )
                     else:
-                        logger.info("betting_bridge: status logged_in=%s",
-                                    self._client_logged_in)
+                        logger.info(
+                            "betting_bridge: status logged_in=%s",
+                            self._client_logged_in,
+                        )
         except websockets.ConnectionClosed:
             pass
         finally:
@@ -305,6 +323,9 @@ class BettingBridge:
                 # at the book) — PlacementTimeout semantics, never a clean error.
                 for fut in list(self._pending.values()):
                     if not fut.done():
-                        fut.set_exception(PlacementTimeout(
-                            "extension disconnected before placement result"))
+                        fut.set_exception(
+                            PlacementTimeout(
+                                "extension disconnected before placement result"
+                            )
+                        )
                 self._pending.clear()

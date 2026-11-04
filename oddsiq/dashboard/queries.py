@@ -82,7 +82,9 @@ def _book_clause() -> tuple[str, list[str]]:
     return f" AND bookmaker IN ({placeholders})", list(_CURRENT_BOOKMAKERS)
 
 
-async def status_strip(store: Store, today_iso: str | None = None, sport: str | None = None) -> dict[str, Any]:
+async def status_strip(
+    store: Store, today_iso: str | None = None, sport: str | None = None
+) -> dict[str, Any]:
     """Aggregates for the ``/live`` status strip card.
 
     Args:
@@ -108,10 +110,14 @@ async def status_strip(store: Store, today_iso: str | None = None, sport: str | 
     """
     sclause, sparams = _sport_clause(sport)
     cursor = await store._db.execute(
-        "SELECT status, COUNT(*) AS n FROM games WHERE 1=1" + sclause + " GROUP BY status",
+        "SELECT status, COUNT(*) AS n FROM games WHERE 1=1"
+        + sclause
+        + " GROUP BY status",
         sparams,
     )
-    by_status: dict[str, int] = {row["status"]: row["n"] for row in await cursor.fetchall()}
+    by_status: dict[str, int] = {
+        row["status"]: row["n"] for row in await cursor.fetchall()
+    }
 
     if today_iso is None:
         today_iso = datetime.now(timezone.utc).date().isoformat()
@@ -163,8 +169,8 @@ async def status_strip(store: Store, today_iso: str | None = None, sport: str | 
 # Dashboard freshness windows per pipeline tier (seconds since last matched
 # snapshot before a coverage cell is flagged). Keyed by pipeline_tiers.tier_for(...).
 _STALE_BY_TIER: dict[str, int] = {
-    "hot": 5 * 60,     # hot (<60m to tipoff): warn after 5 min
-    "warm": 15 * 60,   # warm (1-2h): warn after 15 min
+    "hot": 5 * 60,  # hot (<60m to tipoff): warn after 5 min
+    "warm": 15 * 60,  # warm (1-2h): warn after 15 min
 }
 
 
@@ -195,7 +201,9 @@ async def active_game_tiers(store: Store, sport: str | None = None) -> set[str]:
     return result
 
 
-async def coverage_matrix(store: Store, *, scrapers: list[str], sport: str | None = None) -> list[dict[str, Any]]:
+async def coverage_matrix(
+    store: Store, *, scrapers: list[str], sport: str | None = None
+) -> list[dict[str, Any]]:
     """Per-(game, scraper) coverage rows for hot/warm active (PREGAME) games.
 
     Rows are emitted for the cartesian product of (active game) × (scraper).
@@ -256,21 +264,25 @@ async def coverage_matrix(store: Store, *, scrapers: list[str], sport: str | Non
             else:
                 age_s = (now - datetime.fromisoformat(last_ts)).total_seconds()
                 state = "fresh" if age_s <= stale_threshold else "stale"
-            rows.append({
-                "game_id": g["id"],
-                "home": g["home_team"],
-                "away": g["away_team"],
-                "tipoff": tipoff.isoformat(),
-                "tier": tier,
-                "status": g["status"],
-                "bookmaker": scraper,
-                "state": state,
-                "age_s": age_s,
-            })
+            rows.append(
+                {
+                    "game_id": g["id"],
+                    "home": g["home_team"],
+                    "away": g["away_team"],
+                    "tipoff": tipoff.isoformat(),
+                    "tier": tier,
+                    "status": g["status"],
+                    "bookmaker": scraper,
+                    "state": state,
+                    "age_s": age_s,
+                }
+            )
     return rows
 
 
-async def recent_db_events(store: Store, *, limit: int = 25, sport: str | None = None) -> list[dict[str, Any]]:
+async def recent_db_events(
+    store: Store, *, limit: int = 25, sport: str | None = None
+) -> list[dict[str, Any]]:
     """Return recent activity events derivable from the DB schema only.
 
     Two event types qualify because they have real timestamps on the
@@ -293,8 +305,9 @@ async def recent_db_events(store: Store, *, limit: int = 25, sport: str | None =
         "vb.market_type AS market, vb.selection, vb.edge_pct, vb.tier, "
         "g.home_team, g.away_team "
         "FROM value_bets vb JOIN games g ON vb.game_id = g.id "
-        "WHERE vb.excluded_reason IS NULL" + sclause +
-        " ORDER BY vb.flagged_at DESC LIMIT ?",
+        "WHERE vb.excluded_reason IS NULL"
+        + sclause
+        + " ORDER BY vb.flagged_at DESC LIMIT ?",
         [*sparams, limit],
     )
     vbs = [dict(r) for r in await cur.fetchall()]
@@ -350,7 +363,9 @@ async def big_numbers(store: Store, sport: str | None = None) -> dict[str, Any]:
     n_draw = int(r["n_draw"] or 0)
     n_push = int(r["n_push"] or 0)
     avg_clv = round(r["avg_clv"], 2) if r["avg_clv"] is not None else None
-    avg_edge_subset = round(r["avg_edge_subset"], 2) if r["avg_edge_subset"] is not None else None
+    avg_edge_subset = (
+        round(r["avg_edge_subset"], 2) if r["avg_edge_subset"] is not None else None
+    )
     delta = (
         round(avg_edge_subset - avg_clv, 2)
         if avg_clv is not None and avg_edge_subset is not None
@@ -387,7 +402,10 @@ async def big_numbers(store: Store, sport: str | None = None) -> dict[str, Any]:
 
 
 async def monthly_performance(
-    store: Store, *, month: str | None = None, sport: str | None = None,
+    store: Store,
+    *,
+    month: str | None = None,
+    sport: str | None = None,
 ) -> dict[str, Any]:
     """Per-calendar-month performance rollup for the ``/analysis`` monthly tabs.
 
@@ -418,11 +436,23 @@ async def monthly_performance(
     # month="all" -> all-time aggregates (selected None but data still runs);
     # an unknown/omitted month falls back to the newest data month.
     all_time = month == "all"
-    selected = None if all_time else (month if month in months else (months[0] if months else None))
+    selected = (
+        None
+        if all_time
+        else (month if month in months else (months[0] if months else None))
+    )
     bets: dict[str, Any] = {
-        "n_total": 0, "n_resolved": 0, "n_win": 0, "n_loss": 0, "n_push": 0,
-        "win_rate": None, "avg_edge": None, "avg_clv": None, "n_clv": 0,
-        "flat_pl": 0.0, "flat_roi_pct": 0.0,
+        "n_total": 0,
+        "n_resolved": 0,
+        "n_win": 0,
+        "n_loss": 0,
+        "n_push": 0,
+        "win_rate": None,
+        "avg_edge": None,
+        "avg_clv": None,
+        "n_clv": 0,
+        "flat_pl": 0.0,
+        "flat_roi_pct": 0.0,
     }
     if selected is None and not all_time:
         return {"months": months, "month": None, "bets": bets}
@@ -449,24 +479,30 @@ async def monthly_performance(
     n_loss = int(r["n_loss"] or 0)
     n_decided = n_win + n_loss
     flat_pl = float(r["flat_pl"] or 0.0)
-    bets.update({
-        "n_total": int(r["n_total"] or 0),
-        "n_resolved": n_resolved,
-        "n_win": n_win,
-        "n_loss": n_loss,
-        "n_push": n_resolved - n_win - n_loss,
-        "win_rate": round(100.0 * n_win / n_decided, 1) if n_decided else None,
-        "avg_edge": round(r["avg_edge"], 2) if r["avg_edge"] is not None else None,
-        "avg_clv": round(r["avg_clv"], 2) if r["avg_clv"] is not None else None,
-        "n_clv": int(r["n_clv"] or 0),
-        "flat_pl": round(flat_pl, 2),
-        "flat_roi_pct": round(100.0 * flat_pl / n_resolved, 2) if n_resolved else 0.0,
-    })
+    bets.update(
+        {
+            "n_total": int(r["n_total"] or 0),
+            "n_resolved": n_resolved,
+            "n_win": n_win,
+            "n_loss": n_loss,
+            "n_push": n_resolved - n_win - n_loss,
+            "win_rate": round(100.0 * n_win / n_decided, 1) if n_decided else None,
+            "avg_edge": round(r["avg_edge"], 2) if r["avg_edge"] is not None else None,
+            "avg_clv": round(r["avg_clv"], 2) if r["avg_clv"] is not None else None,
+            "n_clv": int(r["n_clv"] or 0),
+            "flat_pl": round(flat_pl, 2),
+            "flat_roi_pct": round(100.0 * flat_pl / n_resolved, 2)
+            if n_resolved
+            else 0.0,
+        }
+    )
 
     return {"months": months, "month": selected, "bets": bets}
 
 
-async def clv_trend(store: Store, *, days: int | None = None, sport: str | None = None) -> dict[str, Any]:
+async def clv_trend(
+    store: Store, *, days: int | None = None, sport: str | None = None
+) -> dict[str, Any]:
     """Daily CLV averages (nightly raw + 7-day trailing rolling) for the
     ``/analysis`` hero chart.
 
@@ -562,7 +598,9 @@ async def profit_curve(store: Store, sport: str | None = None) -> dict[str, Any]
     return {"labels": labels, "cumulative": cumulative}
 
 
-async def per_book_scoreboard(store: Store, sport: str | None = None) -> list[dict[str, Any]]:
+async def per_book_scoreboard(
+    store: Store, sport: str | None = None
+) -> list[dict[str, Any]]:
     """Per-book coverage + value-bet metrics — SOFT books only.
 
     Restricted to ``_SOFT_BOOKMAKERS`` (Tipsport): the Pinnacle reference row
@@ -603,21 +641,29 @@ async def per_book_scoreboard(store: Store, sport: str | None = None) -> list[di
     for book in sorted(coverage):
         c = coverage[book]
         b = bets_by_book.get(book, {})
-        rows.append({
-            "bookmaker": book,
-            "snapshots": c["snapshots"],
-            "games_matched": c["games_matched"],
-            "days_active": c["days_active"],
-            "first_seen": c["first_seen"],
-            "last_seen": c["last_seen"],
-            "bets": int(b.get("bets") or 0),
-            "avg_edge": round(b["avg_edge"], 2) if b.get("avg_edge") is not None else None,
-            "avg_clv": round(b["avg_clv"], 2) if b.get("avg_clv") is not None else None,
-        })
+        rows.append(
+            {
+                "bookmaker": book,
+                "snapshots": c["snapshots"],
+                "games_matched": c["games_matched"],
+                "days_active": c["days_active"],
+                "first_seen": c["first_seen"],
+                "last_seen": c["last_seen"],
+                "bets": int(b.get("bets") or 0),
+                "avg_edge": round(b["avg_edge"], 2)
+                if b.get("avg_edge") is not None
+                else None,
+                "avg_clv": round(b["avg_clv"], 2)
+                if b.get("avg_clv") is not None
+                else None,
+            }
+        )
     return rows
 
 
-async def edge_distribution(store: Store, sport: str | None = None) -> list[dict[str, Any]]:
+async def edge_distribution(
+    store: Store, sport: str | None = None
+) -> list[dict[str, Any]]:
     """Bucketed counts of ``edge_pct`` for the histogram.
 
     Bucket boundaries (half-open intervals):
@@ -641,17 +687,19 @@ async def edge_distribution(store: Store, sport: str | None = None) -> list[dict
     )
     r = await cur.fetchone()
     return [
-        {"bucket": "3-5%",  "count": int(r["b1"] or 0)},
-        {"bucket": "5-7%",  "count": int(r["b2"] or 0)},
+        {"bucket": "3-5%", "count": int(r["b1"] or 0)},
+        {"bucket": "5-7%", "count": int(r["b2"] or 0)},
         {"bucket": "7-10%", "count": int(r["b3"] or 0)},
-        {"bucket": "10%+",  "count": int(r["b4"] or 0)},
+        {"bucket": "10%+", "count": int(r["b4"] or 0)},
     ]
 
 
 _THIN_N: int = 10
 
 
-async def edge_calibration(store: Store, sport: str | None = None) -> list[dict[str, Any]]:
+async def edge_calibration(
+    store: Store, sport: str | None = None
+) -> list[dict[str, Any]]:
     """Edge-bucket profitability: break-even win% vs actual win%, with a
     ``thin`` flag for buckets with fewer than ``_THIN_N`` resolved bets.
 
@@ -675,33 +723,41 @@ async def edge_calibration(store: Store, sport: str | None = None) -> list[dict[
         "  NULLIF(SUM(CASE WHEN result IS NOT NULL THEN 1 ELSE 0 END), 0) AS actual_win, "
         "MIN(edge_pct) AS min_edge "
         f"FROM {VALUE_BETS_DEDUPED} WHERE edge_pct >= 3.0 AND result IS NOT NULL"
-        + sclause + " GROUP BY bucket ORDER BY min_edge",
+        + sclause
+        + " GROUP BY bucket ORDER BY min_edge",
         sparams,
     )
     rows = await cur.fetchall()
     out: list[dict[str, Any]] = []
     for r in rows:
         n = int(r["n"] or 0)
-        expected = round(r["expected_win"], 1) if r["expected_win"] is not None else None
+        expected = (
+            round(r["expected_win"], 1) if r["expected_win"] is not None else None
+        )
         actual = round(r["actual_win"], 1) if r["actual_win"] is not None else None
         delta = (
             round(actual - expected, 1)
             if expected is not None and actual is not None
             else None
         )
-        out.append({
-            "bucket": r["bucket"],
-            "n": n,
-            "expected_win": expected,
-            "actual_win": actual,
-            "delta": delta,
-            "thin": n < _THIN_N,
-        })
+        out.append(
+            {
+                "bucket": r["bucket"],
+                "n": n,
+                "expected_win": expected,
+                "actual_win": actual,
+                "delta": delta,
+                "thin": n < _THIN_N,
+            }
+        )
     return out
 
 
 async def recent_value_bets(
-    store: Store, *, limit: int = 10, sport: str | None = None,
+    store: Store,
+    *,
+    limit: int = 10,
+    sport: str | None = None,
     include_suspect: bool = False,
 ) -> list[dict[str, Any]]:
     """Return the last ``limit`` value bets (descending ``flagged_at``)
@@ -718,8 +774,7 @@ async def recent_value_bets(
         "vb.sport, vb.tipsport_url, vb.game_id, vb.excluded_reason, "
         "g.home_team, g.away_team "
         "FROM value_bets vb JOIN games g ON vb.game_id = g.id "
-        "WHERE 1=1" + suspect_clause + sclause +
-        " ORDER BY vb.flagged_at DESC LIMIT ?",
+        "WHERE 1=1" + suspect_clause + sclause + " ORDER BY vb.flagged_at DESC LIMIT ?",
         [*sparams, limit],
     )
     return [dict(r) for r in await cur.fetchall()]
@@ -827,7 +882,9 @@ async def betting_overview(store: Store, sport: str | None = None) -> dict[str, 
         "at_risk_czk": round(float(r["at_risk"] or 0.0), 2),
         "total_staked_czk": round(staked, 2),
         "realized_pl_czk": round(realized, 2),
-        "roi_pct": round(100.0 * realized / staked, 2) if staked > 0 and n_settled else None,
+        "roi_pct": round(100.0 * realized / staked, 2)
+        if staked > 0 and n_settled
+        else None,
         "n_open": int(r["n_open"] or 0),
         "n_settled": n_settled,
         "n_total": int(r["n_total"] or 0),
@@ -840,27 +897,36 @@ async def betting_overview(store: Store, sport: str | None = None) -> dict[str, 
             "rejected": int(pt["rejected"] or 0),
             "placed": int(pt["placed"] or 0),
         },
-        "betting_sports": sorted(parse_betting_sports(await store.get_meta("betting_sports"))),
+        "betting_sports": sorted(
+            parse_betting_sports(await store.get_meta("betting_sports"))
+        ),
         "flat_stake_czk": await _meta_num(
-            "betting_flat_stake_czk", _BETTING_META_DEFAULTS["betting_flat_stake_czk"],
-            config.BETTING_MAX_STAKE_CZK, 1.0,
+            "betting_flat_stake_czk",
+            _BETTING_META_DEFAULTS["betting_flat_stake_czk"],
+            config.BETTING_MAX_STAKE_CZK,
+            1.0,
         ),
         "max_bets_per_day": await _meta_num(
-            "betting_max_bets_per_day", _BETTING_META_DEFAULTS["betting_max_bets_per_day"],
+            "betting_max_bets_per_day",
+            _BETTING_META_DEFAULTS["betting_max_bets_per_day"],
             config.BETTING_MAX_BETS_PER_DAY,
         ),
         "max_open_stakes_czk": await _meta_num(
-            "betting_max_open_stakes_czk", _BETTING_META_DEFAULTS["betting_max_open_stakes_czk"],
+            "betting_max_open_stakes_czk",
+            _BETTING_META_DEFAULTS["betting_max_open_stakes_czk"],
             config.BETTING_MAX_OPEN_STAKES_CZK,
         ),
         "daily_loss_limit_czk": await _meta_num(
-            "betting_daily_loss_limit_czk", _BETTING_META_DEFAULTS["betting_daily_loss_limit_czk"],
+            "betting_daily_loss_limit_czk",
+            _BETTING_META_DEFAULTS["betting_daily_loss_limit_czk"],
             config.BETTING_MAX_DAILY_LOSS_CZK,
         ),
     }
 
 
-async def placed_bets_table(store: Store, *, limit: int = 25, sport: str | None = None) -> list[dict[str, Any]]:
+async def placed_bets_table(
+    store: Store, *, limit: int = 25, sport: str | None = None
+) -> list[dict[str, Any]]:
     """Recent betting DECISIONS joined to game + value bet, newest first —
     skips included (with their qualification-failure reason): a skip must be
     as visible as a placement, or "why didn't it bet?" has no answer."""
@@ -873,14 +939,17 @@ async def placed_bets_table(store: Store, *, limit: int = 25, sport: str | None 
         "g.home_team, g.away_team "
         "FROM placed_bets pb JOIN games g ON pb.game_id = g.id "
         "JOIN value_bets vb ON pb.value_bet_id = vb.id "
-        "WHERE 1=1" + sclause +
-        " ORDER BY COALESCE(pb.commanded_at, pb.created_at) DESC, pb.id DESC LIMIT ?",
+        "WHERE 1=1"
+        + sclause
+        + " ORDER BY COALESCE(pb.commanded_at, pb.created_at) DESC, pb.id DESC LIMIT ?",
         [*sparams, limit],
     )
     rows = []
     for r in await cur.fetchall():
         d = dict(r)
-        d["selection_team"] = _selection_team(d["selection"], d["home_team"], d["away_team"])
+        d["selection_team"] = _selection_team(
+            d["selection"], d["home_team"], d["away_team"]
+        )
         rows.append(d)
     return rows
 
@@ -909,7 +978,10 @@ def _window_label(tier: str, tipoff: datetime) -> str:
 
 
 async def upcoming_games(
-    store: Store, *, sport: str | None = None, now: datetime | None = None,
+    store: Store,
+    *,
+    sport: str | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Schedule view for the dashboard Upcoming tab: scheduled games tipping off
     within the next 24h, shaped for "when should I be active to manually bet".
@@ -945,29 +1017,42 @@ async def upcoming_games(
         tipoff = datetime.fromisoformat(g["commence_time"] or g["scheduled_at"])
         if not (now < tipoff <= horizon):
             continue
-        windowed.append({
-            "sport": g["sport"], "home": g["home_team"],
-            "away": g["away_team"], "tipoff": tipoff,
-        })
+        windowed.append(
+            {
+                "sport": g["sport"],
+                "home": g["home_team"],
+                "away": g["away_team"],
+                "tipoff": tipoff,
+            }
+        )
 
     # Tiles: always one per ENABLED sport (incl. zero), regardless of `sport`.
     tiles: list[dict[str, Any]] = []
     for key in ENABLED_SPORTS:
         sport_games = [w for w in windowed if w["sport"] == key]
-        tiles.append({
-            "sport": key,
-            "display": get_profile(key).display_name,
-            "count": len(sport_games),
-            "next_local": (
-                _fmt_local_hm(min(w["tipoff"] for w in sport_games))
-                if sport_games else None
-            ),
-        })
+        tiles.append(
+            {
+                "sport": key,
+                "display": get_profile(key).display_name,
+                "count": len(sport_games),
+                "next_local": (
+                    _fmt_local_hm(min(w["tipoff"] for w in sport_games))
+                    if sport_games
+                    else None
+                ),
+            }
+        )
     # A TOTAL tile only earns its space with 2+ sports; single-sport it is a
     # duplicate of the one sport tile.
     if len(ENABLED_SPORTS) > 1:
-        tiles.append({"sport": "total", "display": "TOTAL",
-                      "count": len(windowed), "next_local": None})
+        tiles.append(
+            {
+                "sport": "total",
+                "display": "TOTAL",
+                "count": len(windowed),
+                "next_local": None,
+            }
+        )
 
     # Agenda: respect the `sport` filter, then group + format.
     agenda_src = [w for w in windowed if w["sport"] == sport] if sport else windowed
@@ -979,7 +1064,8 @@ async def upcoming_games(
         game = {
             "sport": w["sport"],
             "display": get_profile(w["sport"]).display_name,
-            "away": w["away"], "home": w["home"],
+            "away": w["away"],
+            "home": w["home"],
             "tipoff_local": _fmt_local_hm(w["tipoff"]),
             "tipoff_iso": w["tipoff"].isoformat(),
             "countdown": _fmt_countdown(ttip),
@@ -996,7 +1082,8 @@ async def upcoming_games(
     labels = {"open": "Bet window open", "today": "Later today", "tomorrow": "Tomorrow"}
     groups = [
         {"key": k, "label": labels[k], "games": buckets[k]}
-        for k in ("open", "today", "tomorrow") if buckets[k]
+        for k in ("open", "today", "tomorrow")
+        if buckets[k]
     ]
     # When the first bet window opens (Prague HH:MM): now if one is already
     # open, else earliest tipoff − 2h. The "when will the engine wake up" line.
@@ -1007,13 +1094,18 @@ async def upcoming_games(
         earliest = min(w["tipoff"] for w in agenda_src)
         first_window_opens_local = _fmt_local_hm(earliest - timedelta(hours=2))
     return {
-        "tiles": tiles, "groups": groups, "total": len(windowed),
+        "tiles": tiles,
+        "groups": groups,
+        "total": len(windowed),
         "first_window_opens_local": first_window_opens_local,
     }
 
 
 async def next_game_window(
-    store: Store, sport: str | None = None, *, now: datetime | None = None,
+    store: Store,
+    sport: str | None = None,
+    *,
+    now: datetime | None = None,
 ) -> dict[str, Any] | None:
     """The NEXT scheduled game's bet window, for empty-state context.
 
@@ -1068,14 +1160,16 @@ async def game_detail(store: Store, game_id: int) -> dict[str, Any] | None:
     if tipoff_iso:
         tipoff_local = (
             datetime.fromisoformat(tipoff_iso)
-            .astimezone(_DISPLAY_TZ).strftime("%d.%m.%Y %H:%M")
+            .astimezone(_DISPLAY_TZ)
+            .strftime("%d.%m.%Y %H:%M")
         )
 
     bclause, bparams = _book_clause()
     cur = await store._db.execute(
         "SELECT bookmaker, selection, odds, captured_at, is_closing "
         "FROM odds_snapshots WHERE game_id = ? AND market_type = 'moneyline'"
-        + bclause + " ORDER BY captured_at",
+        + bclause
+        + " ORDER BY captured_at",
         [game_id, *bparams],
     )
     snaps = await cur.fetchall()
@@ -1089,7 +1183,8 @@ async def game_detail(store: Store, game_id: int) -> dict[str, Any] | None:
     index = {ts: i for i, ts in enumerate(instants)}
     labels = [t.astimezone(_DISPLAY_TZ).strftime("%d.%m %H:%M") for t in instants]
     series: dict[str, dict[str, list]] = {
-        "home": {}, "away": {},
+        "home": {},
+        "away": {},
     }
     for s in snaps:
         sel = s["selection"]
@@ -1108,7 +1203,8 @@ async def game_detail(store: Store, game_id: int) -> dict[str, Any] | None:
     for f in flags:
         f["flagged_label"] = (
             datetime.fromisoformat(f["flagged_at"])
-            .astimezone(_DISPLAY_TZ).strftime("%d.%m %H:%M")
+            .astimezone(_DISPLAY_TZ)
+            .strftime("%d.%m %H:%M")
         )
 
     return {
@@ -1124,6 +1220,7 @@ async def game_detail(store: Store, game_id: int) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 # Activity calendar (/analysis) — 2026-09-06
 # ---------------------------------------------------------------------------
+
 
 def _month_range(first_ym: str | None, now: datetime) -> list[str]:
     """Calendar months from ``first_ym`` ("YYYY-MM") through ``now``'s UTC
@@ -1154,15 +1251,30 @@ def _prague_hm(ts_iso: str) -> str:
 
 def _empty_day(d: date, today: date) -> dict[str, Any]:
     return {
-        "date": d.isoformat(), "dom": d.day,
-        "clean": 0, "guarded": 0, "shadow": 0, "attempts": 0, "placed": 0, "skipped": 0,
-        "pl_czk": 0.0, "flat_pl": 0.0, "first_time": None, "last_time": None,
-        "milestones": [], "is_today": d == today, "future": d > today, "level": 0,
+        "date": d.isoformat(),
+        "dom": d.day,
+        "clean": 0,
+        "guarded": 0,
+        "shadow": 0,
+        "attempts": 0,
+        "placed": 0,
+        "skipped": 0,
+        "pl_czk": 0.0,
+        "flat_pl": 0.0,
+        "first_time": None,
+        "last_time": None,
+        "milestones": [],
+        "is_today": d == today,
+        "future": d > today,
+        "level": 0,
     }
 
 
 async def activity_calendar(
-    store: Store, *, sport: str | None = None, now: datetime | None = None,
+    store: Store,
+    *,
+    sport: str | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Per-day activity from the first collected odds through today, bucketed
     by PRAGUE calendar day (a 23:30 UTC detection is "tonight" to the operator,
@@ -1189,7 +1301,8 @@ async def activity_calendar(
     first_detection: date | None = None
     cur = await store._db.execute(
         f"SELECT flagged_at, excluded_reason, result, entry_odds, tier "
-        f"FROM value_bets WHERE 1=1{sclause}", sparams,
+        f"FROM value_bets WHERE 1=1{sclause}",
+        sparams,
     )
     for r in await cur.fetchall():
         d = _prague_day(r["flagged_at"])
@@ -1204,7 +1317,7 @@ async def activity_calendar(
         if first_detection is None or d < first_detection:
             first_detection = d
         if r["tier"] == pipeline_tiers.SHADOW_TIER:
-            b["shadow"] += 1      # shadow detection: recorded, never bettable
+            b["shadow"] += 1  # shadow detection: recorded, never bettable
             continue
         if r["excluded_reason"]:
             b["guarded"] += 1
@@ -1240,19 +1353,26 @@ async def activity_calendar(
             b["pl_czk"] += float(r["settled_pl_czk"])
 
     cur = await store._db.execute(
-        f"SELECT MIN(captured_at) AS m FROM odds_snapshots WHERE 1=1{sclause}", sparams,
+        f"SELECT MIN(captured_at) AS m FROM odds_snapshots WHERE 1=1{sclause}",
+        sparams,
     )
     row = await cur.fetchone()
     first_odds = _prague_day(row["m"]) if row and row["m"] else None
 
     starts = [d for d in (first_odds, first_detection, first_attempt) if d is not None]
     if not starts:
-        return {"months": [], "milestones": [], "today": today.isoformat(), "sport": sport}
+        return {
+            "months": [],
+            "milestones": [],
+            "today": today.isoformat(),
+            "sport": sport,
+        }
     start = min(starts).replace(day=1)
 
     milestones: list[dict[str, Any]] = [
         {"date": m.day, "label": m.label, "kind": m.kind}
-        for m in MILESTONES if start <= m.day <= today
+        for m in MILESTONES
+        if start <= m.day <= today
     ]
     for d, label in (
         (first_odds, "First odds collected"),
@@ -1269,8 +1389,15 @@ async def activity_calendar(
     for b in days.values():
         c = b["clean"]
         b["level"] = (
-            4 if c >= 5 else 3 if c >= 2 else 2 if c == 1
-            else 1 if (b["guarded"] or b["shadow"]) else 0
+            4
+            if c >= 5
+            else 3
+            if c >= 2
+            else 2
+            if c == 1
+            else 1
+            if (b["guarded"] or b["shadow"])
+            else 0
         )
 
     months: list[dict[str, Any]] = []
@@ -1278,7 +1405,9 @@ async def activity_calendar(
     while (y, mo) <= (today.year, today.month):
         first = date(y, mo, 1)
         nxt = date(y + 1, 1, 1) if mo == 12 else date(y, mo + 1, 1)
-        cells: list[dict[str, Any] | None] = [None] * first.weekday()  # Monday-first grid
+        cells: list[dict[str, Any] | None] = [
+            None
+        ] * first.weekday()  # Monday-first grid
         d = first
         while d < nxt:
             cells.append(days.get(d) or _empty_day(d, today))
@@ -1286,27 +1415,42 @@ async def activity_calendar(
         while len(cells) % 7:
             cells.append(None)
         mdays = [c for c in cells if c is not None]
-        months.append({
-            "ym": f"{y:04d}-{mo:02d}",
-            "label": first.strftime("%b %Y"),
-            "weeks": [cells[i:i + 7] for i in range(0, len(cells), 7)],
-            "clean": sum(c["clean"] for c in mdays),
-            "guarded": sum(c["guarded"] for c in mdays),
-            "shadow": sum(c["shadow"] for c in mdays),
-            "placed": sum(c["placed"] for c in mdays),
-            "attempts": sum(c["attempts"] for c in mdays),
-            "pl_czk": round(sum(c["pl_czk"] for c in mdays), 2),
-            "milestones": [m for m in milestones if (m["date"].year, m["date"].month) == (y, mo)],
-        })
+        months.append(
+            {
+                "ym": f"{y:04d}-{mo:02d}",
+                "label": first.strftime("%b %Y"),
+                "weeks": [cells[i : i + 7] for i in range(0, len(cells), 7)],
+                "clean": sum(c["clean"] for c in mdays),
+                "guarded": sum(c["guarded"] for c in mdays),
+                "shadow": sum(c["shadow"] for c in mdays),
+                "placed": sum(c["placed"] for c in mdays),
+                "attempts": sum(c["attempts"] for c in mdays),
+                "pl_czk": round(sum(c["pl_czk"] for c in mdays), 2),
+                "milestones": [
+                    m
+                    for m in milestones
+                    if (m["date"].year, m["date"].month) == (y, mo)
+                ],
+            }
+        )
         y, mo = (y + 1, 1) if mo == 12 else (y, mo + 1)
-    return {"months": months, "milestones": milestones, "today": today.isoformat(), "sport": sport}
+    return {
+        "months": months,
+        "milestones": milestones,
+        "today": today.isoformat(),
+        "sport": sport,
+    }
 
 
-async def day_detail(store: Store, day: date, *, sport: str | None = None) -> dict[str, Any]:
+async def day_detail(
+    store: Store, day: date, *, sport: str | None = None
+) -> dict[str, Any]:
     """Everything that happened on one PRAGUE calendar day: detections (with
     their betting decision) and the day's placed-bet outcomes, times in Prague."""
     start = datetime.combine(day, time(0), tzinfo=_DISPLAY_TZ).astimezone(timezone.utc)
-    end = datetime.combine(day + timedelta(days=1), time(0), tzinfo=_DISPLAY_TZ).astimezone(timezone.utc)
+    end = datetime.combine(
+        day + timedelta(days=1), time(0), tzinfo=_DISPLAY_TZ
+    ).astimezone(timezone.utc)
     sclause, sparams = _sport_clause(sport, alias="vb")
     cur = await store._db.execute(
         "SELECT vb.id, vb.game_id, vb.flagged_at, vb.tier, vb.selection, vb.entry_odds, "
@@ -1325,13 +1469,21 @@ async def day_detail(store: Store, day: date, *, sport: str | None = None) -> di
         d = dict(r)
         d["time"] = _prague_hm(d["flagged_at"])
         sel = (d["selection"] or "").lower()
-        d["team"] = d["home_team"] if sel == "home" else d["away_team"] if sel == "away" else d["selection"]
+        d["team"] = (
+            d["home_team"]
+            if sel == "home"
+            else d["away_team"]
+            if sel == "away"
+            else d["selection"]
+        )
         detections.append(d)
     # Far-tier rows are SHADOW detections (recorded, never bettable): they are
     # neither clean nor guarded, so they get their own count rather than
     # inflating the day's "clean" headline.
     shadow = pipeline_tiers.SHADOW_TIER
-    n_clean = sum(1 for d in detections if not d["excluded_reason"] and d["tier"] != shadow)
+    n_clean = sum(
+        1 for d in detections if not d["excluded_reason"] and d["tier"] != shadow
+    )
     return {
         "day": day.isoformat(),
         "label": day.strftime("%A %d.%m.%Y"),
@@ -1339,10 +1491,18 @@ async def day_detail(store: Store, day: date, *, sport: str | None = None) -> di
         "n_clean": n_clean,
         # A far-tier row is SHADOW even when it also carries an excluded_reason
         # guard stamp — it must land in exactly one bucket (2026-09-06).
-        "n_guarded": sum(1 for d in detections if d["excluded_reason"] and d["tier"] != shadow),
+        "n_guarded": sum(
+            1 for d in detections if d["excluded_reason"] and d["tier"] != shadow
+        ),
         "n_shadow": sum(1 for d in detections if d["tier"] == shadow),
-        "n_placed": sum(1 for d in detections if d["dec_status"] in ("pending", "placed", "settled")),
-        "n_attempts": sum(1 for d in detections if d["dec_status"] in ("rejected", "failed", "unknown")),
+        "n_placed": sum(
+            1 for d in detections if d["dec_status"] in ("pending", "placed", "settled")
+        ),
+        "n_attempts": sum(
+            1
+            for d in detections
+            if d["dec_status"] in ("rejected", "failed", "unknown")
+        ),
         "n_skipped": sum(1 for d in detections if d["dec_status"] == "skipped"),
         "pl_czk": round(sum(d["settled_pl_czk"] or 0.0 for d in detections), 2),
     }

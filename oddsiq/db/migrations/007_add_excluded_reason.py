@@ -21,7 +21,8 @@ import sqlite3
 
 def apply(conn: sqlite3.Connection) -> None:
     for table in ("value_bets", "live_edge_candidates"):
-        cols = {row[1] for row in conn.execute(
-            f"PRAGMA table_info({table})").fetchall()}
+        cols = {
+            row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()
+        }
         if "excluded_reason" not in cols:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN excluded_reason TEXT")

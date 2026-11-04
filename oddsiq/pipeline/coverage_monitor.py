@@ -3,6 +3,7 @@ game goes stale (>10 min) while any game sits in warm/hot tier. Owns the
 in-memory match timestamps + the alert-dedup set. Extracted verbatim from the
 old Scheduler._check_coverage_gaps / _format_last_coverage.
 """
+
 from __future__ import annotations
 
 import logging
@@ -56,7 +57,9 @@ class CoverageMonitor:
             self._last_scraper_match[scraper_name] = now
         self._coverage_gap_alerted.discard(key)
 
-    async def check_gaps(self, games: list[Game], scrapers: list[BaseScraper], now: datetime) -> None:
+    async def check_gaps(
+        self, games: list[Game], scrapers: list[BaseScraper], now: datetime
+    ) -> None:
         """Alert when a scraper's matched coverage is >10 min stale while any
         game sits in warm or hot tier. Reads in-memory match timestamps (not
         DB rows — snapshot dedupe means rows can stay quiet on a healthy pipeline).
@@ -77,12 +80,14 @@ class CoverageMonitor:
             key for key in self._coverage_gap_alerted if key[0] in slate_ids
         }
         self._last_game_coverage_success = {
-            key: seen for key, seen in self._last_game_coverage_success.items()
+            key: seen
+            for key, seen in self._last_game_coverage_success.items()
             if key[0] in slate_ids
         }
 
         watched_games = [
-            g for g in games
+            g
+            for g in games
             if g.id is not None
             and g.status not in ("final", "postponed", "live")
             and 0 < ((g.commence_time or g.scheduled_at) - now).total_seconds() <= 7200
@@ -106,12 +111,17 @@ class CoverageMonitor:
                 if key in self._coverage_gap_alerted:
                     continue
                 self._coverage_gap_alerted.add(key)
-                minutes = int(stale_seconds // 60) if stale_seconds is not None else None
+                minutes = (
+                    int(stale_seconds // 60) if stale_seconds is not None else None
+                )
                 # Logged for the dashboard activity feed; no phone alert
                 # (2026-08-10 rebrand — only real placed/won/lost notify).
                 logger.warning(
                     "Coverage gap: game_id=%d scraper=%s tier=%s minutes_stale=%s",
-                    game.id, scraper.name, tier, minutes,
+                    game.id,
+                    scraper.name,
+                    tier,
+                    minutes,
                 )
 
     def last_coverage(self, scraper_name: str) -> str:

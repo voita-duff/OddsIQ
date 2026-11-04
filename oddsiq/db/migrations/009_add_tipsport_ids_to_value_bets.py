@@ -19,8 +19,7 @@ import sqlite3
 
 
 def apply(conn: sqlite3.Connection) -> None:
-    cols = {row[1] for row in conn.execute(
-        "PRAGMA table_info(value_bets)").fetchall()}
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(value_bets)").fetchall()}
     if "tipsport_match_id" not in cols:
         conn.execute("ALTER TABLE value_bets ADD COLUMN tipsport_match_id INTEGER")
     if "tipsport_opp_id" not in cols:

@@ -42,7 +42,9 @@ def _fmt_flagged_at(value: str) -> str:
     """Render a stored UTC ISO ``flagged_at`` as European (Prague) local
     ``DD.MM.YYYY HH:MM`` — day-first, dotted, 24-hour. The column is written
     as ``datetime.now(timezone.utc).isoformat()``, so convert before display."""
-    return datetime.fromisoformat(value).astimezone(_DISPLAY_TZ).strftime("%d.%m.%Y %H:%M")
+    return (
+        datetime.fromisoformat(value).astimezone(_DISPLAY_TZ).strftime("%d.%m.%Y %H:%M")
+    )
 
 
 def _selection_team(selection: str, home_team: str, away_team: str) -> str:
@@ -101,59 +103,151 @@ def _settings_config_sections() -> list[dict]:
     whole live-edge subsystem, 2026-08-27.)
     """
     from oddsiq.sports.profiles import ENABLED_SPORTS as _sports
+
     telegram_recipients = sum(
-        1 for token, chat in (
+        1
+        for token, chat in (
             (config.TELEGRAM_BOT_TOKEN, config.TELEGRAM_CHAT_ID),
             (config.TELEGRAM_BOT_TOKEN_2, config.TELEGRAM_CHAT_ID_2),
-        ) if token and chat
+        )
+        if token and chat
     )
     return [
-        {"title": "Detection", "rows": [
-            {"name": "EDGE_THRESHOLD", "value": str(config.EDGE_THRESHOLD)},
-            {"name": "PREGAME_MAX_PLAUSIBLE_EDGE", "value": str(config.PREGAME_MAX_PLAUSIBLE_EDGE)},
-            {"name": "PREGAME_MIN_BOOK_OVERROUND", "value": str(config.PREGAME_MIN_BOOK_OVERROUND)},
-            {"name": "PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS",
-             "value": str(config.PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS)},
-            {"name": "PREGAME_REQUIRE_COMPLETE_BOOK_MARKET",
-             "value": str(config.PREGAME_REQUIRE_COMPLETE_BOOK_MARKET)},
-            {"name": "CLOSING_FRESHNESS_MINUTES", "value": str(config.CLOSING_FRESHNESS_MINUTES)},
-            {"name": "PINNACLE_MARKETS", "value": config.PINNACLE_MARKETS},
-        ]},
-        {"title": "Polling & schedule", "rows": [
-            {"name": "POLL_TIER_FAR / WARM / HOT",
-             "value": (f"{config.POLL_TIER_FAR} / {config.POLL_TIER_WARM} / "
-                       f"{config.POLL_TIER_HOT} s")},
-            {"name": "SCHEDULE_GAME_WINDOW_REFRESH", "value": f"{config.SCHEDULE_GAME_WINDOW_REFRESH}s"},
-            {"name": "SCHEDULE_COMPLETION_CHECK_INTERVAL", "value": f"{config.SCHEDULE_COMPLETION_CHECK_INTERVAL}s"},
-            {"name": "SCHEDULE_REFRESH_INTERVAL", "value": f"{config.SCHEDULE_REFRESH_INTERVAL}s"},
-            {"name": "SCHEDULER_HEARTBEAT_SECONDS", "value": str(config.SCHEDULER_HEARTBEAT_SECONDS)},
-        ]},
-        {"title": "Auto-betting", "rows": [
-            {"name": "BETTING_ENABLED", "value": _flag(config.BETTING_ENABLED)},
-            {"name": "BETTING_CONFIRM_ENABLED (env)", "value": _flag(config.BETTING_CONFIRM_ENABLED)},
-            {"name": "BETTING_MAX_STAKE_CZK (hard ceiling)", "value": f"{config.BETTING_MAX_STAKE_CZK:.0f}"},
-            {"name": "BETTING_MAX_BETS_PER_DAY (hard ceiling)", "value": str(config.BETTING_MAX_BETS_PER_DAY)},
-            {"name": "BETTING_MAX_OPEN_STAKES_CZK (hard ceiling)", "value": f"{config.BETTING_MAX_OPEN_STAKES_CZK:.0f}"},
-            {"name": "BETTING_MAX_DAILY_LOSS_CZK (hard ceiling)", "value": f"{config.BETTING_MAX_DAILY_LOSS_CZK:.0f}"},
-            {"name": "BETTING_BRIDGE", "value": f"{config.BETTING_BRIDGE_HOST}:{config.BETTING_BRIDGE_PORT}"},
-            {"name": "BETTING_PLACEMENT_TIMEOUT_SECONDS", "value": str(config.BETTING_PLACEMENT_TIMEOUT_SECONDS)},
-            {"name": "BETTING_FAIR_MAX_AGE_SECONDS", "value": str(config.BETTING_FAIR_MAX_AGE_SECONDS)},
-            {"name": "DASHBOARD_CONTROLS_ENABLED", "value": _flag(config.DASHBOARD_CONTROLS_ENABLED)},
-            {"name": "DASHBOARD_CONTROLS_AUTH", "value": (
-                "configured" if config.DASHBOARD_CONTROLS_USERNAME
-                and config.DASHBOARD_CONTROLS_PASSWORD else "MISSING"
-            )},
-        ]},
-        {"title": "Pipeline & ops", "rows": [
-            {"name": "ENABLED_SPORTS", "value": ", ".join(_sports) or "none"},
-            {"name": "Bookmaker: tipsport",
-             "value": "enabled" if config.BOOKMAKER_TIPSPORT_ENABLED else "disabled"},
-            {"name": "ODDS_API_KEY", "value": "set" if config.ODDS_API_KEY else "MISSING"},
-            {"name": "Telegram recipients", "value": str(telegram_recipients)},
-            {"name": "HEARTBEAT_PING_URL", "value": "set" if config.HEARTBEAT_PING_URL else "not set"},
-            {"name": "BACKUP_INTERVAL_HOURS", "value": str(config.BACKUP_INTERVAL_HOURS)},
-            {"name": "RAW_RESPONSE_KEEP_DAYS", "value": str(config.RAW_RESPONSE_KEEP_DAYS)},
-        ]},
+        {
+            "title": "Detection",
+            "rows": [
+                {"name": "EDGE_THRESHOLD", "value": str(config.EDGE_THRESHOLD)},
+                {
+                    "name": "PREGAME_MAX_PLAUSIBLE_EDGE",
+                    "value": str(config.PREGAME_MAX_PLAUSIBLE_EDGE),
+                },
+                {
+                    "name": "PREGAME_MIN_BOOK_OVERROUND",
+                    "value": str(config.PREGAME_MIN_BOOK_OVERROUND),
+                },
+                {
+                    "name": "PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS",
+                    "value": str(config.PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS),
+                },
+                {
+                    "name": "PREGAME_REQUIRE_COMPLETE_BOOK_MARKET",
+                    "value": str(config.PREGAME_REQUIRE_COMPLETE_BOOK_MARKET),
+                },
+                {
+                    "name": "CLOSING_FRESHNESS_MINUTES",
+                    "value": str(config.CLOSING_FRESHNESS_MINUTES),
+                },
+                {"name": "PINNACLE_MARKETS", "value": config.PINNACLE_MARKETS},
+            ],
+        },
+        {
+            "title": "Polling & schedule",
+            "rows": [
+                {
+                    "name": "POLL_TIER_FAR / WARM / HOT",
+                    "value": (
+                        f"{config.POLL_TIER_FAR} / {config.POLL_TIER_WARM} / "
+                        f"{config.POLL_TIER_HOT} s"
+                    ),
+                },
+                {
+                    "name": "SCHEDULE_GAME_WINDOW_REFRESH",
+                    "value": f"{config.SCHEDULE_GAME_WINDOW_REFRESH}s",
+                },
+                {
+                    "name": "SCHEDULE_COMPLETION_CHECK_INTERVAL",
+                    "value": f"{config.SCHEDULE_COMPLETION_CHECK_INTERVAL}s",
+                },
+                {
+                    "name": "SCHEDULE_REFRESH_INTERVAL",
+                    "value": f"{config.SCHEDULE_REFRESH_INTERVAL}s",
+                },
+                {
+                    "name": "SCHEDULER_HEARTBEAT_SECONDS",
+                    "value": str(config.SCHEDULER_HEARTBEAT_SECONDS),
+                },
+            ],
+        },
+        {
+            "title": "Auto-betting",
+            "rows": [
+                {"name": "BETTING_ENABLED", "value": _flag(config.BETTING_ENABLED)},
+                {
+                    "name": "BETTING_CONFIRM_ENABLED (env)",
+                    "value": _flag(config.BETTING_CONFIRM_ENABLED),
+                },
+                {
+                    "name": "BETTING_MAX_STAKE_CZK (hard ceiling)",
+                    "value": f"{config.BETTING_MAX_STAKE_CZK:.0f}",
+                },
+                {
+                    "name": "BETTING_MAX_BETS_PER_DAY (hard ceiling)",
+                    "value": str(config.BETTING_MAX_BETS_PER_DAY),
+                },
+                {
+                    "name": "BETTING_MAX_OPEN_STAKES_CZK (hard ceiling)",
+                    "value": f"{config.BETTING_MAX_OPEN_STAKES_CZK:.0f}",
+                },
+                {
+                    "name": "BETTING_MAX_DAILY_LOSS_CZK (hard ceiling)",
+                    "value": f"{config.BETTING_MAX_DAILY_LOSS_CZK:.0f}",
+                },
+                {
+                    "name": "BETTING_BRIDGE",
+                    "value": f"{config.BETTING_BRIDGE_HOST}:{config.BETTING_BRIDGE_PORT}",
+                },
+                {
+                    "name": "BETTING_PLACEMENT_TIMEOUT_SECONDS",
+                    "value": str(config.BETTING_PLACEMENT_TIMEOUT_SECONDS),
+                },
+                {
+                    "name": "BETTING_FAIR_MAX_AGE_SECONDS",
+                    "value": str(config.BETTING_FAIR_MAX_AGE_SECONDS),
+                },
+                {
+                    "name": "DASHBOARD_CONTROLS_ENABLED",
+                    "value": _flag(config.DASHBOARD_CONTROLS_ENABLED),
+                },
+                {
+                    "name": "DASHBOARD_CONTROLS_AUTH",
+                    "value": (
+                        "configured"
+                        if config.DASHBOARD_CONTROLS_USERNAME
+                        and config.DASHBOARD_CONTROLS_PASSWORD
+                        else "MISSING"
+                    ),
+                },
+            ],
+        },
+        {
+            "title": "Pipeline & ops",
+            "rows": [
+                {"name": "ENABLED_SPORTS", "value": ", ".join(_sports) or "none"},
+                {
+                    "name": "Bookmaker: tipsport",
+                    "value": "enabled"
+                    if config.BOOKMAKER_TIPSPORT_ENABLED
+                    else "disabled",
+                },
+                {
+                    "name": "ODDS_API_KEY",
+                    "value": "set" if config.ODDS_API_KEY else "MISSING",
+                },
+                {"name": "Telegram recipients", "value": str(telegram_recipients)},
+                {
+                    "name": "HEARTBEAT_PING_URL",
+                    "value": "set" if config.HEARTBEAT_PING_URL else "not set",
+                },
+                {
+                    "name": "BACKUP_INTERVAL_HOURS",
+                    "value": str(config.BACKUP_INTERVAL_HOURS),
+                },
+                {
+                    "name": "RAW_RESPONSE_KEEP_DAYS",
+                    "value": str(config.RAW_RESPONSE_KEEP_DAYS),
+                },
+            ],
+        },
     ]
 
 
@@ -278,14 +372,19 @@ def _scraper_status_rows(
             icon, css = "⚠", "warn"
         else:
             icon, css = "✗", "err"
-        rows.append({
-            "name": name, "icon": icon, "css_class": css, "age": _fmt_age(age_s),
-            # Tripwire: snapshots dropped because Tipsport's listing carried no
-            # usable start time. Non-zero means a payload change is silently
-            # killing game matching (the fail-closed path), so it gets its own
-            # badge rather than hiding inside the log line.
-            "unsafe_start": h.unsafe_start_snapshots,
-        })
+        rows.append(
+            {
+                "name": name,
+                "icon": icon,
+                "css_class": css,
+                "age": _fmt_age(age_s),
+                # Tripwire: snapshots dropped because Tipsport's listing carried no
+                # usable start time. Non-zero means a payload change is silently
+                # killing game matching (the fail-closed path), so it gets its own
+                # badge rather than hiding inside the log line.
+                "unsafe_start": h.unsafe_start_snapshots,
+            }
+        )
     return rows
 
 
@@ -293,6 +392,7 @@ def _parse_budget_history(raw: str | None) -> list | None:
     """The governor's `odds_api_budget_history` meta (JSON list) -> list, or
     None on absent/malformed (the context then falls back to period average)."""
     import json
+
     if not raw:
         return None
     try:
@@ -303,8 +403,12 @@ def _parse_budget_history(raw: str | None) -> list | None:
 
 
 def _budget_context(
-    used: int | None, remaining: int | None, *, now: datetime,
-    reset_day: int | None = None, history: list | None = None,
+    used: int | None,
+    remaining: int | None,
+    *,
+    now: datetime,
+    reset_day: int | None = None,
+    history: list | None = None,
 ) -> dict | None:
     """Everything the budget cell needs to answer "am I going to run out":
     percent used, the next reset date (``ODDS_API_QUOTA_RESET_DAY``), burn/day,
@@ -352,7 +456,7 @@ def _budget_context(
             if last_reset <= d < today and d >= window_start and u <= used:
                 candidates.append((d, u))
         if candidates:
-            anchor_d, anchor_u = min(candidates)   # oldest usable in the window
+            anchor_d, anchor_u = min(candidates)  # oldest usable in the window
             span_days = max((today - anchor_d).days, 1)
             burn = round((used - anchor_u) / span_days)
             burn_basis = "3d"
@@ -373,7 +477,8 @@ def _budget_context(
 def _format_db_event(e: dict) -> str:
     if e["type"] == "value_bet":
         team = _selection_team(
-            e.get("selection", "?"), e.get("home_team", "?"), e.get("away_team", "?"))
+            e.get("selection", "?"), e.get("home_team", "?"), e.get("away_team", "?")
+        )
         matchup = f"{e.get('away_team', '?')} @ {e.get('home_team', '?')}"
         tier = f" ({e['tier']})" if e.get("tier") else ""
         return f"VALUE BET · {matchup} · {team} {e['edge_pct']:+.2f}%{tier}"
@@ -386,32 +491,32 @@ def _format_log_event(e: "log_tail.LogEvent") -> str:
     f = e.fields
     if e.event_type == "value_bet_suspect":
         return (
-            f"guarded detection · {f.get('reason','?')} · {f.get('bookmaker','?')} "
-            f"{f.get('market','?')} {f.get('selection','?')} +{f.get('edge_pct','?')}%"
+            f"guarded detection · {f.get('reason', '?')} · {f.get('bookmaker', '?')} "
+            f"{f.get('market', '?')} {f.get('selection', '?')} +{f.get('edge_pct', '?')}%"
         )
     if e.event_type == "clv":
-        return f"CLV · {f.get('bookmaker','?')} {f.get('market','?')} {f.get('selection','?')} {f.get('clv_pct','?')}%"
+        return f"CLV · {f.get('bookmaker', '?')} {f.get('market', '?')} {f.get('selection', '?')} {f.get('clv_pct', '?')}%"
     if e.event_type == "result":
-        return f"RESULT {f.get('result','?')} · {f.get('bookmaker','?')} {f.get('market','?')} {f.get('selection','?')}"
+        return f"RESULT {f.get('result', '?')} · {f.get('bookmaker', '?')} {f.get('market', '?')} {f.get('selection', '?')}"
     if e.event_type == "game_live":
-        return f"game live · {f.get('away','?')} @ {f.get('home','?')}"
+        return f"game live · {f.get('away', '?')} @ {f.get('home', '?')}"
     if e.event_type == "game_final":
         return (
-            f"game final · {f.get('away','?')} {f.get('away_score','?')} - "
-            f"{f.get('home','?')} {f.get('home_score','?')}"
+            f"game final · {f.get('away', '?')} {f.get('away_score', '?')} - "
+            f"{f.get('home', '?')} {f.get('home_score', '?')}"
         )
     if e.event_type == "coverage_gap":
         return (
-            f"⚠ coverage gap · {f.get('scraper','?')} "
-            f"game={f.get('game_id','?')} stale={f.get('minutes_stale','?')}m"
+            f"⚠ coverage gap · {f.get('scraper', '?')} "
+            f"game={f.get('game_id', '?')} stale={f.get('minutes_stale', '?')}m"
         )
     if e.event_type == "scraper_health":
         return (
-            f"poll · {f.get('name','?')} matched_games={f.get('matched_games','?')} "
-            f"errors={f.get('errors','?')}"
+            f"poll · {f.get('name', '?')} matched_games={f.get('matched_games', '?')} "
+            f"errors={f.get('errors', '?')}"
         )
     if e.event_type == "heartbeat":
-        return f"heartbeat · state={f.get('state','?')} games={f.get('games_tracked','?')}"
+        return f"heartbeat · state={f.get('state', '?')} games={f.get('games_tracked', '?')}"
     return e.event_type
 
 
@@ -439,7 +544,11 @@ def _fmt_feed_ts(instant: datetime, now: datetime) -> str:
 
 
 def _merge_activity_rows(
-    db_events, log_events, *, limit: int = 50, now: datetime | None = None,
+    db_events,
+    log_events,
+    *,
+    limit: int = 50,
+    now: datetime | None = None,
 ) -> list[dict]:
     """Merge DB-sourced and log-sourced activity events into one newest-first feed.
 
@@ -458,28 +567,38 @@ def _merge_activity_rows(
     for e in db_events:
         ts = e["ts"]
         instant = _as_instant(ts)
-        rows.append((instant, {
-            "src": "DB",
-            "ts": ts,
-            "ts_short": _fmt_feed_ts(instant, now),
-            "event_type": e["type"],
-            "level": "INFO",
-            "text": _format_db_event(e),
-        }))
+        rows.append(
+            (
+                instant,
+                {
+                    "src": "DB",
+                    "ts": ts,
+                    "ts_short": _fmt_feed_ts(instant, now),
+                    "event_type": e["type"],
+                    "level": "INFO",
+                    "text": _format_db_event(e),
+                },
+            )
+        )
     for e in log_events:
         # Skip value_bet (the DB already supplies a formatted row) and heartbeat
         # (liveness is shown by the status strip) so neither consumes the row
         # budget and pushes real events out of the feed.
         if e.event_type in ("value_bet", "heartbeat"):
             continue
-        rows.append((e.timestamp, {
-            "src": "LOG",
-            "ts": e.timestamp.isoformat(),
-            "ts_short": _fmt_feed_ts(e.timestamp, now),
-            "event_type": e.event_type,
-            "level": e.level,
-            "text": _format_log_event(e),
-        }))
+        rows.append(
+            (
+                e.timestamp,
+                {
+                    "src": "LOG",
+                    "ts": e.timestamp.isoformat(),
+                    "ts_short": _fmt_feed_ts(e.timestamp, now),
+                    "event_type": e.event_type,
+                    "level": e.level,
+                    "text": _format_log_event(e),
+                },
+            )
+        )
     rows.sort(key=lambda r: r[0], reverse=True)
     return [row for _, row in rows[:limit]]
 
@@ -495,63 +614,97 @@ def _engine_state(hb, now: datetime) -> str:
     return hb.betting
 
 
-def _betting_chain(hb, bridge, engine_state: str, *, armed_meta: bool, now: datetime) -> list[dict]:
+def _betting_chain(
+    hb, bridge, engine_state: str, *, armed_meta: bool, now: datetime
+) -> list[dict]:
     """The 6-link safety chain for /betting: enabled → bridge → extension →
     logged in → armed → confirm gate. Each link is ok/fail/warn/na with a
     short detail, so a broken deploy (extension didn't re-dial, login
     dropped, gate off) is diagnosable at a glance instead of hiding behind a
     one-word pill."""
     links: list[dict] = []
-    links.append({
-        "label": "enabled", "css": "ok" if config.BETTING_ENABLED else "na",
-        "detail": "" if config.BETTING_ENABLED else "BETTING_ENABLED=0",
-    })
+    links.append(
+        {
+            "label": "enabled",
+            "css": "ok" if config.BETTING_ENABLED else "na",
+            "detail": "" if config.BETTING_ENABLED else "BETTING_ENABLED=0",
+        }
+    )
     if hb is None:
         links.append({"label": "bridge", "css": "na", "detail": "no heartbeat"})
     elif hb.betting is None or engine_state == "off":
         links.append({"label": "bridge", "css": "fail", "detail": "engine off"})
     else:
-        links.append({"label": "bridge", "css": "ok",
-                      "detail": f"hb {_fmt_age((now - hb.timestamp).total_seconds())}"})
+        links.append(
+            {
+                "label": "bridge",
+                "css": "ok",
+                "detail": f"hb {_fmt_age((now - hb.timestamp).total_seconds())}",
+            }
+        )
     ext_detail = ""
     if bridge is not None and bridge.last_connected is not None:
-        ext_detail = f"seen {_fmt_age((now - bridge.last_connected).total_seconds())} ago"
+        ext_detail = (
+            f"seen {_fmt_age((now - bridge.last_connected).total_seconds())} ago"
+        )
     if engine_state in ("disarmed", "armed"):
         links.append({"label": "extension", "css": "ok", "detail": ext_detail})
     elif engine_state == "disconnected":
-        links.append({"label": "extension", "css": "fail", "detail": ext_detail or "not connected"})
+        links.append(
+            {
+                "label": "extension",
+                "css": "fail",
+                "detail": ext_detail or "not connected",
+            }
+        )
     else:
         links.append({"label": "extension", "css": "na", "detail": ext_detail})
     if bridge is not None and bridge.logged_in is not None:
         li_detail = ""
         if bridge.logged_in_at is not None:
-            li_detail = f"as of {_fmt_age((now - bridge.logged_in_at).total_seconds())} ago"
-        links.append({
-            "label": "logged in", "css": "ok" if bridge.logged_in else "fail",
-            "detail": li_detail if bridge.logged_in else (li_detail or "session down"),
-        })
+            li_detail = (
+                f"as of {_fmt_age((now - bridge.logged_in_at).total_seconds())} ago"
+            )
+        links.append(
+            {
+                "label": "logged in",
+                "css": "ok" if bridge.logged_in else "fail",
+                "detail": li_detail
+                if bridge.logged_in
+                else (li_detail or "session down"),
+            }
+        )
     else:
         links.append({"label": "logged in", "css": "na", "detail": "no bridge log"})
     if engine_state == "armed":
         links.append({"label": "armed", "css": "ok", "detail": ""})
     elif armed_meta:
-        links.append({"label": "armed", "css": "warn", "detail": "meta armed, engine not"})
+        links.append(
+            {"label": "armed", "css": "warn", "detail": "meta armed, engine not"}
+        )
     else:
         links.append({"label": "armed", "css": "fail", "detail": "disarmed"})
-    links.append({
-        "label": "confirm gate",
-        "css": "ok" if config.BETTING_CONFIRM_ENABLED else "warn",
-        "detail": "money ON (env)" if config.BETTING_CONFIRM_ENABLED else "OFF — dry-run (env)",
-    })
+    links.append(
+        {
+            "label": "confirm gate",
+            "css": "ok" if config.BETTING_CONFIRM_ENABLED else "warn",
+            "detail": "money ON (env)"
+            if config.BETTING_CONFIRM_ENABLED
+            else "OFF — dry-run (env)",
+        }
+    )
     # A recent supersede is the reconnect-storm signature — surface it even
     # after the storm settles so the operator knows to check the extension.
     if bridge is not None and bridge.last_supersede is not None:
         storm_age = (now - bridge.last_supersede).total_seconds()
         if storm_age < 1800:
-            links.append({
-                "label": "reconnect storm", "css": "warn",
-                "detail": f"supersede {_fmt_age(storm_age)} ago",
-            })
+            links.append(
+                {
+                    "label": "reconnect storm",
+                    "css": "warn",
+                    "detail": f"supersede {_fmt_age(storm_age)} ago",
+                }
+            )
     return links
 
 
@@ -619,7 +772,9 @@ def create_app() -> FastAPI:
     @app.get("/upcoming", response_class=HTMLResponse)
     async def upcoming(request: Request, sport: str | None = None) -> HTMLResponse:
         return templates.TemplateResponse(
-            request, "upcoming.html", {
+            request,
+            "upcoming.html",
+            {
                 "page": "upcoming",
                 "sport": _norm_sport(sport),
                 "enabled_sports": ENABLED_SPORTS,
@@ -627,18 +782,24 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/upcoming/partials/board", response_class=HTMLResponse)
-    async def upcoming_board_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def upcoming_board_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             board = await queries.upcoming_games(store, sport=s)
         return templates.TemplateResponse(
-            request, "partials/upcoming_board.html", {"board": board, "sport": s},
+            request,
+            "partials/upcoming_board.html",
+            {"board": board, "sport": s},
         )
 
     @app.get("/live", response_class=HTMLResponse)
     async def live(request: Request, sport: str | None = None) -> HTMLResponse:
         return templates.TemplateResponse(
-            request, "live.html", {
+            request,
+            "live.html",
+            {
                 "page": "live",
                 "sport": _norm_sport(sport),
                 "enabled_sports": ENABLED_SPORTS,
@@ -646,13 +807,16 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/live/partials/status-strip", response_class=HTMLResponse)
-    async def status_strip_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def status_strip_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             summary = await queries.status_strip(store, sport=s)
             active_tiers = await queries.active_game_tiers(store, sport=s)
             budget_history = _parse_budget_history(
-                await store.get_meta("odds_api_budget_history"))
+                await store.get_meta("odds_api_budget_history")
+            )
         now = datetime.now(timezone.utc)
         # One offloaded scan: derive heartbeat + scraper health in a single pass
         # and reuse the heartbeat for the state derivation (avoids 3 blocking
@@ -663,21 +827,30 @@ def create_app() -> FastAPI:
             "partials/status_strip.html",
             {
                 "summary": summary,
-                "state": state_mod.derive_pipeline_state(config.LOG_FILE, now=now, heartbeat=hb),
+                "state": state_mod.derive_pipeline_state(
+                    config.LOG_FILE, now=now, heartbeat=hb
+                ),
                 "heartbeat": hb,
-                "heartbeat_age_s": int((now - hb.timestamp).total_seconds()) if hb else None,
+                "heartbeat_age_s": int((now - hb.timestamp).total_seconds())
+                if hb
+                else None,
                 "scrapers": _scraper_status_rows(health, now, active_tiers),
                 "api_key_set": bool(config.ODDS_API_KEY),
                 "budget": _budget_context(
-                    summary["budget_used"], summary["budget_remaining"], now=now,
-                    history=budget_history),
+                    summary["budget_used"],
+                    summary["budget_remaining"],
+                    now=now,
+                    history=budget_history,
+                ),
                 "updated": now.astimezone(_DISPLAY_TZ).strftime("%H:%M:%S"),
                 "sport": s,
             },
         )
 
     @app.get("/live/partials/coverage-matrix", response_class=HTMLResponse)
-    async def coverage_matrix_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def coverage_matrix_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         enabled_pairs = [
             ("pinnacle", True),
@@ -686,13 +859,22 @@ def create_app() -> FastAPI:
         enabled = [name for name, on in enabled_pairs if on]
         async with _store() as store:
             rows = await queries.coverage_matrix(store, scrapers=enabled, sport=s)
-            next_window = None if rows else await queries.next_game_window(store, sport=s)
-        health = await asyncio.to_thread(log_tail.latest_scraper_health_by_name, config.LOG_FILE)
+            next_window = (
+                None if rows else await queries.next_game_window(store, sport=s)
+            )
+        health = await asyncio.to_thread(
+            log_tail.latest_scraper_health_by_name, config.LOG_FILE
+        )
         return templates.TemplateResponse(
             request,
             "partials/coverage_matrix.html",
-            {"rows": rows, "scrapers": enabled, "health": health,
-             "next_window": next_window, "sport": s},
+            {
+                "rows": rows,
+                "scrapers": enabled,
+                "health": health,
+                "next_window": next_window,
+                "sport": s,
+            },
         )
 
     @app.get("/bets")
@@ -717,45 +899,60 @@ def create_app() -> FastAPI:
                 headers={"WWW-Authenticate": _CONTROLS_REALM},
             )
         return templates.TemplateResponse(
-            request, "betting.html", {
+            request,
+            "betting.html",
+            {
                 "page": "betting",
                 "sport": _norm_sport(sport),
                 "enabled_sports": ENABLED_SPORTS,
             },
         )
 
-    async def _overview_response(request: Request, sport: str | None, *, saved: bool = False):
+    async def _overview_response(
+        request: Request, sport: str | None, *, saved: bool = False
+    ):
         s = _norm_sport(sport)
         async with _store() as store:
             overview = await queries.betting_overview(store, sport=s)
         now = datetime.now(timezone.utc)
         hb, bridge = await asyncio.to_thread(
-            lambda: (log_tail.latest_heartbeat(config.LOG_FILE),
-                     log_tail.latest_bridge_state(config.LOG_FILE)))
+            lambda: (
+                log_tail.latest_heartbeat(config.LOG_FILE),
+                log_tail.latest_bridge_state(config.LOG_FILE),
+            )
+        )
         engine_state = _engine_state(hb, now)
         overview["betting"] = engine_state
         return templates.TemplateResponse(
-            request, "partials/betting_overview.html",
-            {"o": overview, "sport": s,
-             "engine_state": engine_state,
-             "chain": _betting_chain(hb, bridge, engine_state,
-                                     armed_meta=overview["armed"], now=now),
-             "saved": saved,
-             "updated": now.astimezone(_DISPLAY_TZ).strftime("%H:%M:%S"),
-             # Render the arm/disarm + caps FORM only to an authenticated viewer:
-             # the overview partial itself stays public (read-only data), so an
-             # unauthenticated stranger must not even see the controls.
-             "controls_enabled": _controls_available() and _basic_auth_ok(request),
-             "controls_flag_enabled": config.DASHBOARD_CONTROLS_ENABLED,
-             "controls_auth_configured": _controls_auth_configured(),
-             "gate_sports": list(ENABLED_SPORTS),
-             "max_stake_czk": config.BETTING_MAX_STAKE_CZK,
-             "max_bets_per_day_ceiling": config.BETTING_MAX_BETS_PER_DAY,
-             "max_open_stakes_czk_ceiling": config.BETTING_MAX_OPEN_STAKES_CZK,
-             "daily_loss_limit_czk_ceiling": config.BETTING_MAX_DAILY_LOSS_CZK})
+            request,
+            "partials/betting_overview.html",
+            {
+                "o": overview,
+                "sport": s,
+                "engine_state": engine_state,
+                "chain": _betting_chain(
+                    hb, bridge, engine_state, armed_meta=overview["armed"], now=now
+                ),
+                "saved": saved,
+                "updated": now.astimezone(_DISPLAY_TZ).strftime("%H:%M:%S"),
+                # Render the arm/disarm + caps FORM only to an authenticated viewer:
+                # the overview partial itself stays public (read-only data), so an
+                # unauthenticated stranger must not even see the controls.
+                "controls_enabled": _controls_available() and _basic_auth_ok(request),
+                "controls_flag_enabled": config.DASHBOARD_CONTROLS_ENABLED,
+                "controls_auth_configured": _controls_auth_configured(),
+                "gate_sports": list(ENABLED_SPORTS),
+                "max_stake_czk": config.BETTING_MAX_STAKE_CZK,
+                "max_bets_per_day_ceiling": config.BETTING_MAX_BETS_PER_DAY,
+                "max_open_stakes_czk_ceiling": config.BETTING_MAX_OPEN_STAKES_CZK,
+                "daily_loss_limit_czk_ceiling": config.BETTING_MAX_DAILY_LOSS_CZK,
+            },
+        )
 
     @app.get("/betting/partials/overview", response_class=HTMLResponse)
-    async def betting_overview_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def betting_overview_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         return await _overview_response(request, sport)
 
     @app.get("/betting/partials/state-dot", response_class=HTMLResponse)
@@ -767,15 +964,19 @@ def create_app() -> FastAPI:
             return HTMLResponse("")
         state = _engine_state(hb, datetime.now(timezone.utc))
         return templates.TemplateResponse(
-            request, "partials/state_dot.html", {"state": state})
+            request, "partials/state_dot.html", {"state": state}
+        )
 
     @app.get("/betting/partials/placed-bets", response_class=HTMLResponse)
-    async def betting_placed_bets_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def betting_placed_bets_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             rows = await queries.placed_bets_table(store, limit=25, sport=s)
         return templates.TemplateResponse(
-            request, "partials/placed_bets.html", {"rows": rows, "sport": s})
+            request, "partials/placed_bets.html", {"rows": rows, "sport": s}
+        )
 
     @app.get("/betting/partials/value-bets", response_class=HTMLResponse)
     async def betting_value_bets_partial(
@@ -791,18 +992,29 @@ def create_app() -> FastAPI:
         toggle_label = "show guarded too" if not include_suspect else "clean only"
         async with _store() as store:
             rows = await queries.recent_value_bets(
-                store, limit=15, sport=s, include_suspect=include_suspect)
+                store, limit=15, sport=s, include_suspect=include_suspect
+            )
         return templates.TemplateResponse(
-            request, "partials/recent_value_bets.html",
-            {"rows": rows, "sport": s, "show": show,
-             "self_qs": self_qs, "toggle_qs": toggle_qs, "toggle_label": toggle_label})
+            request,
+            "partials/recent_value_bets.html",
+            {
+                "rows": rows,
+                "sport": s,
+                "show": show,
+                "self_qs": self_qs,
+                "toggle_qs": toggle_qs,
+                "toggle_label": toggle_label,
+            },
+        )
 
     def _require_controls(request: Request) -> None:
         """Authorize one money-affecting POST and reject cross-site submits."""
         if not config.DASHBOARD_CONTROLS_ENABLED:
             raise HTTPException(status_code=403, detail="dashboard controls disabled")
         if not _controls_auth_configured():
-            raise HTTPException(status_code=503, detail="dashboard control credentials not configured")
+            raise HTTPException(
+                status_code=503, detail="dashboard control credentials not configured"
+            )
         if not _basic_auth_ok(request):
             raise HTTPException(
                 status_code=401,
@@ -811,7 +1023,9 @@ def create_app() -> FastAPI:
             )
         source = request.headers.get("origin") or request.headers.get("referer")
         if not source or urlsplit(source).netloc != _expected_origin_host(request):
-            raise HTTPException(status_code=403, detail="cross-origin control request rejected")
+            raise HTTPException(
+                status_code=403, detail="cross-origin control request rejected"
+            )
 
     def _bounded_number(value: float, maximum: float, *, minimum: float = 0.0) -> float:
         if not math.isfinite(value):
@@ -829,13 +1043,16 @@ def create_app() -> FastAPI:
         return await _overview_response(request, sport)
 
     @app.post("/betting/disarm", response_class=HTMLResponse)
-    async def betting_disarm(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def betting_disarm(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         _require_controls(request)
         async with _store() as store:
             await store.set_meta("betting_armed", "0")
             await store.set_meta(
                 "betting_disarm_reason",
-                f"operator_dashboard @ {datetime.now(timezone.utc).isoformat()}")
+                f"operator_dashboard @ {datetime.now(timezone.utc).isoformat()}",
+            )
         logger_dash.info("betting_disarmed: via dashboard")
         return await _overview_response(request, sport)
 
@@ -861,41 +1078,57 @@ def create_app() -> FastAPI:
                 # its seasonal re-enable without an operator tick. Unknown
                 # keys drop; empty falls back to mlb — the gate must never go
                 # silently empty (disarm is the off switch, not this).
-                sel = sorted({s2.strip().lower() for s2 in (betting_sports or [])
-                              if s2.strip().lower() in ENABLED_SPORTS})
+                sel = sorted(
+                    {
+                        s2.strip().lower()
+                        for s2 in (betting_sports or [])
+                        if s2.strip().lower() in ENABLED_SPORTS
+                    }
+                )
                 await store.set_meta("betting_sports", ",".join(sel) if sel else "mlb")
             if flat_stake_czk is not None:
                 # Clamp to the env hard ceiling — the dashboard can never set a
                 # stake above BETTING_MAX_STAKE_CZK.
                 stake = _bounded_number(
-                    float(flat_stake_czk), config.BETTING_MAX_STAKE_CZK,
+                    float(flat_stake_czk),
+                    config.BETTING_MAX_STAKE_CZK,
                     minimum=1.0,
                 )
                 await store.set_meta("betting_flat_stake_czk", str(stake))
             if max_bets_per_day is not None:
-                max_day = max(0, min(
-                    int(max_bets_per_day), config.BETTING_MAX_BETS_PER_DAY,
-                ))
+                max_day = max(
+                    0,
+                    min(
+                        int(max_bets_per_day),
+                        config.BETTING_MAX_BETS_PER_DAY,
+                    ),
+                )
                 await store.set_meta("betting_max_bets_per_day", str(max_day))
             if max_open_stakes_czk is not None:
                 max_open = _bounded_number(
-                    float(max_open_stakes_czk), config.BETTING_MAX_OPEN_STAKES_CZK,
+                    float(max_open_stakes_czk),
+                    config.BETTING_MAX_OPEN_STAKES_CZK,
                 )
                 await store.set_meta("betting_max_open_stakes_czk", str(max_open))
             if daily_loss_limit_czk is not None:
                 loss_limit = _bounded_number(
-                    float(daily_loss_limit_czk), config.BETTING_MAX_DAILY_LOSS_CZK,
+                    float(daily_loss_limit_czk),
+                    config.BETTING_MAX_DAILY_LOSS_CZK,
                 )
                 await store.set_meta("betting_daily_loss_limit_czk", str(loss_limit))
         logger_dash.info("betting_config_updated: via dashboard")
         return await _overview_response(request, sport, saved=True)
 
     @app.get("/live/partials/activity-feed", response_class=HTMLResponse)
-    async def activity_feed_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def activity_feed_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             db_events = await queries.recent_db_events(store, limit=25, sport=s)
-        log_events = await asyncio.to_thread(log_tail.parse_event_lines, config.LOG_FILE, n=200)
+        log_events = await asyncio.to_thread(
+            log_tail.parse_event_lines, config.LOG_FILE, n=200
+        )
         rows = _merge_activity_rows(db_events, log_events, limit=50)
         return templates.TemplateResponse(
             request,
@@ -913,7 +1146,9 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/analysis/partials/big-numbers", response_class=HTMLResponse)
-    async def big_numbers_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def big_numbers_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             n = await queries.big_numbers(store, sport=s)
@@ -925,7 +1160,9 @@ def create_app() -> FastAPI:
 
     @app.get("/analysis/partials/monthly", response_class=HTMLResponse)
     async def monthly_partial(
-        request: Request, month: str | None = None, sport: str | None = None,
+        request: Request,
+        month: str | None = None,
+        sport: str | None = None,
     ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
@@ -936,7 +1173,8 @@ def create_app() -> FastAPI:
             for ym in data["months"]
         ]
         return templates.TemplateResponse(
-            request, "partials/monthly_performance.html",
+            request,
+            "partials/monthly_performance.html",
             {
                 "months": months,
                 "month": data["month"],
@@ -947,17 +1185,23 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/analysis/partials/calendar", response_class=HTMLResponse)
-    async def calendar_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def calendar_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             cal = await queries.activity_calendar(store, sport=s)
         return templates.TemplateResponse(
-            request, "partials/activity_calendar.html", {"cal": cal, "sport": s},
+            request,
+            "partials/activity_calendar.html",
+            {"cal": cal, "sport": s},
         )
 
     @app.get("/analysis/partials/day", response_class=HTMLResponse)
     async def day_partial(
-        request: Request, date: str, sport: str | None = None,
+        request: Request,
+        date: str,
+        sport: str | None = None,
     ) -> HTMLResponse:
         try:
             day = date_cls.fromisoformat(date)
@@ -967,21 +1211,29 @@ def create_app() -> FastAPI:
         async with _store() as store:
             d = await queries.day_detail(store, day, sport=s)
         return templates.TemplateResponse(
-            request, "partials/day_detail.html", {"d": d, "sport": s},
+            request,
+            "partials/day_detail.html",
+            {"d": d, "sport": s},
         )
 
     @app.get("/analysis/partials/profit-curve", response_class=HTMLResponse)
-    async def profit_curve_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def profit_curve_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             curve = await queries.profit_curve(store, sport=s)
         return templates.TemplateResponse(
-            request, "partials/profit_curve.html", {"curve": curve, "sport": s},
+            request,
+            "partials/profit_curve.html",
+            {"curve": curve, "sport": s},
         )
 
     @app.get("/analysis/partials/clv-trend", response_class=HTMLResponse)
     async def clv_trend_partial(
-        request: Request, days: int | None = None, sport: str | None = None,
+        request: Request,
+        days: int | None = None,
+        sport: str | None = None,
     ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
@@ -993,7 +1245,9 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/analysis/partials/scoreboard", response_class=HTMLResponse)
-    async def scoreboard_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def scoreboard_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         s = _norm_sport(sport)
         async with _store() as store:
             rows = await queries.per_book_scoreboard(store, sport=s)
@@ -1004,7 +1258,9 @@ def create_app() -> FastAPI:
         )
 
     @app.get("/analysis/partials/edge-buckets", response_class=HTMLResponse)
-    async def edge_buckets_partial(request: Request, sport: str | None = None) -> HTMLResponse:
+    async def edge_buckets_partial(
+        request: Request, sport: str | None = None
+    ) -> HTMLResponse:
         # One table for what used to be two sections over the SAME buckets:
         # the volume histogram (all flagged) + the calibration columns
         # (resolved-only break-even vs actual win rate).
@@ -1014,20 +1270,29 @@ def create_app() -> FastAPI:
             cal = await queries.edge_calibration(store, sport=s)
         cal_by_bucket = {c["bucket"]: c for c in cal}
         max_count = max((d["count"] for d in dist), default=0) or 1
-        rows = [{
-            **d,
-            "bar_pct": d["count"] * 100 // max_count,
-            **{k: cal_by_bucket.get(d["bucket"], {}).get(k)
-               for k in ("n", "expected_win", "actual_win", "delta", "thin")},
-        } for d in dist]
+        rows = [
+            {
+                **d,
+                "bar_pct": d["count"] * 100 // max_count,
+                **{
+                    k: cal_by_bucket.get(d["bucket"], {}).get(k)
+                    for k in ("n", "expected_win", "actual_win", "delta", "thin")
+                },
+            }
+            for d in dist
+        ]
         return templates.TemplateResponse(
-            request, "partials/edge_buckets.html", {"rows": rows, "sport": s},
+            request,
+            "partials/edge_buckets.html",
+            {"rows": rows, "sport": s},
         )
 
     @app.get("/analysis", response_class=HTMLResponse)
     async def analysis(request: Request, sport: str | None = None) -> HTMLResponse:
         return templates.TemplateResponse(
-            request, "analysis.html", {
+            request,
+            "analysis.html",
+            {
                 "page": "analysis",
                 "sport": _norm_sport(sport),
                 "enabled_sports": ENABLED_SPORTS,
@@ -1041,7 +1306,9 @@ def create_app() -> FastAPI:
         if detail is None:
             raise HTTPException(status_code=404, detail="unknown game")
         return templates.TemplateResponse(
-            request, "game.html", {
+            request,
+            "game.html",
+            {
                 "page": "game",
                 "sport": None,
                 "enabled_sports": ENABLED_SPORTS,
@@ -1059,6 +1326,7 @@ def create_app() -> FastAPI:
         from importlib.metadata import PackageNotFoundError
         from importlib.metadata import version as _dist_version
         from oddsiq.pipeline.budget_governor import throttle_intervals
+
         try:
             _pkg_version = _dist_version("oddsiq")
         except PackageNotFoundError:
@@ -1072,8 +1340,11 @@ def create_app() -> FastAPI:
                 used = await store.get_meta("odds_api_budget_used")
                 remaining = await store.get_meta("odds_api_budget_remaining")
                 budget_history = _parse_budget_history(
-                    await store.get_meta("odds_api_budget_history"))
-                cur = await store._db.execute("SELECT MAX(version) AS v FROM schema_version")
+                    await store.get_meta("odds_api_budget_history")
+                )
+                cur = await store._db.execute(
+                    "SELECT MAX(version) AS v FROM schema_version"
+                )
                 row = await cur.fetchone()
                 schema_version = row["v"] if row else None
             except _sqlite3.OperationalError:
@@ -1090,33 +1361,39 @@ def create_app() -> FastAPI:
             "backup": str(config.BACKUP_DIR),
             "backup_count": _count_files(config.BACKUP_DIR, "*.db"),
         }
-        level = hb.budget_throttle if hb is not None and hb.budget_throttle is not None else 0
+        level = (
+            hb.budget_throttle
+            if hb is not None and hb.budget_throttle is not None
+            else 0
+        )
         eff = throttle_intervals(level)
         governor = {
             "budget": _budget_context(
                 int(used) if used is not None else None,
                 int(remaining) if remaining is not None else None,
-                now=now, history=budget_history),
+                now=now,
+                history=budget_history,
+            ),
             "budget_used": int(used) if used is not None else None,
             "budget_remaining": int(remaining) if remaining is not None else None,
             "throttle_level": hb.budget_throttle if hb is not None else None,
             # The cadence ACTUALLY running right now (base config throttled by
             # the governor level) — showing base "hot 90s" at L2 was a lie.
-            "effective_cadence": (
-                f"warm {eff['warm']}s / hot {eff['hot']}s"
-            ),
+            "effective_cadence": (f"warm {eff['warm']}s / hot {eff['hot']}s"),
             "base_cadence": (
-                f"warm {config.POLL_TIER_WARM}s / "
-                f"hot {config.POLL_TIER_HOT}s"
+                f"warm {config.POLL_TIER_WARM}s / hot {config.POLL_TIER_HOT}s"
             ),
         }
         import platform as _platform
+
         system = {
             "version": _pkg_version,
             "python": _platform.python_version(),
             "schema_version": schema_version,
             "heartbeat_state": hb.state if hb is not None else None,
-            "heartbeat_age_s": int((now - hb.timestamp).total_seconds()) if hb else None,
+            "heartbeat_age_s": int((now - hb.timestamp).total_seconds())
+            if hb
+            else None,
         }
         return templates.TemplateResponse(
             request,
@@ -1144,6 +1421,7 @@ def run_dashboard(*, host: str = "127.0.0.1", port: int = 8080) -> int:
     """
     import uvicorn  # local import keeps test_cli.py argparse tests fast
     from oddsiq.db import migrations
+
     # Apply pending migrations so the dashboard is self-sufficient even if the
     # pipeline hasn't run since the last schema change — /betting selects
     # placed_bets (migration 010) and every reporting query filters

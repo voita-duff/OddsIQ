@@ -35,7 +35,9 @@ _BACKUP_FILENAME_RE = re.compile(
 
 def _format_backup_filename(timestamp: datetime, moment: str) -> str:
     if moment not in _VALID_MOMENTS:
-        raise ValueError(f"moment must be one of {sorted(_VALID_MOMENTS)}, got {moment!r}")
+        raise ValueError(
+            f"moment must be one of {sorted(_VALID_MOMENTS)}, got {moment!r}"
+        )
     return f"oddsiq-{timestamp.strftime('%Y%m%d-%H%M%S')}-{moment}.db"
 
 
@@ -171,7 +173,10 @@ def _prune_old_backups(
     by_date: dict[str, tuple[Path, str]] = {}
     for path, date_str, time_str in parsed:
         cur = by_date.get(date_str)
-        if cur is None or (time_str, _tiebreak(path.name)) > (cur[1], _tiebreak(cur[0].name)):
+        if cur is None or (time_str, _tiebreak(path.name)) > (
+            cur[1],
+            _tiebreak(cur[0].name),
+        ):
             by_date[date_str] = (path, time_str)
     newest_dates = sorted(by_date.keys(), reverse=True)[:keep_daily]
     daily_keep: set[Path] = {by_date[d][0] for d in newest_dates}
@@ -180,7 +185,11 @@ def _prune_old_backups(
     for path, date_str, time_str in parsed:
         month = date_str[:6]
         cur = by_month.get(month)
-        if cur is None or (date_str, time_str, _tiebreak(path.name)) > (cur[1], cur[2], _tiebreak(cur[0].name)):
+        if cur is None or (date_str, time_str, _tiebreak(path.name)) > (
+            cur[1],
+            cur[2],
+            _tiebreak(cur[0].name),
+        ):
             by_month[month] = (path, date_str, time_str)
     newest_months = sorted(by_month.keys(), reverse=True)[:keep_monthly]
     monthly_keep: set[Path] = {by_month[m][0] for m in newest_months}

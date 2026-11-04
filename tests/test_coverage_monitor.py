@@ -122,11 +122,15 @@ class _ThrottledGov:
 
 
 @pytest.mark.asyncio
-async def test_coverage_threshold_scales_with_budget_throttle(store: Store, monkeypatch):
+async def test_coverage_threshold_scales_with_budget_throttle(
+    store: Store, monkeypatch
+):
     """Under budget throttle, warm cadence stretches to 900-1800s. A fixed 600s
     staleness bar would false-alert every cycle on a HEALTHY pipeline simply not
     due to poll yet — so the threshold must scale with the throttled interval."""
-    warm_game = await _make_game(store, external_id="nba_warm_thr", seconds_to_tipoff=90 * 60)
+    warm_game = await _make_game(
+        store, external_id="nba_warm_thr", seconds_to_tipoff=90 * 60
+    )
     games = [warm_game]
     scrapers = _scrapers("pinnacle")
     now = datetime.now(timezone.utc)
@@ -151,7 +155,9 @@ async def test_coverage_threshold_scales_with_budget_throttle(store: Store, monk
 
 
 @pytest.mark.asyncio
-async def test_coverage_gap_alert_when_scraper_never_succeeded(store: Store, monkeypatch):
+async def test_coverage_gap_alert_when_scraper_never_succeeded(
+    store: Store, monkeypatch
+):
     """Hot tier with no matched coverage yet must alert, not silently continue."""
     mon = CoverageMonitor()
     hot_game = await _make_game(store, external_id="nba_hot", seconds_to_tipoff=600)
@@ -172,7 +178,9 @@ async def test_coverage_gap_alert_when_scraper_never_succeeded(store: Store, mon
 async def test_coverage_gap_includes_extra_stub_scraper(store: Store, monkeypatch):
     """Coverage-gap tracking follows every enabled scraper in the scheduler list."""
     mon = CoverageMonitor()
-    hot_game = await _make_game(store, external_id="nba_hot_stub", seconds_to_tipoff=600)
+    hot_game = await _make_game(
+        store, external_id="nba_hot_stub", seconds_to_tipoff=600
+    )
     games = [hot_game]
     scrapers = _scrapers("pinnacle", "tipsport", "stubbook")
     now = datetime.now(timezone.utc)
@@ -215,19 +223,26 @@ async def test_coverage_gap_alerts_warm_but_ignores_far_and_final(
     mon = CoverageMonitor()
     scrapers = _scrapers("pinnacle", "tipsport")
     warm = Game(
-        external_id="nba_warm", home_team="Miami Heat", away_team="Toronto Raptors",
-        scheduled_at=datetime.now(timezone.utc) + timedelta(hours=1, minutes=30),  # 90min -> warm
+        external_id="nba_warm",
+        home_team="Miami Heat",
+        away_team="Toronto Raptors",
+        scheduled_at=datetime.now(timezone.utc)
+        + timedelta(hours=1, minutes=30),  # 90min -> warm
         status="scheduled",
     )
     warm.id = await store.upsert_game(warm)
     far = Game(
-        external_id="nba_far", home_team="Denver Nuggets", away_team="Phoenix Suns",
+        external_id="nba_far",
+        home_team="Denver Nuggets",
+        away_team="Phoenix Suns",
         scheduled_at=datetime.now(timezone.utc) + timedelta(hours=3),
         status="scheduled",
     )
     far.id = await store.upsert_game(far)
     finalgame = Game(
-        external_id="nba_final", home_team="Chicago Bulls", away_team="New York Knicks",
+        external_id="nba_final",
+        home_team="Chicago Bulls",
+        away_team="New York Knicks",
         scheduled_at=datetime.now(timezone.utc) - timedelta(hours=1),
         status="final",
     )
@@ -276,8 +291,13 @@ async def test_match_timestamps_pruned_to_slate_scoreboard_keeps_last_seen():
     mon.record_match(1, "tipsport", now - timedelta(minutes=3))
     mon.record_match(99, "tipsport", now - timedelta(minutes=5))  # game left the slate
 
-    slate_game = Game(external_id="cov_slate", home_team="A", away_team="B",
-                      scheduled_at=now + timedelta(hours=5), status="scheduled")
+    slate_game = Game(
+        external_id="cov_slate",
+        home_team="A",
+        away_team="B",
+        scheduled_at=now + timedelta(hours=5),
+        status="scheduled",
+    )
     slate_game.id = 1
     await mon.check_gaps([slate_game], [], now)
 

@@ -13,6 +13,7 @@ Throttle model (discrete levels; hot protected — widened only gently at 2/3):
   Level 2 WARM+HOT   1.25 < ratio ≤ 1.6
   Level 3 CONSERVATIVE  ratio > 1.6 OR remaining ≤ reserve floor
 """
+
 from __future__ import annotations
 
 import calendar
@@ -92,7 +93,9 @@ class BudgetGovernor:
             total = pin.budget_total
             logger.info(
                 "Odds API budget: %d used / %d remaining (%d total)",
-                result["used"], result["remaining"], total,
+                result["used"],
+                result["remaining"],
+                total,
             )
             return
         # Probe failed — try to restore last-known values from DB.
@@ -103,7 +106,8 @@ class BudgetGovernor:
             pin._budget_remaining = int(remaining)
             logger.info(
                 "Odds API budget (from DB fallback): %d used / %d remaining",
-                pin._budget_used, pin._budget_remaining,
+                pin._budget_used,
+                pin._budget_remaining,
             )
         else:
             logger.warning("Odds API budget unknown — probe failed and no DB snapshot")
@@ -123,10 +127,15 @@ class BudgetGovernor:
         pin = self._pinnacle
         if pin is None:
             return
-        if pin.budget_used == 0 and pin.budget_remaining == config.ODDS_API_MONTHLY_BUDGET:
+        if (
+            pin.budget_used == 0
+            and pin.budget_remaining == config.ODDS_API_MONTHLY_BUDGET
+        ):
             return  # never probed successfully — don't persist the default
         await self._store.set_meta("odds_api_budget_used", str(pin.budget_used))
-        await self._store.set_meta("odds_api_budget_remaining", str(pin.budget_remaining))
+        await self._store.set_meta(
+            "odds_api_budget_remaining", str(pin.budget_remaining)
+        )
         await self._persist_daily_history(now, pin.budget_used)
         self._last_budget_persist = now
 
@@ -138,9 +147,12 @@ class BudgetGovernor:
         (e.g. the 2026-08-27 live-tier removal cut ~200/day but the average
         kept projecting the old rate). Malformed/absent history starts fresh."""
         import json
+
         today = now.date().isoformat()
         try:
-            history = json.loads(await self._store.get_meta("odds_api_budget_history") or "[]")
+            history = json.loads(
+                await self._store.get_meta("odds_api_budget_history") or "[]"
+            )
             assert isinstance(history, list)
         except (ValueError, AssertionError):
             history = []
@@ -155,8 +167,9 @@ class BudgetGovernor:
         """Reset-day boundary for (year, month), clamped into the month's length
         and stamped with ``now``'s tzinfo."""
         dim = calendar.monthrange(year, month)[1]
-        return datetime(year, month, min(config.ODDS_API_QUOTA_RESET_DAY, dim),
-                        tzinfo=now.tzinfo)
+        return datetime(
+            year, month, min(config.ODDS_API_QUOTA_RESET_DAY, dim), tzinfo=now.tzinfo
+        )
 
     def _current_period_start(self, now: datetime) -> datetime:
         """The most-recent quota reset boundary at or before ``now``.
@@ -174,7 +187,9 @@ class BudgetGovernor:
     def _period_progress(self, now: datetime) -> tuple[float, float]:
         """Return ``(frac_elapsed, days_elapsed)`` of the CURRENT quota period."""
         start = self._current_period_start(now)
-        ny, nm = (start.year + 1, 1) if start.month == 12 else (start.year, start.month + 1)
+        ny, nm = (
+            (start.year + 1, 1) if start.month == 12 else (start.year, start.month + 1)
+        )
         nxt = self._reset_boundary(ny, nm, now)
         period_len = (nxt - start).total_seconds()
         elapsed = (now - start).total_seconds()
@@ -216,7 +231,8 @@ class BudgetGovernor:
                 logger.info(
                     "Odds API quota period rolled over — re-probed budget: "
                     "%d used / %d remaining",
-                    pin.budget_used, pin.budget_remaining,
+                    pin.budget_used,
+                    pin.budget_remaining,
                 )
             else:
                 logger.warning(
@@ -240,7 +256,8 @@ class BudgetGovernor:
         if result is not None and result["remaining"] > 0:
             logger.info(
                 "Odds API budget refilled — re-probed: %d used / %d remaining",
-                pin.budget_used, pin.budget_remaining,
+                pin.budget_used,
+                pin.budget_remaining,
             )
 
     def throttle_level(self, now: datetime) -> int:

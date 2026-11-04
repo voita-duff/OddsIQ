@@ -19,6 +19,7 @@ from oddsiq.db.migrations import Migration
 
 # ---------- Fixtures ----------
 
+
 @pytest.fixture
 def db_path(tmp_path: Path) -> Path:
     return tmp_path / "test.db"
@@ -36,6 +37,7 @@ def _count_tables(conn: sqlite3.Connection) -> int:
 
 # ---------- Discovery ----------
 
+
 def test_discover_finds_baseline():
     found = migrations._discover()
     assert len(found) >= 1
@@ -51,6 +53,7 @@ def test_discover_returns_sorted_by_version():
 
 
 # ---------- Schema version bootstrap ----------
+
 
 def test_ensure_schema_version_creates_table(db_path):
     conn = sqlite3.connect(db_path)
@@ -88,17 +91,25 @@ def test_current_version_empty_returns_minus_one(db_path):
 
 # ---------- Baseline idempotence ----------
 
+
 def test_baseline_on_fresh_db_creates_phase1_tables(db_path):
     migrations.run(db_path)
     conn = sqlite3.connect(db_path)
     try:
         names = {
-            r[0] for r in conn.execute(
+            r[0]
+            for r in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
             ).fetchall()
         }
         # baseline tables + schema_version
-        assert {"games", "odds_snapshots", "value_bets", "meta", "schema_version"} <= names
+        assert {
+            "games",
+            "odds_snapshots",
+            "value_bets",
+            "meta",
+            "schema_version",
+        } <= names
     finally:
         conn.close()
 
@@ -130,6 +141,7 @@ def test_baseline_idempotent_against_preexisting_tables(db_path):
 
 
 # ---------- Skip-already-applied ----------
+
 
 def test_second_run_is_noop_after_baseline(db_path, caplog):
     migrations.run(db_path)
@@ -166,6 +178,7 @@ def test_summary_log_always_fires(db_path, caplog):
 
 
 # ---------- Transaction rollback on failure ----------
+
 
 def test_failed_migration_rolls_back_entirely(db_path):
     """A migration that raises must leave no schema_version row AND no
@@ -260,6 +273,7 @@ def test_failed_migration_preserves_prior_schema_version_rows(db_path):
 
 # ---------- Success-criterion timing assertion ----------
 
+
 def test_migration_001_rebuilds_value_bets_unique_index_with_line(db_path):
     """Migration 001 must drop the old (game, book, market, selection) unique
     index and replace it with one that includes IFNULL(line, -999.0)."""
@@ -300,7 +314,8 @@ def test_migration_003_adds_tier_with_hot_default(db_path):
     conn = sqlite3.connect(db_path)
     try:
         columns = {
-            row[1]: row for row in conn.execute("PRAGMA table_info(value_bets)").fetchall()
+            row[1]: row
+            for row in conn.execute("PRAGMA table_info(value_bets)").fetchall()
         }
         assert "tier" in columns, "value_bets.tier column must exist post-migration"
         # PRAGMA table_info returns (cid, name, type, notnull, dflt_value, pk)
@@ -346,10 +361,12 @@ def test_migration_003_backfills_existing_rows_to_hot(db_path):
     try:
         # Bring schema up to 002 manually by inserting a value_bet pre-003.
         from oddsiq.db.migrations import _ensure_schema_version_table  # noqa: PLC0415
+
         _ensure_schema_version_table(conn)
 
         # Apply 000, 001, 002 but not 003.
         from oddsiq.db.migrations import _discover, _apply_one  # noqa: PLC0415
+
         for m in _discover():
             if m.version >= 3:
                 break
@@ -395,19 +412,23 @@ def test_migration_011_drops_live_edge_candidates(tmp_path):
     migrations.run(db)  # idempotent second run
     conn = sqlite3.connect(db)
     try:
-        tables = {r[0] for r in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        )}
+        tables = {
+            r[0]
+            for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
         assert "live_edge_candidates" not in tables
-        indexes = {r[0] for r in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='index'"
-        )}
+        indexes = {
+            r[0]
+            for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
+        }
         assert "idx_live_edge_unique" not in indexes
     finally:
         conn.close()
 
+
 def test_migration_004_is_idempotent(tmp_path):
     from oddsiq.db import migrations
+
     db = tmp_path / "m004b.db"
     migrations.run(db)
     migrations.run(db)  # second run must be a no-op, not raise
@@ -431,6 +452,7 @@ def test_run_creates_missing_db_parent_dirs(tmp_path):
     mounts the DB at /data/db/oddsiq.db where /data/db doesn't exist on a fresh
     volume. Without this, sqlite3.connect raises 'unable to open database file'."""
     from oddsiq.db import migrations
+
     nested = tmp_path / "db" / "sub" / "oddsiq.db"
     migrations.run(nested)  # must not raise
     assert nested.exists()

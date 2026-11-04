@@ -34,7 +34,11 @@ async def test_retries_then_reraises():
 
     with pytest.raises(RetryableError):
         await with_backoff(
-            attempt, max_attempts=3, base_delay=1.0, rng=lambda: 0.5, sleep=_sleep,
+            attempt,
+            max_attempts=3,
+            base_delay=1.0,
+            rng=lambda: 0.5,
+            sleep=_sleep,
         )
     assert len(calls) == 3
     assert slept == [0.5, 1.0]  # full jitter: 1*2^0*0.5, then 1*2^1*0.5
@@ -76,9 +80,15 @@ async def test_retry_after_is_capped_at_max_delay():
             raise RetryableError("rate limited", retry_after=3600.0)
         return "ok"
 
-    assert await with_backoff(
-        attempt, max_delay=30.0, rng=lambda: 0.5, sleep=_sleep,
-    ) == "ok"
+    assert (
+        await with_backoff(
+            attempt,
+            max_delay=30.0,
+            rng=lambda: 0.5,
+            sleep=_sleep,
+        )
+        == "ok"
+    )
     assert slept == [30.0]
 
 

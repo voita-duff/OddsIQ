@@ -62,6 +62,7 @@ async def test_persist_maintains_daily_used_history(store):
     Same-day persists update the day's entry; a new day appends; the list is
     pruned to the last 10 entries."""
     import json
+
     pin = _fake_pinnacle(used=100, remaining=19900)
     gov = BudgetGovernor(pinnacle=pin, store=store)
     day1 = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
@@ -69,7 +70,7 @@ async def test_persist_maintains_daily_used_history(store):
     pin.budget_used = 250
     await gov.persist(day1.replace(hour=23), force=True)
     hist = json.loads(await store.get_meta("odds_api_budget_history"))
-    assert hist == [{"d": "2026-06-03", "u": 250}]   # same day updated, not appended
+    assert hist == [{"d": "2026-06-03", "u": 250}]  # same day updated, not appended
 
     pin.budget_used = 400
     await gov.persist(day1 + timedelta(days=1), force=True)
@@ -90,10 +91,10 @@ async def test_persist_throttled_within_window(store):
     pin = _fake_pinnacle(used=10, remaining=19990)
     gov = BudgetGovernor(pinnacle=pin, store=store)
     now = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
-    await gov.persist(now, force=True)          # first write
-    pin.budget_used = 20                        # change values
-    later = now.replace(minute=2)               # within 5-min window
-    await gov.persist(later)                     # throttled -> no write
+    await gov.persist(now, force=True)  # first write
+    pin.budget_used = 20  # change values
+    later = now.replace(minute=2)  # within 5-min window
+    await gov.persist(later)  # throttled -> no write
     assert await store.get_meta("odds_api_budget_used") == "10"
 
 
@@ -124,24 +125,28 @@ def _gov(used, remaining):
 
 def test_throttle_level_none_on_track():
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)  # ~half the month
-    gov = _gov(used=7000, remaining=13000)   # projected ~14k < 20k*1.1
+    gov = _gov(used=7000, remaining=13000)  # projected ~14k < 20k*1.1
     assert gov.throttle_level(now) == 0
     assert gov.interval_for_tier("warm", now) == config.POLL_TIER_WARM
 
 
 def test_throttle_widens_warm_then_hot():
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
-    gov = _gov(used=13000, remaining=7000)   # projected ~26k => ratio ~1.3 => level 2
+    gov = _gov(used=13000, remaining=7000)  # projected ~26k => ratio ~1.3 => level 2
     assert gov.throttle_level(now) == 2
     assert gov.interval_for_tier("warm", now) == 900
-    assert gov.interval_for_tier("hot", now) == 120   # betting tier protected — only gently widened
+    assert (
+        gov.interval_for_tier("hot", now) == 120
+    )  # betting tier protected — only gently widened
 
 
 def test_reserve_floor_forces_conservative():
     now = datetime(2026, 6, 2, 12, 0, tzinfo=timezone.utc)
-    gov = _gov(used=18600, remaining=1400)   # below 1500 reserve
+    gov = _gov(used=18600, remaining=1400)  # below 1500 reserve
     assert gov.throttle_level(now) == 3
-    assert gov.interval_for_tier("hot", now) == 180   # betting tier still tighter than the old 300
+    assert (
+        gov.interval_for_tier("hot", now) == 180
+    )  # betting tier still tighter than the old 300
 
 
 def test_no_throttle_when_unprobed():
@@ -151,7 +156,7 @@ def test_no_throttle_when_unprobed():
 
 
 def test_no_throttle_first_day_insufficient_signal():
-    now = datetime(2026, 6, 1, 6, 0, tzinfo=timezone.utc)   # <1 day into period
+    now = datetime(2026, 6, 1, 6, 0, tzinfo=timezone.utc)  # <1 day into period
     gov = _gov(used=900, remaining=19100)
     assert gov.throttle_level(now) == 0
 
@@ -159,15 +164,17 @@ def test_no_throttle_first_day_insufficient_signal():
 def test_throttle_level_one_widens_only_warm():
     # ratio in (slack, 1.25] -> level 1: warm widened, hot + live still protected.
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)  # ~half the month
-    gov = _gov(used=11600, remaining=8400)   # projected ~24k => ratio ~1.20 => level 1
+    gov = _gov(used=11600, remaining=8400)  # projected ~24k => ratio ~1.20 => level 1
     assert gov.throttle_level(now) == 1
     assert gov.interval_for_tier("warm", now) == 600
-    assert gov.interval_for_tier("hot", now) == config.POLL_TIER_HOT   # protected at level 1
+    assert (
+        gov.interval_for_tier("hot", now) == config.POLL_TIER_HOT
+    )  # protected at level 1
 
 
 def test_interval_for_unknown_tier_falls_back_to_far():
     now = datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc)
-    gov = _gov(used=7000, remaining=13000)   # level 0
+    gov = _gov(used=7000, remaining=13000)  # level 0
     assert gov.interval_for_tier("bogus", now) == config.POLL_TIER_FAR
 
 
@@ -176,7 +183,7 @@ def test_reset_day_boundary_no_projection_throttle(monkeypatch):
     # reliable, so even high cumulative `used` doesn't trigger a soft throttle —
     # only the reserve floor would (remaining here is comfortably above it).
     monkeypatch.setattr(config, "ODDS_API_QUOTA_RESET_DAY", 1)
-    gov = _gov(used=18000, remaining=2000)   # above the 1500 reserve floor
+    gov = _gov(used=18000, remaining=2000)  # above the 1500 reserve floor
     on_reset = datetime(2026, 6, 1, 0, 0, tzinfo=timezone.utc)
     assert gov.throttle_level(on_reset) == 0
 
@@ -221,10 +228,12 @@ async def test_maybe_reprobe_clears_exhausted_budget_at_period_rollover(monkeypa
     (While exhausted it also re-probes mid-period — see the exhaustion tests —
     so the mid-period probe here reads still-0 until the provider resets.)"""
     monkeypatch.setattr(config, "ODDS_API_QUOTA_RESET_DAY", 1)
-    pin = _SequencePin(results=[
-        {"used": 20000, "remaining": 0},   # Jun 28 exhaustion re-probe: no reset yet
-        {"used": 0, "remaining": 20000},   # Jul 2 boundary: reset visible
-    ])
+    pin = _SequencePin(
+        results=[
+            {"used": 20000, "remaining": 0},  # Jun 28 exhaustion re-probe: no reset yet
+            {"used": 0, "remaining": 20000},  # Jul 2 boundary: reset visible
+        ]
+    )
     gov = BudgetGovernor(pinnacle=pin, store=None)
 
     # First call seeds the period start; no reprobe yet.
@@ -256,9 +265,11 @@ async def test_maybe_reprobe_retries_when_probe_fails(monkeypatch):
     gov = BudgetGovernor(pinnacle=pin, store=None)
 
     await gov.maybe_reprobe(datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc))  # seed
-    await gov.maybe_reprobe(datetime(2026, 7, 2, 12, 0, tzinfo=timezone.utc))   # rollover, fails
+    await gov.maybe_reprobe(
+        datetime(2026, 7, 2, 12, 0, tzinfo=timezone.utc)
+    )  # rollover, fails
     assert pin.probe_calls == 1
-    await gov.maybe_reprobe(datetime(2026, 7, 3, 12, 0, tzinfo=timezone.utc))   # retry
+    await gov.maybe_reprobe(datetime(2026, 7, 3, 12, 0, tzinfo=timezone.utc))  # retry
     assert pin.probe_calls == 2
 
 
@@ -294,14 +305,18 @@ async def test_exhausted_budget_reprobes_within_period(monkeypatch):
     exhausted budget must keep re-probing (the endpoint is free) until tokens
     reappear, boundary or not."""
     monkeypatch.setattr(config, "ODDS_API_QUOTA_RESET_DAY", 1)
-    pin = _SequencePin(results=[
-        {"used": 20000, "remaining": 0},      # Jul 1 boundary: pre-reset read
-        {"used": 100, "remaining": 19900},    # Jul 2+: provider has refilled
-    ])
+    pin = _SequencePin(
+        results=[
+            {"used": 20000, "remaining": 0},  # Jul 1 boundary: pre-reset read
+            {"used": 100, "remaining": 19900},  # Jul 2+: provider has refilled
+        ]
+    )
     gov = BudgetGovernor(pinnacle=pin, store=None)
 
     await gov.maybe_reprobe(datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc))  # seed
-    await gov.maybe_reprobe(datetime(2026, 7, 1, 0, 0, tzinfo=timezone.utc))    # boundary, still 0
+    await gov.maybe_reprobe(
+        datetime(2026, 7, 1, 0, 0, tzinfo=timezone.utc)
+    )  # boundary, still 0
     assert pin.probe_calls == 1
     assert pin.budget_remaining == 0  # latched despite "successful" probe
 
@@ -319,18 +334,26 @@ async def test_exhausted_budget_reprobes_within_period(monkeypatch):
 async def test_exhausted_reprobe_throttled_to_interval(monkeypatch):
     """Exhaustion re-probes are rate-limited (default hourly), not per-cycle."""
     monkeypatch.setattr(config, "ODDS_API_QUOTA_RESET_DAY", 1)
-    pin = _SequencePin(results=[
-        {"used": 20000, "remaining": 0},      # still exhausted on first re-probe
-        {"used": 20000, "remaining": 0},      # and on the second
-    ])
+    pin = _SequencePin(
+        results=[
+            {"used": 20000, "remaining": 0},  # still exhausted on first re-probe
+            {"used": 20000, "remaining": 0},  # and on the second
+        ]
+    )
     gov = BudgetGovernor(pinnacle=pin, store=None)
 
     await gov.maybe_reprobe(datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc))  # seed
-    await gov.maybe_reprobe(datetime(2026, 6, 15, 13, 0, tzinfo=timezone.utc))  # first re-probe
+    await gov.maybe_reprobe(
+        datetime(2026, 6, 15, 13, 0, tzinfo=timezone.utc)
+    )  # first re-probe
     assert pin.probe_calls == 1
-    await gov.maybe_reprobe(datetime(2026, 6, 15, 13, 10, tzinfo=timezone.utc))  # within interval
+    await gov.maybe_reprobe(
+        datetime(2026, 6, 15, 13, 10, tzinfo=timezone.utc)
+    )  # within interval
     assert pin.probe_calls == 1
-    await gov.maybe_reprobe(datetime(2026, 6, 15, 14, 1, tzinfo=timezone.utc))   # past interval
+    await gov.maybe_reprobe(
+        datetime(2026, 6, 15, 14, 1, tzinfo=timezone.utc)
+    )  # past interval
     assert pin.probe_calls == 2
 
 
@@ -352,14 +375,18 @@ async def test_exhausted_reprobe_does_not_advance_period(monkeypatch):
     """A mid-month top-up recovered via exhaustion re-probe must not consume
     the period boundary — the next real rollover still triggers its re-probe."""
     monkeypatch.setattr(config, "ODDS_API_QUOTA_RESET_DAY", 1)
-    pin = _SequencePin(results=[
-        {"used": 18000, "remaining": 2000},   # Jun 25: top-up arrives mid-month
-        {"used": 0, "remaining": 20000},      # Jul 1: real boundary re-probe
-    ])
+    pin = _SequencePin(
+        results=[
+            {"used": 18000, "remaining": 2000},  # Jun 25: top-up arrives mid-month
+            {"used": 0, "remaining": 20000},  # Jul 1: real boundary re-probe
+        ]
+    )
     gov = BudgetGovernor(pinnacle=pin, store=None)
 
     await gov.maybe_reprobe(datetime(2026, 6, 15, 12, 0, tzinfo=timezone.utc))  # seed
-    await gov.maybe_reprobe(datetime(2026, 6, 25, 12, 0, tzinfo=timezone.utc))  # exhaustion re-probe
+    await gov.maybe_reprobe(
+        datetime(2026, 6, 25, 12, 0, tzinfo=timezone.utc)
+    )  # exhaustion re-probe
     assert pin.probe_calls == 1
     assert pin.budget_remaining == 2000
 
@@ -372,8 +399,11 @@ async def test_exhausted_reprobe_does_not_advance_period(monkeypatch):
 def test_throttle_intervals_public_accessor():
     """The dashboard renders effective cadences per level via this accessor."""
     from oddsiq.pipeline.budget_governor import throttle_intervals
+
     l0 = throttle_intervals(0)
-    assert l0["hot"] == 60 and "live" not in l0  # hot 60s since 2026-08-27; live tier removed
+    assert (
+        l0["hot"] == 60 and "live" not in l0
+    )  # hot 60s since 2026-08-27; live tier removed
     l2 = throttle_intervals(2)
     assert l2 == {"far": 1800, "warm": 900, "hot": 120}
     assert throttle_intervals(99) == l0  # unknown level falls back to base

@@ -14,6 +14,7 @@ def _env_flag(name: str, default: str) -> bool:
     # disabling it. Anything else ("0"/"false"/"no"/"off"/"" /junk) is False.
     return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
+
 # API key — a single Odds API credential, used for BOTH Pinnacle odds and the
 # schedule/scores source. (Multi-key pool rotation was removed: one strong key
 # under the 20k/month budget needs no failover.)
@@ -42,7 +43,9 @@ EDGE_THRESHOLD: float = float(os.environ.get("EDGE_THRESHOLD", "0.03"))
 # cannot catch the mirage. Capped bets are still recorded (and settle, so the
 # cap stays validatable) but are stamped excluded_reason=
 # 'implausible_edge_pregame': hidden from reporting, never alerted. <=0 disables.
-PREGAME_MAX_PLAUSIBLE_EDGE: float = float(os.environ.get("PREGAME_MAX_PLAUSIBLE_EDGE", "0.08"))
+PREGAME_MAX_PLAUSIBLE_EDGE: float = float(
+    os.environ.get("PREGAME_MAX_PLAUSIBLE_EDGE", "0.08")
+)
 # Soft-book coherence floor: if the soft book's OWN two-way implied sum
 # (1/home + 1/away) drops below this, the book is arbing against itself —
 # impossible on a fresh coherent book (Tipsport pregame overround is ~1.04-1.07),
@@ -50,7 +53,9 @@ PREGAME_MAX_PLAUSIBLE_EDGE: float = float(os.environ.get("PREGAME_MAX_PLAUSIBLE_
 # 'incoherent_book_pregame' (recorded, not alerted), even sides individually
 # below the plausibility cap. All 3 historical both-sides-+EV games (incl. a
 # 37% "edge" that lost) would have been caught. <=0 disables.
-PREGAME_MIN_BOOK_OVERROUND: float = float(os.environ.get("PREGAME_MIN_BOOK_OVERROUND", "1.0"))
+PREGAME_MIN_BOOK_OVERROUND: float = float(
+    os.environ.get("PREGAME_MIN_BOOK_OVERROUND", "1.0")
+)
 # Maximum age of the Pinnacle market timestamp carried by The Odds API at
 # observation time. This is a different failure mode from betting queue age:
 # the HTTP response can arrive now while containing a feed snapshot that has
@@ -115,12 +120,14 @@ PINNACLE_MARKETS: str = os.environ.get("PINNACLE_MARKETS", "h2h")
 
 # Polling tiers (seconds) — data-driven cadence (spec §3.5). 89% of historical
 # value bets land in the last hour pregame, peaking 15-30m before tipoff.
-POLL_TIER_FAR: int = 1800       # >2h: Tipsport only, no Pinnacle (lines too soft; 1 bet ever)
-POLL_TIER_WARM: int = 300       # 1-2h: every 5 min (rare early edge; cheap baseline)
-POLL_TIER_HOT: int = 60         # <60m: every 60s (89% of bets land here; tightened
-                                # 90->60 on 2026-08-27, funded by the live-tier removal
-                                # freeing ~150-225 credits/day — earlier detection +
-                                # fresher entry prices in the betting window)
+POLL_TIER_FAR: int = (
+    1800  # >2h: Tipsport only, no Pinnacle (lines too soft; 1 bet ever)
+)
+POLL_TIER_WARM: int = 300  # 1-2h: every 5 min (rare early edge; cheap baseline)
+POLL_TIER_HOT: int = 60  # <60m: every 60s (89% of bets land here; tightened
+# 90->60 on 2026-08-27, funded by the live-tier removal
+# freeing ~150-225 credits/day — earlier detection +
+# fresher entry prices in the betting window)
 # (POLL_TIER_LIVE and the whole live-scout knob block were removed 2026-08-27
 # with the live-edge subsystem — post-tipoff games are no longer polled.)
 
@@ -130,13 +137,17 @@ POLL_TIER_HOT: int = 60         # <60m: every 60s (89% of bets land here; tighte
 # when no game is active at all). Raised 3600 -> 10800 on 2026-08-08: slates
 # post days ahead, so 3h discovery latency is harmless, and each sweep costs
 # ~2 credits per enabled sport.
-SCHEDULE_REFRESH_INTERVAL: int = int(os.environ.get("SCHEDULE_REFRESH_INTERVAL", "10800"))
+SCHEDULE_REFRESH_INTERVAL: int = int(
+    os.environ.get("SCHEDULE_REFRESH_INTERVAL", "10800")
+)
 # Active-window /scores cadence. Each refresh costs ~2 Odds API credits per
 # fetched sport; at the old 300s default schedule calls were roughly half the
 # monthly burn and both the 2026-06 and 2026-07 quotas exhausted ~10 days
 # early. 900s keeps slate discovery timely (game-final detection has its own
 # path in check_completed_games) at about a third of the quota cost.
-SCHEDULE_GAME_WINDOW_REFRESH: int = int(os.environ.get("SCHEDULE_GAME_WINDOW_REFRESH", "900"))
+SCHEDULE_GAME_WINDOW_REFRESH: int = int(
+    os.environ.get("SCHEDULE_GAME_WINDOW_REFRESH", "900")
+)
 # Game-final detection cadence (check_completed_games), per sport with a live
 # game, 2 credits per check. Was a hardcoded 300s; measured 2026-08 it was the
 # largest single Odds API burn (MLB is live 10-14h/day -> ~250-350 credits/day)
@@ -228,9 +239,7 @@ BACKUP_INTERVAL_HOURS: float = float(os.environ.get("BACKUP_INTERVAL_HOURS", "24
 # Default to a repo-relative ./backups (consistent with DATABASE_PATH / LOG_FILE).
 # In Docker this is overridden to a mounted volume path (see docker-compose.yml).
 # The old ~/Desktop default did not exist on a headless VM / in a container.
-BACKUP_DIR: Path = Path(
-    os.environ.get("BACKUP_DIR", "./backups")
-).expanduser()
+BACKUP_DIR: Path = Path(os.environ.get("BACKUP_DIR", "./backups")).expanduser()
 BACKUP_KEEP_DAILY: int = int(os.environ.get("BACKUP_KEEP_DAILY", "7"))
 BACKUP_KEEP_MONTHLY: int = int(os.environ.get("BACKUP_KEEP_MONTHLY", "6"))
 
@@ -252,7 +261,9 @@ LOG_FILE_ENABLED: bool = _env_flag("LOG_FILE_ENABLED", "1")
 # Scheduler heartbeat cadence. Emits one log line per interval so the
 # dashboard's "is the pipeline alive?" check works even when no games
 # are tracked. See docs/Components/Dashboard.md.
-SCHEDULER_HEARTBEAT_SECONDS: int = int(os.environ.get("SCHEDULER_HEARTBEAT_SECONDS", "60"))
+SCHEDULER_HEARTBEAT_SECONDS: int = int(
+    os.environ.get("SCHEDULER_HEARTBEAT_SECONDS", "60")
+)
 
 # (The opt-in Telegram health ping was removed in the 2026-08-10 notification
 # rebrand — the phone carries only real-money placed/won/lost. Liveness is the

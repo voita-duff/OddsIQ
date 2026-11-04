@@ -16,59 +16,89 @@ def test_parse_commence_time_coerces_naive_to_utc():
     dt = PinnacleScraper._parse_commence_time("2026-06-01T23:00:00")
     assert dt is not None and dt.tzinfo is not None
     assert dt.utcoffset().total_seconds() == 0
-    assert PinnacleScraper._parse_commence_time("2026-06-01T23:00:00Z").utcoffset().total_seconds() == 0
+    assert (
+        PinnacleScraper._parse_commence_time("2026-06-01T23:00:00Z")
+        .utcoffset()
+        .total_seconds()
+        == 0
+    )
 
 
 def test_parse_source_updated_at_requires_trustworthy_provider_time():
     observed = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
     assert PinnacleScraper._parse_source_updated_at(
-        "2026-09-06T11:59:30Z", observed_at=observed,
+        "2026-09-06T11:59:30Z",
+        observed_at=observed,
     ) == datetime(2026, 9, 6, 11, 59, 30, tzinfo=timezone.utc)
-    assert PinnacleScraper._parse_source_updated_at(
-        "2026-09-06T12:02:00Z", observed_at=observed,
-    ) is None
-    assert PinnacleScraper._parse_source_updated_at(
-        "2026-09-06T11:59:30", observed_at=observed,
-    ) is None
-    assert PinnacleScraper._parse_source_updated_at(
-        "garbage", observed_at=observed,
-    ) is None
+    assert (
+        PinnacleScraper._parse_source_updated_at(
+            "2026-09-06T12:02:00Z",
+            observed_at=observed,
+        )
+        is None
+    )
+    assert (
+        PinnacleScraper._parse_source_updated_at(
+            "2026-09-06T11:59:30",
+            observed_at=observed,
+        )
+        is None
+    )
+    assert (
+        PinnacleScraper._parse_source_updated_at(
+            "garbage",
+            observed_at=observed,
+        )
+        is None
+    )
 
 
 def test_parse_threads_event_id_and_market_source_timestamp():
     observed = datetime(2026, 9, 6, 12, 0, tzinfo=timezone.utc)
-    payload = [{
-        "id": "exact-event-1",
-        "home_team": "Boston Celtics",
-        "away_team": "Los Angeles Lakers",
-        "commence_time": "2026-09-07T00:00:00Z",
-        "bookmakers": [{
-            "key": "pinnacle", "last_update": "2026-09-06T11:58:00Z",
-            "markets": [{
-                "key": "h2h", "last_update": "2026-09-06T11:59:20Z",
-                "outcomes": [
-                    {"name": "Boston Celtics", "price": 1.8},
-                    {"name": "Los Angeles Lakers", "price": 2.1},
-                ],
-            }],
-        }],
-    }]
+    payload = [
+        {
+            "id": "exact-event-1",
+            "home_team": "Boston Celtics",
+            "away_team": "Los Angeles Lakers",
+            "commence_time": "2026-09-07T00:00:00Z",
+            "bookmakers": [
+                {
+                    "key": "pinnacle",
+                    "last_update": "2026-09-06T11:58:00Z",
+                    "markets": [
+                        {
+                            "key": "h2h",
+                            "last_update": "2026-09-06T11:59:20Z",
+                            "outcomes": [
+                                {"name": "Boston Celtics", "price": 1.8},
+                                {"name": "Los Angeles Lakers", "price": 2.1},
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
     scraper = PinnacleScraper(api_key="k")
     snaps = scraper.parse_response(payload, captured_at=observed)
     assert len(snaps) == 2
     assert {s._source_event_id for s in snaps} == {"exact-event-1"}
     assert {s.source_updated_at for s in snaps} == {
-        datetime(2026, 9, 6, 11, 59, 20, tzinfo=timezone.utc)}
+        datetime(2026, 9, 6, 11, 59, 20, tzinfo=timezone.utc)
+    }
     assert all(not s._source_freshness_missing for s in snaps)
     assert scraper.last_parse_missing_source_updates == 0
 
 
 def test_parse_missing_event_id_drops_event_and_counts_it():
     scraper = PinnacleScraper(api_key="k")
-    payload = [{
-        "home_team": "Boston Celtics", "away_team": "Los Angeles Lakers",
-        "bookmakers": [],
-    }]
+    payload = [
+        {
+            "home_team": "Boston Celtics",
+            "away_team": "Los Angeles Lakers",
+            "bookmakers": [],
+        }
+    ]
     assert scraper.parse_response(payload) == []
     assert scraper.last_parse_missing_event_ids == 1
 
@@ -136,16 +166,22 @@ def _raw_responses_to_tmp(monkeypatch, tmp_path):
 async def test_parse_odds_response(scraper: PinnacleScraper):
     snapshots = scraper.parse_response(SAMPLE_ODDS_RESPONSE)
     assert len(snapshots) == 6
-    ml_home = [s for s in snapshots if s.market_type == "moneyline" and s.selection == "home"]
+    ml_home = [
+        s for s in snapshots if s.market_type == "moneyline" and s.selection == "home"
+    ]
     assert len(ml_home) == 1
     assert ml_home[0].odds == 1.65
     assert ml_home[0].line is None
     assert ml_home[0]._commence_time == datetime(2026, 4, 11, 0, 0, tzinfo=timezone.utc)
-    spread_home = [s for s in snapshots if s.market_type == "spread" and s.selection == "home"]
+    spread_home = [
+        s for s in snapshots if s.market_type == "spread" and s.selection == "home"
+    ]
     assert len(spread_home) == 1
     assert spread_home[0].odds == 1.91
     assert spread_home[0].line == -5.5
-    total_over = [s for s in snapshots if s.market_type == "total" and s.selection == "over"]
+    total_over = [
+        s for s in snapshots if s.market_type == "total" and s.selection == "over"
+    ]
     assert len(total_over) == 1
     assert total_over[0].odds == 1.95
     assert total_over[0].line == 218.5
@@ -162,9 +198,12 @@ async def test_parse_skips_malformed_event(scraper: PinnacleScraper):
         "home_team": "Phoenix Suns",
         "away_team": "Denver Nuggets",
         "bookmakers": [
-            {"key": "pinnacle", "markets": [
-                {"key": "h2h", "outcomes": [{"name": "Phoenix Suns"}]},  # no price
-            ]},
+            {
+                "key": "pinnacle",
+                "markets": [
+                    {"key": "h2h", "outcomes": [{"name": "Phoenix Suns"}]},  # no price
+                ],
+            },
         ],
     }
     data = [malformed, outcome_missing_price] + SAMPLE_ODDS_RESPONSE
@@ -180,16 +219,28 @@ async def test_parse_normalizes_team_names_for_matching(scraper: PinnacleScraper
     # the schedule source normalizes (alias/fuzzy) is left raw here, the Pinnacle
     # odds silently never match that game and edge detection is blacked out.
     # "LA Lakers" is an alias for "Los Angeles Lakers" in the NBA mapping.
-    data = [{
-        "id": "e1",
-        "home_team": "LA Lakers",
-        "away_team": "Boston Celtics",
-        "commence_time": "2026-04-11T00:00:00Z",
-        "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
-            {"name": "LA Lakers", "price": 2.1},
-            {"name": "Boston Celtics", "price": 1.8},
-        ]}]}],
-    }]
+    data = [
+        {
+            "id": "e1",
+            "home_team": "LA Lakers",
+            "away_team": "Boston Celtics",
+            "commence_time": "2026-04-11T00:00:00Z",
+            "bookmakers": [
+                {
+                    "key": "pinnacle",
+                    "markets": [
+                        {
+                            "key": "h2h",
+                            "outcomes": [
+                                {"name": "LA Lakers", "price": 2.1},
+                                {"name": "Boston Celtics", "price": 1.8},
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
     snaps = scraper.parse_response(data, sport="nba")
     assert snaps, "expected moneyline snapshots"
     home = next(s for s in snaps if s.selection == "home")
@@ -331,6 +382,7 @@ async def test_raw_response_path_propagates_to_snapshots(
     snapshots = await scraper.fetch_odds(date(2026, 4, 10), NBA)
     assert len(snapshots) > 0
     from pathlib import Path
+
     for snap in snapshots:
         assert snap.raw_response_path is not None, (
             f"raw_response_path is None on {snap.market_type}/{snap.selection}"
@@ -445,13 +497,20 @@ async def test_fetch_odds_returns_empty_on_http_error(httpx_mock, monkeypatch):
     """A 429/401/5xx on the single key fails soft to [] (no rotation) while the
     quota headers from the response are still applied before the raise. A 429 is
     now retried with backoff (instant here) and still ends as [] once exhausted."""
+
     async def _noop_sleep(_d):
         return None
+
     monkeypatch.setattr("oddsiq.scrapers.retry.asyncio.sleep", _noop_sleep)
     httpx_mock.add_response(
         url=httpx.URL(
             "https://api.the-odds-api.com/v4/sports/basketball_nba/odds",
-            params={"apiKey": "k", "regions": "us", "markets": "h2h", "bookmakers": "pinnacle"},
+            params={
+                "apiKey": "k",
+                "regions": "us",
+                "markets": "h2h",
+                "bookmakers": "pinnacle",
+            },
         ),
         status_code=429,
         headers={"x-requests-used": "20000", "x-requests-remaining": "0"},
@@ -480,28 +539,52 @@ async def test_fetch_error_count_resets_and_skips_budget_path():
 
 
 @pytest.mark.asyncio
-async def test_parse_counters_reset_on_a_fetch_that_never_parses(httpx_mock, monkeypatch):
+async def test_parse_counters_reset_on_a_fetch_that_never_parses(
+    httpx_mock, monkeypatch
+):
     """The parse counters ride the scraper health line, so a fetch that returns
     [] without parsing (budget skip, HTTP failure) must not republish the
     PREVIOUS cycle's integrity counts as if they were this cycle's."""
+
     async def _noop_sleep(_d):
         return None
+
     monkeypatch.setattr("oddsiq.scrapers.retry.asyncio.sleep", _noop_sleep)
 
     sc = PinnacleScraper(api_key="k")
     # A real parse that recorded both integrity problems.
-    assert sc.parse_response([{
-        "home_team": "Boston Celtics", "away_team": "Los Angeles Lakers",
-        "bookmakers": [],
-    }, {
-        "id": "no-timestamps",
-        "home_team": "Miami Heat", "away_team": "Chicago Bulls",
-        "commence_time": "2026-09-07T00:00:00Z",
-        "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
-            {"name": "Miami Heat", "price": 1.9},
-            {"name": "Chicago Bulls", "price": 2.0},
-        ]}]}],
-    }]) != []
+    assert (
+        sc.parse_response(
+            [
+                {
+                    "home_team": "Boston Celtics",
+                    "away_team": "Los Angeles Lakers",
+                    "bookmakers": [],
+                },
+                {
+                    "id": "no-timestamps",
+                    "home_team": "Miami Heat",
+                    "away_team": "Chicago Bulls",
+                    "commence_time": "2026-09-07T00:00:00Z",
+                    "bookmakers": [
+                        {
+                            "key": "pinnacle",
+                            "markets": [
+                                {
+                                    "key": "h2h",
+                                    "outcomes": [
+                                        {"name": "Miami Heat", "price": 1.9},
+                                        {"name": "Chicago Bulls", "price": 2.0},
+                                    ],
+                                }
+                            ],
+                        }
+                    ],
+                },
+            ]
+        )
+        != []
+    )
     assert sc.last_parse_missing_event_ids == 1
     assert sc.last_parse_missing_source_updates == 1
 
@@ -519,7 +602,12 @@ async def test_parse_counters_reset_on_a_fetch_that_never_parses(httpx_mock, mon
     httpx_mock.add_response(
         url=httpx.URL(
             "https://api.the-odds-api.com/v4/sports/basketball_nba/odds",
-            params={"apiKey": "k", "regions": "us", "markets": "h2h", "bookmakers": "pinnacle"},
+            params={
+                "apiKey": "k",
+                "regions": "us",
+                "markets": "h2h",
+                "bookmakers": "pinnacle",
+            },
         ),
         status_code=500,
         is_reusable=True,
@@ -535,15 +623,28 @@ async def test_parse_counters_reset_on_a_fetch_that_never_parses(httpx_mock, mon
 async def test_fetch_uses_profile_odds_api_key_and_stamps_sport(httpx_mock):
     httpx_mock.add_response(
         url="https://api.the-odds-api.com/v4/sports/basketball_nba/odds?apiKey=k&regions=us&markets=h2h&bookmakers=pinnacle",
-        json=[{
-            "id": "nba-profile-test",
-            "home_team": "Boston Celtics", "away_team": "Miami Heat",
-            "commence_time": "2026-06-04T00:00:00Z",
-            "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
-                {"name": "Boston Celtics", "price": 1.8},
-                {"name": "Miami Heat", "price": 2.1},
-            ]}]}],
-        }],
+        json=[
+            {
+                "id": "nba-profile-test",
+                "home_team": "Boston Celtics",
+                "away_team": "Miami Heat",
+                "commence_time": "2026-06-04T00:00:00Z",
+                "bookmakers": [
+                    {
+                        "key": "pinnacle",
+                        "markets": [
+                            {
+                                "key": "h2h",
+                                "outcomes": [
+                                    {"name": "Boston Celtics", "price": 1.8},
+                                    {"name": "Miami Heat", "price": 2.1},
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     )
     scraper = PinnacleScraper(api_key="k")
     snaps = await scraper.fetch_odds(date.today(), NBA)
@@ -554,17 +655,31 @@ async def test_fetch_uses_profile_odds_api_key_and_stamps_sport(httpx_mock):
 @pytest.mark.asyncio
 async def test_fetch_nhl_uses_icehockey_url_and_stamps_sport(httpx_mock):
     from oddsiq.sports.profiles import NHL
+
     httpx_mock.add_response(
         url="https://api.the-odds-api.com/v4/sports/icehockey_nhl/odds?apiKey=k&regions=us&markets=h2h&bookmakers=pinnacle",
-        json=[{
-            "id": "nhl-profile-test",
-            "home_team": "Carolina Hurricanes", "away_team": "Vegas Golden Knights",
-            "commence_time": "2026-06-05T00:00:00Z",
-            "bookmakers": [{"key": "pinnacle", "markets": [{"key": "h2h", "outcomes": [
-                {"name": "Carolina Hurricanes", "price": 1.65},
-                {"name": "Vegas Golden Knights", "price": 2.37},
-            ]}]}],
-        }],
+        json=[
+            {
+                "id": "nhl-profile-test",
+                "home_team": "Carolina Hurricanes",
+                "away_team": "Vegas Golden Knights",
+                "commence_time": "2026-06-05T00:00:00Z",
+                "bookmakers": [
+                    {
+                        "key": "pinnacle",
+                        "markets": [
+                            {
+                                "key": "h2h",
+                                "outcomes": [
+                                    {"name": "Carolina Hurricanes", "price": 1.65},
+                                    {"name": "Vegas Golden Knights", "price": 2.37},
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
     )
     scraper = PinnacleScraper(api_key="k")
     snaps = await scraper.fetch_odds(date.today(), NHL)
@@ -584,12 +699,18 @@ async def test_parse_skips_nonpositive_or_garbage_price(scraper: PinnacleScraper
         "away_team": "Denver Nuggets",
         "commence_time": "2026-04-11T00:00:00Z",
         "bookmakers": [
-            {"key": "pinnacle", "markets": [
-                {"key": "h2h", "outcomes": [
-                    {"name": "Phoenix Suns", "price": 0.0},        # nonsense
-                    {"name": "Denver Nuggets", "price": 2.0},      # valid
-                ]},
-            ]},
+            {
+                "key": "pinnacle",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "outcomes": [
+                            {"name": "Phoenix Suns", "price": 0.0},  # nonsense
+                            {"name": "Denver Nuggets", "price": 2.0},  # valid
+                        ],
+                    },
+                ],
+            },
         ],
     }
     garbage = {
@@ -598,12 +719,18 @@ async def test_parse_skips_nonpositive_or_garbage_price(scraper: PinnacleScraper
         "away_team": "Denver Nuggets",
         "commence_time": "2026-04-11T00:00:00Z",
         "bookmakers": [
-            {"key": "pinnacle", "markets": [
-                {"key": "h2h", "outcomes": [
-                    {"name": "Phoenix Suns", "price": "abc"},      # garbage type
-                    {"name": "Denver Nuggets", "price": 1.0},      # <=1.0 nonsense
-                ]},
-            ]},
+            {
+                "key": "pinnacle",
+                "markets": [
+                    {
+                        "key": "h2h",
+                        "outcomes": [
+                            {"name": "Phoenix Suns", "price": "abc"},  # garbage type
+                            {"name": "Denver Nuggets", "price": 1.0},  # <=1.0 nonsense
+                        ],
+                    },
+                ],
+            },
         ],
     }
     snapshots = scraper.parse_response([event, garbage])

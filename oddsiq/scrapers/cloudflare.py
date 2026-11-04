@@ -67,7 +67,8 @@ class CloudflareSession:
         try:
             self._pw = await async_playwright().start()
             self._browser = await self._pw.chromium.launch(
-                headless=True, args=_CHROMIUM_LAUNCH_ARGS,
+                headless=True,
+                args=_CHROMIUM_LAUNCH_ARGS,
             )
             self._context = await self._browser.new_context(
                 user_agent=_USER_AGENT,
@@ -117,9 +118,7 @@ class CloudflareSession:
             raise
         except Exception as e:
             await self.close()
-            raise CloudflareSolveError(
-                f"Cloudflare solver: browser error — {e}"
-            ) from e
+            raise CloudflareSolveError(f"Cloudflare solver: browser error — {e}") from e
 
     async def post(self, url: str, json: dict) -> dict[str, Any]:
         """Make a POST request from inside the browser page via fetch().

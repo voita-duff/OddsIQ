@@ -111,22 +111,25 @@ class PlacedBet:
     `value_bet_id` is UNIQUE, so a second decision is impossible.
     Money columns are CZK (Tipsport account currency).
     """
+
     value_bet_id: int
     game_id: int
     sport: str
-    status: str                          # skipped|pending|placed|rejected|failed|unknown|settled
+    status: str  # skipped|pending|placed|rejected|failed|unknown|settled
     skip_reason: str | None = None
     stake_czk: float | None = None
     requested_odds: float | None = None
-    min_odds: float | None = None        # extension aborts confirm below this price
+    min_odds: float | None = None  # extension aborts confirm below this price
     accepted_odds: float | None = None
     receipt_id: str | None = None
     error: str | None = None
     balance_after_czk: float | None = None
     commanded_at: datetime | None = None
-    resolved_at: datetime | None = None  # last state transition (placement result / settlement)
+    resolved_at: datetime | None = (
+        None  # last state transition (placement result / settlement)
+    )
     latency_detect_ms: int | None = None  # flagged_at -> command dispatch
-    latency_place_ms: int | None = None   # command dispatch -> extension result
+    latency_place_ms: int | None = None  # command dispatch -> extension result
     settled_pl_czk: float | None = None
     id: int | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

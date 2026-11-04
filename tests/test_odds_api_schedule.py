@@ -1,7 +1,11 @@
 import re
 import pytest
 
-from oddsiq.scrapers.odds_api_schedule import OddsApiScheduleSource, ScheduleFetchError, _parse_iso
+from oddsiq.scrapers.odds_api_schedule import (
+    OddsApiScheduleSource,
+    ScheduleFetchError,
+    _parse_iso,
+)
 from oddsiq import config
 
 BASE = config.ODDS_API_BASE_URL
@@ -13,12 +17,27 @@ async def test_final_and_upcoming_from_scores(httpx_mock):
     # an upcoming game (completed=false, scores=null).
     httpx_mock.add_response(
         url=re.compile(re.escape(f"{BASE}/sports/basketball_nba/scores")),
-        json=[{"id": "g1", "commence_time": "2026-06-01T23:40:00Z", "completed": True,
-               "home_team": "Boston Celtics", "away_team": "Miami Heat",
-               "scores": [{"name": "Boston Celtics", "score": "110"},
-                          {"name": "Miami Heat", "score": "104"}]},
-              {"id": "g2", "commence_time": "2026-06-02T23:00:00Z", "completed": False,
-               "home_team": "Denver Nuggets", "away_team": "Phoenix Suns", "scores": None}],
+        json=[
+            {
+                "id": "g1",
+                "commence_time": "2026-06-01T23:40:00Z",
+                "completed": True,
+                "home_team": "Boston Celtics",
+                "away_team": "Miami Heat",
+                "scores": [
+                    {"name": "Boston Celtics", "score": "110"},
+                    {"name": "Miami Heat", "score": "104"},
+                ],
+            },
+            {
+                "id": "g2",
+                "commence_time": "2026-06-02T23:00:00Z",
+                "completed": False,
+                "home_team": "Denver Nuggets",
+                "away_team": "Phoenix Suns",
+                "scores": None,
+            },
+        ],
     )
     src = OddsApiScheduleSource(api_key="k")
     games = {g.external_id: g for g in await src.fetch_games("basketball_nba")}
@@ -34,10 +53,19 @@ async def test_final_and_upcoming_from_scores(httpx_mock):
 async def test_live_game_from_scores(httpx_mock):
     httpx_mock.add_response(
         url=re.compile(re.escape(f"{BASE}/sports/basketball_nba/scores")),
-        json=[{"id": "g3", "commence_time": "2026-06-01T23:40:00Z", "completed": False,
-               "home_team": "New York Knicks", "away_team": "Chicago Bulls",
-               "scores": [{"name": "New York Knicks", "score": "40"},
-                          {"name": "Chicago Bulls", "score": "38"}]}],
+        json=[
+            {
+                "id": "g3",
+                "commence_time": "2026-06-01T23:40:00Z",
+                "completed": False,
+                "home_team": "New York Knicks",
+                "away_team": "Chicago Bulls",
+                "scores": [
+                    {"name": "New York Knicks", "score": "40"},
+                    {"name": "Chicago Bulls", "score": "38"},
+                ],
+            }
+        ],
     )
     src = OddsApiScheduleSource(api_key="k")
     games = await src.fetch_games("basketball_nba")
@@ -65,6 +93,7 @@ async def test_5xx_retried_once_then_succeeds(httpx_mock, monkeypatch):
     # body is parsed normally.
     async def _noop_sleep(_d):
         return None
+
     monkeypatch.setattr("oddsiq.scrapers.retry.asyncio.sleep", _noop_sleep)
     httpx_mock.add_response(
         url=re.compile(re.escape(f"{BASE}/sports/basketball_nba/scores")),
@@ -72,8 +101,16 @@ async def test_5xx_retried_once_then_succeeds(httpx_mock, monkeypatch):
     )
     httpx_mock.add_response(
         url=re.compile(re.escape(f"{BASE}/sports/basketball_nba/scores")),
-        json=[{"id": "g5", "commence_time": "2026-06-02T23:00:00Z", "completed": False,
-               "home_team": "Denver Nuggets", "away_team": "Phoenix Suns", "scores": None}],
+        json=[
+            {
+                "id": "g5",
+                "commence_time": "2026-06-02T23:00:00Z",
+                "completed": False,
+                "home_team": "Denver Nuggets",
+                "away_team": "Phoenix Suns",
+                "scores": None,
+            }
+        ],
     )
     src = OddsApiScheduleSource(api_key="k")
     games = await src.fetch_games("basketball_nba")

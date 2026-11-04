@@ -52,12 +52,8 @@ async def test_check_budget_prints_used_remaining_total(monkeypatch, capsys):
         self._budget_remaining = 458
         return {"used": 42, "remaining": 458}
 
-    monkeypatch.setattr(
-        "oddsiq.cli.PinnacleScraper.probe_budget", fake_probe
-    )
-    monkeypatch.setattr(
-        "oddsiq.cli.PinnacleScraper.close", AsyncMock()
-    )
+    monkeypatch.setattr("oddsiq.cli.PinnacleScraper.probe_budget", fake_probe)
+    monkeypatch.setattr("oddsiq.cli.PinnacleScraper.close", AsyncMock())
 
     code = await cli.check_budget()
     out = capsys.readouterr().out
@@ -75,9 +71,7 @@ async def test_check_budget_probe_failure_nonzero_exit(monkeypatch, capsys):
         "oddsiq.cli.PinnacleScraper.probe_budget",
         AsyncMock(return_value=None),
     )
-    monkeypatch.setattr(
-        "oddsiq.cli.PinnacleScraper.close", AsyncMock()
-    )
+    monkeypatch.setattr("oddsiq.cli.PinnacleScraper.close", AsyncMock())
 
     code = await cli.check_budget()
     err = capsys.readouterr().err
@@ -127,22 +121,29 @@ async def test_backup_runs_before_init_and_after_close(monkeypatch, tmp_path):
 
         def __init__(self, *a, **kw):
             pass
+
         async def initialize(self):
             call_order.append("initialize")
+
         async def close(self):
             call_order.append("close")
+
         async def get_final_games_without_snapshots(self):
             return []
+
         async def get_meta(self, key):
             return self.meta.get(key)
+
         async def set_meta(self, key, value):
             self.meta[key] = value
 
     class FakeScheduler:
         def __init__(self, *a, **kw):
             pass
+
         async def run(self):
             call_order.append("run")
+
         def stop(self):
             pass
 
@@ -173,9 +174,7 @@ def _stub_async_main_dependencies(monkeypatch, tmp_path, *, db_path):
     monkeypatch.setattr("oddsiq.cli.config.BACKUP_KEEP_DAILY", 3)
     monkeypatch.setattr("oddsiq.cli.config.BACKUP_KEEP_MONTHLY", 3)
     monkeypatch.setattr("oddsiq.cli.config.RAW_DATA_DIR", tmp_path / "raw")
-    monkeypatch.setattr(
-        "oddsiq.cli.config.RAW_RESPONSE_RETENTION_ENABLED", False
-    )
+    monkeypatch.setattr("oddsiq.cli.config.RAW_RESPONSE_RETENTION_ENABLED", False)
     # Bypass the migration runner so first-install scenarios stay first-install.
     monkeypatch.setattr("oddsiq.cli.migrations.run", lambda path: None)
 
@@ -218,7 +217,9 @@ def _stub_async_main_dependencies(monkeypatch, tmp_path, *, db_path):
 
 
 @pytest.mark.asyncio
-async def test_backup_failure_logs_warning_when_db_existed(monkeypatch, tmp_path, caplog):
+async def test_backup_failure_logs_warning_when_db_existed(
+    monkeypatch, tmp_path, caplog
+):
     """Backup returning None with an existing source DB logs a WARNING at both
     startup and shutdown (the 2026-08-10 rebrand replaced the Telegram alert
     with a log — the phone only carries real-money placed/won/lost)."""
@@ -227,9 +228,7 @@ async def test_backup_failure_logs_warning_when_db_existed(monkeypatch, tmp_path
 
     _stub_async_main_dependencies(monkeypatch, tmp_path, db_path=db_path)
 
-    monkeypatch.setattr(
-        "oddsiq.cli.backup.backup_database", lambda *a, **kw: None
-    )
+    monkeypatch.setattr("oddsiq.cli.backup.backup_database", lambda *a, **kw: None)
     caplog.clear()
     with caplog.at_level(logging.WARNING, logger="oddsiq"):
         await cli.async_main()
@@ -248,9 +247,7 @@ async def test_backup_failure_silent_at_startup_when_db_did_not_exist(
 
     _stub_async_main_dependencies(monkeypatch, tmp_path, db_path=db_path)
 
-    monkeypatch.setattr(
-        "oddsiq.cli.backup.backup_database", lambda *a, **kw: None
-    )
+    monkeypatch.setattr("oddsiq.cli.backup.backup_database", lambda *a, **kw: None)
     sent: list[str] = []
 
     async def fake_send(text: str) -> None:
@@ -271,9 +268,7 @@ async def test_backup_failure_alert_swallows_telegram_errors(monkeypatch, tmp_pa
 
     _stub_async_main_dependencies(monkeypatch, tmp_path, db_path=db_path)
 
-    monkeypatch.setattr(
-        "oddsiq.cli.backup.backup_database", lambda *a, **kw: None
-    )
+    monkeypatch.setattr("oddsiq.cli.backup.backup_database", lambda *a, **kw: None)
 
     async def raising_send(text: str) -> None:
         raise RuntimeError("telegram offline")
@@ -301,9 +296,7 @@ async def test_raw_response_retention_toggle_off_skips_prune(monkeypatch, tmp_pa
     def fake_prune(root, keep_days):
         prune_calls.append((root, keep_days))
 
-    monkeypatch.setattr(
-        "oddsiq.cli.scraper_base.prune_raw_responses", fake_prune
-    )
+    monkeypatch.setattr("oddsiq.cli.scraper_base.prune_raw_responses", fake_prune)
 
     await cli.async_main()
 
@@ -319,9 +312,7 @@ async def test_raw_response_retention_toggle_on_runs_prune_at_both_phases(
     db_path.touch()
 
     _stub_async_main_dependencies(monkeypatch, tmp_path, db_path=db_path)
-    monkeypatch.setattr(
-        "oddsiq.cli.config.RAW_RESPONSE_RETENTION_ENABLED", True
-    )
+    monkeypatch.setattr("oddsiq.cli.config.RAW_RESPONSE_RETENTION_ENABLED", True)
     monkeypatch.setattr("oddsiq.cli.config.RAW_RESPONSE_KEEP_DAYS", 7)
     monkeypatch.setattr(
         "oddsiq.cli.backup.backup_database",
@@ -333,9 +324,7 @@ async def test_raw_response_retention_toggle_on_runs_prune_at_both_phases(
     def fake_prune(root, keep_days):
         prune_calls.append((root, keep_days))
 
-    monkeypatch.setattr(
-        "oddsiq.cli.scraper_base.prune_raw_responses", fake_prune
-    )
+    monkeypatch.setattr("oddsiq.cli.scraper_base.prune_raw_responses", fake_prune)
 
     await cli.async_main()
 
@@ -385,10 +374,15 @@ async def test_audit_missed_gamedays_baselines_existing_misses_and_alerts_new_on
             status="final",
         )
         observed_id = await store.upsert_game(observed)
-        await store.insert_odds_snapshot(OddsSnapshot(
-            game_id=observed_id, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95,
-        ))
+        await store.insert_odds_snapshot(
+            OddsSnapshot(
+                game_id=observed_id,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.95,
+            )
+        )
 
         with caplog.at_level("WARNING", logger="oddsiq"):
             await cli.audit_missed_gamedays(store)
@@ -411,9 +405,7 @@ async def test_audit_missed_gamedays_baselines_existing_misses_and_alerts_new_on
 
         repeat_warnings = [r for r in caplog.records if r.levelname == "WARNING"]
         assert repeat_warnings == [], "known misses should not warn repeatedly"
-        assert "Telegram suppressed" in " ".join(
-            r.getMessage() for r in caplog.records
-        )
+        assert "Telegram suppressed" in " ".join(r.getMessage() for r in caplog.records)
         send_telegram.assert_not_awaited()
 
         newly_missed = Game(
@@ -469,15 +461,21 @@ async def test_cleanup_closing_flags_resets_stale_keeps_fresh(tmp_path, monkeypa
         gid = await store.upsert_game(game)
         # One stale row (6h pre-tipoff) marked is_closing=1 — pre-Fix-3 fake.
         stale = OddsSnapshot(
-            game_id=gid, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95,
+            game_id=gid,
+            bookmaker="pinnacle",
+            market_type="moneyline",
+            selection="home",
+            odds=1.95,
             captured_at=tipoff - timedelta(hours=6),
             is_closing=True,
         )
         # One fresh row (5 min pre-tipoff) marked is_closing=1 — should stay marked.
         fresh = OddsSnapshot(
-            game_id=gid, bookmaker="pinnacle", market_type="moneyline",
-            selection="away", odds=2.10,
+            game_id=gid,
+            bookmaker="pinnacle",
+            market_type="moneyline",
+            selection="away",
+            odds=2.10,
             captured_at=tipoff - timedelta(minutes=5),
             is_closing=True,
         )
@@ -496,8 +494,12 @@ async def test_cleanup_closing_flags_resets_stale_keeps_fresh(tmp_path, monkeypa
     try:
         latest_home = await store.get_latest_odds(gid, "pinnacle", "moneyline", "home")
         latest_away = await store.get_latest_odds(gid, "pinnacle", "moneyline", "away")
-        assert latest_home.is_closing is False, "stale (6h pre-tipoff) row must be cleared"
-        assert latest_away.is_closing is True, "fresh (5min pre-tipoff) row must remain marked"
+        assert latest_home.is_closing is False, (
+            "stale (6h pre-tipoff) row must be cleared"
+        )
+        assert latest_away.is_closing is True, (
+            "fresh (5min pre-tipoff) row must remain marked"
+        )
     finally:
         await store.close()
 
@@ -527,8 +529,11 @@ async def test_cleanup_closing_flags_dry_run_does_not_write(tmp_path, monkeypatc
         )
         gid = await store.upsert_game(game)
         stale = OddsSnapshot(
-            game_id=gid, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95,
+            game_id=gid,
+            bookmaker="pinnacle",
+            market_type="moneyline",
+            selection="home",
+            odds=1.95,
             captured_at=tipoff - timedelta(hours=6),
             is_closing=True,
         )
@@ -551,7 +556,9 @@ async def test_cleanup_closing_flags_dry_run_does_not_write(tmp_path, monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_cleanup_dry_run_count_matches_real_mark_with_post_tipoff_latest(tmp_path, monkeypatch):
+async def test_cleanup_dry_run_count_matches_real_mark_with_post_tipoff_latest(
+    tmp_path, monkeypatch
+):
     """Regression: --dry-run undercounted when a selection's LATEST snapshot was
     post-tipoff (a dedup 'last seen' bump / late live poll). The would-mark count
     must equal what mark_closing_snapshots actually marks — both must filter the
@@ -568,18 +575,37 @@ async def test_cleanup_dry_run_count_matches_real_mark_with_post_tipoff_latest(t
     await store.initialize()
     try:
         tipoff = datetime(2026, 4, 18, 17, 0, tzinfo=timezone.utc)
-        game = Game(external_id="nba_dedup_bump", home_team="Cleveland Cavaliers",
-                    away_team="Toronto Raptors", scheduled_at=tipoff, status="final")
+        game = Game(
+            external_id="nba_dedup_bump",
+            home_team="Cleveland Cavaliers",
+            away_team="Toronto Raptors",
+            scheduled_at=tipoff,
+            status="final",
+        )
         gid = await store.upsert_game(game)
         # Valid closing candidate: fresh PRE-tipoff snapshot.
-        await store.insert_odds_snapshot(OddsSnapshot(
-            game_id=gid, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95, captured_at=tipoff - timedelta(minutes=10)))
+        await store.insert_odds_snapshot(
+            OddsSnapshot(
+                game_id=gid,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.95,
+                captured_at=tipoff - timedelta(minutes=10),
+            )
+        )
         # Later POST-tipoff snapshot (dedup bump / live poll) — must NOT win
         # ROW_NUMBER()=1 and orphan the pre-tipoff candidate.
-        await store.insert_odds_snapshot(OddsSnapshot(
-            game_id=gid, bookmaker="pinnacle", market_type="moneyline",
-            selection="home", odds=1.95, captured_at=tipoff + timedelta(minutes=5)))
+        await store.insert_odds_snapshot(
+            OddsSnapshot(
+                game_id=gid,
+                bookmaker="pinnacle",
+                market_type="moneyline",
+                selection="home",
+                odds=1.95,
+                captured_at=tipoff + timedelta(minutes=5),
+            )
+        )
 
         would_mark = await store.count_markable_closing_snapshots(gid, 30)
         await store.mark_closing_snapshots(gid, 30)
@@ -645,17 +671,33 @@ async def test_backup_skipped_when_disabled(monkeypatch, tmp_path):
     class FakeStore:
         meta: dict[str, str] = {}
 
-        def __init__(self, *a, **kw): pass
-        async def initialize(self): pass
-        async def close(self): pass
-        async def get_final_games_without_snapshots(self): return []
-        async def get_meta(self, key): return self.meta.get(key)
-        async def set_meta(self, key, value): self.meta[key] = value
+        def __init__(self, *a, **kw):
+            pass
+
+        async def initialize(self):
+            pass
+
+        async def close(self):
+            pass
+
+        async def get_final_games_without_snapshots(self):
+            return []
+
+        async def get_meta(self, key):
+            return self.meta.get(key)
+
+        async def set_meta(self, key, value):
+            self.meta[key] = value
 
     class FakeScheduler:
-        def __init__(self, *a, **kw): pass
-        async def run(self): pass
-        def stop(self): pass
+        def __init__(self, *a, **kw):
+            pass
+
+        async def run(self):
+            pass
+
+        def stop(self):
+            pass
 
     monkeypatch.setattr("oddsiq.cli.Store", FakeStore)
     monkeypatch.setattr("oddsiq.cli.Scheduler", FakeScheduler)
@@ -669,7 +711,9 @@ async def test_backup_skipped_when_disabled(monkeypatch, tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_audit_bookmakers_runs_and_prints_section_headers(monkeypatch, tmp_path, capsys):
+async def test_audit_bookmakers_runs_and_prints_section_headers(
+    monkeypatch, tmp_path, capsys
+):
     """`oddsiq audit-bookmakers` opens the store, runs the audit, prints the
     text report, and exits 0."""
     from oddsiq.db import migrations
@@ -689,7 +733,9 @@ async def test_audit_bookmakers_runs_and_prints_section_headers(monkeypatch, tmp
 
 
 @pytest.mark.asyncio
-async def test_audit_bookmakers_json_flag_produces_parseable_json(monkeypatch, tmp_path, capsys):
+async def test_audit_bookmakers_json_flag_produces_parseable_json(
+    monkeypatch, tmp_path, capsys
+):
     """`--json` emits valid JSON with the five section keys."""
     import json
     from oddsiq.db import migrations
@@ -704,13 +750,25 @@ async def test_audit_bookmakers_json_flag_produces_parseable_json(monkeypatch, t
     assert code == 0
     parsed = json.loads(out)
     assert set(parsed.keys()) == {
-        "snapshot_volumes", "value_bets", "clv_by_bucket",
-        "closing_quality", "coverage_gap_proxy",
+        "snapshot_volumes",
+        "value_bets",
+        "clv_by_bucket",
+        "closing_quality",
+        "coverage_gap_proxy",
     }
 
 
 def test_parse_args_audit_bookmakers_with_filters():
-    args = cli._parse_args(["audit-bookmakers", "--bookmaker", "tipsport", "--since", "2026-05-15", "--json"])
+    args = cli._parse_args(
+        [
+            "audit-bookmakers",
+            "--bookmaker",
+            "tipsport",
+            "--since",
+            "2026-05-15",
+            "--json",
+        ]
+    )
     assert args.command == "audit-bookmakers"
     assert args.bookmaker == "tipsport"
     assert args.since == "2026-05-15"
@@ -718,7 +776,9 @@ def test_parse_args_audit_bookmakers_with_filters():
 
 
 @pytest.mark.asyncio
-async def test_audit_bookmakers_filters_round_trip_to_audit_module(monkeypatch, tmp_path):
+async def test_audit_bookmakers_filters_round_trip_to_audit_module(
+    monkeypatch, tmp_path
+):
     """`audit_bookmakers(bookmaker=..., since=...)` must thread BOTH filters
     into `run_audit`. Parse-args alone doesn't prove the CLI wrapper forwards
     them — this test verifies the round trip end-to-end."""
@@ -734,13 +794,18 @@ async def test_audit_bookmakers_filters_round_trip_to_audit_module(monkeypatch, 
         captured["bookmaker"] = bookmaker
         captured["since"] = since
         return {
-            "snapshot_volumes": [], "value_bets": [], "clv_by_bucket": [],
-            "closing_quality": [], "coverage_gap_proxy": [],
+            "snapshot_volumes": [],
+            "value_bets": [],
+            "clv_by_bucket": [],
+            "closing_quality": [],
+            "coverage_gap_proxy": [],
         }
 
     monkeypatch.setattr("oddsiq.audit.bookmakers.run_audit", fake_run_audit)
 
-    code = await cli.audit_bookmakers(bookmaker="tipsport", since="2026-05-15", as_json=True)
+    code = await cli.audit_bookmakers(
+        bookmaker="tipsport", since="2026-05-15", as_json=True
+    )
 
     assert code == 0
     # A bare date is normalized to a full UTC instant before it reaches the SQL
@@ -765,14 +830,18 @@ async def test_audit_bookmakers_normalizes_offset_since_to_utc(monkeypatch, tmp_
     async def fake_run_audit(store, *, bookmaker=None, since=None):
         captured["since"] = since
         return {
-            "snapshot_volumes": [], "value_bets": [], "clv_by_bucket": [],
-            "closing_quality": [], "coverage_gap_proxy": [],
+            "snapshot_volumes": [],
+            "value_bets": [],
+            "clv_by_bucket": [],
+            "closing_quality": [],
+            "coverage_gap_proxy": [],
         }
 
     monkeypatch.setattr("oddsiq.audit.bookmakers.run_audit", fake_run_audit)
 
     code = await cli.audit_bookmakers(
-        bookmaker=None, since="2026-06-01T12:00:00+02:00", as_json=True)
+        bookmaker=None, since="2026-06-01T12:00:00+02:00", as_json=True
+    )
 
     assert code == 0
     assert captured["since"] == "2026-06-01T10:00:00+00:00"
@@ -796,6 +865,7 @@ def test_parse_args_tipsport_smoke():
 
 def test_parse_args_sport_flag():
     from oddsiq.cli import _parse_args
+
     assert _parse_args(["tipsport-smoke", "--sport", "mlb"]).sport == "mlb"
     assert _parse_args(["tipsport-smoke"]).sport == "nba"
 
@@ -812,10 +882,16 @@ def _smoke_snap(
     """Build a minimal OddsSnapshot the smoke command will accept."""
     from datetime import datetime, timezone
     from oddsiq.db.models import OddsSnapshot
+
     return OddsSnapshot(
-        game_id=0, bookmaker=bookmaker, market_type=market_type,
-        selection=selection, odds=odds, line=line,
-        _home_team=home, _away_team=away,
+        game_id=0,
+        bookmaker=bookmaker,
+        market_type=market_type,
+        selection=selection,
+        odds=odds,
+        line=line,
+        _home_team=home,
+        _away_team=away,
         captured_at=datetime(2026, 5, 20, 14, 0, tzinfo=timezone.utc),
     )
 
@@ -828,20 +904,29 @@ async def test_tipsport_smoke_healthy_exits_0(monkeypatch, capsys):
         self.last_fetch_error_count = 0
         return [
             _smoke_snap(
-                bookmaker="tipsport", market_type="moneyline",
-                selection="home", odds=1.80,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=1.80,
             ),
             _smoke_snap(
-                bookmaker="tipsport", market_type="moneyline",
-                selection="away", odds=2.05,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="away",
+                odds=2.05,
             ),
             _smoke_snap(
-                bookmaker="tipsport", market_type="spread",
-                selection="home", odds=1.91, line=-3.5,
+                bookmaker="tipsport",
+                market_type="spread",
+                selection="home",
+                odds=1.91,
+                line=-3.5,
             ),
         ]
 
-    monkeypatch.setattr("oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch
+    )
 
     code = await tipsport_smoke()
     out = capsys.readouterr().out
@@ -860,13 +945,23 @@ async def test_tipsport_smoke_prints_two_way_overround(monkeypatch, capsys):
     async def fake_fetch(self, game_date, profile):
         self.last_fetch_error_count = 0
         return [
-            _smoke_snap(bookmaker="tipsport", market_type="moneyline",
-                        selection="home", odds=1.80),
-            _smoke_snap(bookmaker="tipsport", market_type="moneyline",
-                        selection="away", odds=2.05),
+            _smoke_snap(
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                odds=1.80,
+            ),
+            _smoke_snap(
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="away",
+                odds=2.05,
+            ),
         ]
 
-    monkeypatch.setattr("oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch
+    )
 
     code = await tipsport_smoke()
     out = capsys.readouterr().out
@@ -886,7 +981,9 @@ async def test_tipsport_smoke_fetch_error_exits_1(monkeypatch, capsys):
             _smoke_snap(bookmaker="tipsport", selection="away", odds=2.05),
         ]
 
-    monkeypatch.setattr("oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch
+    )
 
     code = await tipsport_smoke()
     err = capsys.readouterr().err
@@ -903,16 +1000,24 @@ async def test_tipsport_smoke_zero_moneyline_exits_1(monkeypatch, capsys):
         self.last_fetch_error_count = 0
         return [
             _smoke_snap(
-                bookmaker="tipsport", market_type="spread",
-                selection="home", odds=1.91, line=-3.5,
+                bookmaker="tipsport",
+                market_type="spread",
+                selection="home",
+                odds=1.91,
+                line=-3.5,
             ),
             _smoke_snap(
-                bookmaker="tipsport", market_type="spread",
-                selection="away", odds=1.91, line=3.5,
+                bookmaker="tipsport",
+                market_type="spread",
+                selection="away",
+                odds=1.91,
+                line=3.5,
             ),
         ]
 
-    monkeypatch.setattr("oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch)
+    monkeypatch.setattr(
+        "oddsiq.scrapers.tipsport.TipsportScraper.fetch_odds", fake_fetch
+    )
 
     code = await tipsport_smoke()
     err = capsys.readouterr().err
@@ -944,13 +1049,17 @@ def test_redacting_filter_removes_odds_api_key():
 
     f = cli._SecretsRedactingFilter()
     record = logging.LogRecord(
-        name="httpx", level=logging.INFO, pathname="", lineno=0,
+        name="httpx",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
         msg=(
             "HTTP Request: GET "
             "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
             "?apiKey=0123456789abcdef0123456789abcdef&regions=us"
         ),
-        args=None, exc_info=None,
+        args=None,
+        exc_info=None,
     )
     f.filter(record)
     rendered = record.getMessage()
@@ -964,12 +1073,16 @@ def test_redacting_filter_removes_telegram_bot_token():
 
     f = cli._SecretsRedactingFilter()
     record = logging.LogRecord(
-        name="httpx", level=logging.INFO, pathname="", lineno=0,
+        name="httpx",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
         msg=(
             "HTTP Request: POST "
             "https://api.telegram.org/bot123456789:AAFakeTokenForRedactionTest_000000/sendMessage"
         ),
-        args=None, exc_info=None,
+        args=None,
+        exc_info=None,
     )
     f.filter(record)
     rendered = record.getMessage()
@@ -982,9 +1095,13 @@ def test_redacting_filter_removes_bearer_token():
 
     f = cli._SecretsRedactingFilter()
     record = logging.LogRecord(
-        name="auth", level=logging.INFO, pathname="", lineno=0,
+        name="auth",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
         msg="Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
-        args=None, exc_info=None,
+        args=None,
+        exc_info=None,
     )
     f.filter(record)
     rendered = record.getMessage()
@@ -999,8 +1116,13 @@ def test_redacting_filter_passes_clean_records_unchanged():
     f = cli._SecretsRedactingFilter()
     original = "Scraper health: name=tipsport duration_ms=400 snapshots=4 matched_games=2 errors=0"
     record = logging.LogRecord(
-        name="oddsiq.scheduler", level=logging.INFO, pathname="", lineno=0,
-        msg=original, args=None, exc_info=None,
+        name="oddsiq.scheduler",
+        level=logging.INFO,
+        pathname="",
+        lineno=0,
+        msg=original,
+        args=None,
+        exc_info=None,
     )
     f.filter(record)
     assert record.getMessage() == original
@@ -1013,7 +1135,8 @@ def test_install_secrets_filter_is_idempotent():
     cli.setup_logging()
     cli.setup_logging()
     root_filters = [
-        f for f in logging.getLogger().filters
+        f
+        for f in logging.getLogger().filters
         if isinstance(f, cli._SecretsRedactingFilter)
     ]
     assert len(root_filters) == 1
@@ -1035,7 +1158,8 @@ def test_console_log_redacts_api_key_from_child_logger(monkeypatch):
     ]
     cli.setup_logging()
     stream_handlers = [
-        h for h in root.handlers
+        h
+        for h in root.handlers
         if isinstance(h, logging.StreamHandler)
         and not isinstance(h, logging.FileHandler)
     ]
@@ -1067,6 +1191,7 @@ def _live_game(
     """Build a Game whose effective tipoff is `minutes_in` minutes in the past."""
     from datetime import datetime, timedelta, timezone
     from oddsiq.db.models import Game
+
     tipoff = datetime.now(timezone.utc) - timedelta(minutes=minutes_in)
     return Game(
         external_id=external_id,
@@ -1086,6 +1211,7 @@ def _pretipoff_game(
 ):
     from datetime import datetime, timedelta, timezone
     from oddsiq.db.models import Game
+
     tipoff = datetime.now(timezone.utc) + timedelta(hours=2)
     return Game(
         external_id=external_id,
@@ -1103,8 +1229,9 @@ def test_setup_logging_attaches_rotating_file_handler(tmp_path, monkeypatch):
     _clear_root_handlers()
     root = logging.getLogger()
     cli.setup_logging()
-    file_handlers = [h for h in root.handlers
-                     if isinstance(h, logging.handlers.RotatingFileHandler)]
+    file_handlers = [
+        h for h in root.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
+    ]
     assert len(file_handlers) == 1
     assert Path(file_handlers[0].baseFilename) == (tmp_path / "oddsiq.log").resolve()
     assert (tmp_path / "oddsiq.log").parent.exists()
@@ -1118,8 +1245,9 @@ def test_setup_logging_idempotent_does_not_double_attach(tmp_path, monkeypatch):
     cli.setup_logging()
     cli.setup_logging()
     cli.setup_logging()
-    file_handlers = [h for h in root.handlers
-                     if isinstance(h, logging.handlers.RotatingFileHandler)]
+    file_handlers = [
+        h for h in root.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
+    ]
     assert len(file_handlers) == 1
 
 
@@ -1129,8 +1257,9 @@ def test_setup_logging_disabled_skips_file_handler(tmp_path, monkeypatch):
     _clear_root_handlers()
     root = logging.getLogger()
     cli.setup_logging()
-    file_handlers = [h for h in root.handlers
-                     if isinstance(h, logging.handlers.RotatingFileHandler)]
+    file_handlers = [
+        h for h in root.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
+    ]
     assert file_handlers == []
 
 
@@ -1203,16 +1332,20 @@ def test_find_zombie_scheduled_games_age_rule():
 
     def _game(ext, *, hours_ago, status, sport="mlb"):
         return Game(
-            external_id=ext, home_team="A", away_team="B",
+            external_id=ext,
+            home_team="A",
+            away_team="B",
             scheduled_at=now - timedelta(hours=hours_ago),
-            status=status, sport=sport)
+            status=status,
+            sport=sport,
+        )
 
     games = [
         _game("dropped_fixture", hours_ago=300, status="scheduled"),  # zombie
-        _game("just_past_tipoff", hours_ago=1, status="scheduled"),   # keep
-        _game("inside_grace", hours_ago=73, status="scheduled"),      # 4h+3d=76h, keep
-        _game("future", hours_ago=-5, status="scheduled"),            # keep
-        _game("live_not_ours", hours_ago=300, status="live"),         # other finder
+        _game("just_past_tipoff", hours_ago=1, status="scheduled"),  # keep
+        _game("inside_grace", hours_ago=73, status="scheduled"),  # 4h+3d=76h, keep
+        _game("future", hours_ago=-5, status="scheduled"),  # keep
+        _game("live_not_ours", hours_ago=300, status="live"),  # other finder
     ]
     zombies = cli._find_zombie_scheduled_games(games, now, grace_days=3)
     assert [g.external_id for g in zombies] == ["dropped_fixture"]
@@ -1234,12 +1367,26 @@ async def test_delete_zombie_games_include_scheduled(tmp_path, monkeypatch):
     await store.initialize()
     try:
         now = datetime.now(timezone.utc)
-        await store.upsert_game(Game(
-            external_id="dropped", home_team="A", away_team="B",
-            scheduled_at=now - timedelta(days=12), status="scheduled", sport="mlb"))
-        await store.upsert_game(Game(
-            external_id="upcoming", home_team="C", away_team="D",
-            scheduled_at=now + timedelta(hours=5), status="scheduled", sport="mlb"))
+        await store.upsert_game(
+            Game(
+                external_id="dropped",
+                home_team="A",
+                away_team="B",
+                scheduled_at=now - timedelta(days=12),
+                status="scheduled",
+                sport="mlb",
+            )
+        )
+        await store.upsert_game(
+            Game(
+                external_id="upcoming",
+                home_team="C",
+                away_team="D",
+                scheduled_at=now + timedelta(hours=5),
+                status="scheduled",
+                sport="mlb",
+            )
+        )
     finally:
         await store.close()
 
@@ -1275,9 +1422,13 @@ def test_find_zombie_live_games_respects_backstop_grace_and_status():
 
     def _game(ext, *, hours_ago, status, sport):
         return Game(
-            external_id=ext, home_team="A", away_team="B",
+            external_id=ext,
+            home_team="A",
+            away_team="B",
             scheduled_at=now - timedelta(hours=hours_ago),
-            status=status, sport=sport)
+            status=status,
+            sport=sport,
+        )
 
     games = [
         # MLB backstop 4h + 3d grace = 76h; 100h ago -> zombie.
@@ -1312,28 +1463,75 @@ async def test_delete_zombie_games_deletes_stuck_live_only(tmp_path, monkeypatch
     try:
         now = datetime.now(timezone.utc)
         zombie_tip = now - timedelta(days=10)
-        zombie_id = await store.upsert_game(Game(
-            external_id="zombie", home_team="Atlanta Braves",
-            away_team="San Francisco Giants", scheduled_at=zombie_tip,
-            status="live", sport="mlb"))
-        await store.insert_odds_snapshots_batch([OddsSnapshot(
-            game_id=zombie_id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=1.9, captured_at=zombie_tip, sport="mlb")])
-        await store.insert_value_bet(ValueBet(
-            game_id=zombie_id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-            sport="mlb"))
-        fresh_id = await store.upsert_game(Game(
-            external_id="fresh_live", home_team="C", away_team="D",
-            scheduled_at=now - timedelta(hours=1), status="live", sport="mlb"))
-        final_id = await store.upsert_game(Game(
-            external_id="done", home_team="E", away_team="F",
-            scheduled_at=now - timedelta(days=30), status="final",
-            home_score=3, away_score=1, sport="mlb"))
-        await store.insert_value_bet(ValueBet(
-            game_id=final_id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.10, fair_odds=2.00, edge_pct=5.0,
-            sport="mlb"))
+        zombie_id = await store.upsert_game(
+            Game(
+                external_id="zombie",
+                home_team="Atlanta Braves",
+                away_team="San Francisco Giants",
+                scheduled_at=zombie_tip,
+                status="live",
+                sport="mlb",
+            )
+        )
+        await store.insert_odds_snapshots_batch(
+            [
+                OddsSnapshot(
+                    game_id=zombie_id,
+                    bookmaker="tipsport",
+                    market_type="moneyline",
+                    selection="home",
+                    odds=1.9,
+                    captured_at=zombie_tip,
+                    sport="mlb",
+                )
+            ]
+        )
+        await store.insert_value_bet(
+            ValueBet(
+                game_id=zombie_id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                entry_odds=2.10,
+                fair_odds=2.00,
+                edge_pct=5.0,
+                sport="mlb",
+            )
+        )
+        fresh_id = await store.upsert_game(
+            Game(
+                external_id="fresh_live",
+                home_team="C",
+                away_team="D",
+                scheduled_at=now - timedelta(hours=1),
+                status="live",
+                sport="mlb",
+            )
+        )
+        final_id = await store.upsert_game(
+            Game(
+                external_id="done",
+                home_team="E",
+                away_team="F",
+                scheduled_at=now - timedelta(days=30),
+                status="final",
+                home_score=3,
+                away_score=1,
+                sport="mlb",
+            )
+        )
+        await store.insert_value_bet(
+            ValueBet(
+                game_id=final_id,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                entry_odds=2.10,
+                fair_odds=2.00,
+                edge_pct=5.0,
+                sport="mlb",
+            )
+        )
     finally:
         await store.close()
 
@@ -1344,14 +1542,17 @@ async def test_delete_zombie_games_deletes_stuck_live_only(tmp_path, monkeypatch
     await store.initialize()
     try:
         cur = await store._db.execute(
-            "SELECT external_id FROM games ORDER BY external_id")
+            "SELECT external_id FROM games ORDER BY external_id"
+        )
         assert [r[0] for r in await cur.fetchall()] == ["done", "fresh_live"]
         for table in ("odds_snapshots", "value_bets"):
             cur = await store._db.execute(
-                f"SELECT COUNT(*) FROM {table} WHERE game_id=?", (zombie_id,))
+                f"SELECT COUNT(*) FROM {table} WHERE game_id=?", (zombie_id,)
+            )
             assert (await cur.fetchone())[0] == 0, f"zombie {table} must be gone"
         cur = await store._db.execute(
-            "SELECT COUNT(*) FROM value_bets WHERE game_id=?", (final_id,))
+            "SELECT COUNT(*) FROM value_bets WHERE game_id=?", (final_id,)
+        )
         assert (await cur.fetchone())[0] == 1, "final game's bet must survive"
         assert (await store.get_games_by_status("live"))[0].id == fresh_id
     finally:
@@ -1374,12 +1575,29 @@ async def test_delete_zombie_games_dry_run_does_not_write(tmp_path, monkeypatch)
     try:
         now = datetime.now(timezone.utc)
         zombie_tip = now - timedelta(days=10)
-        zombie_id = await store.upsert_game(Game(
-            external_id="zombie", home_team="A", away_team="B",
-            scheduled_at=zombie_tip, status="live", sport="mlb"))
-        await store.insert_odds_snapshots_batch([OddsSnapshot(
-            game_id=zombie_id, bookmaker="tipsport", market_type="moneyline",
-            selection="home", odds=1.9, captured_at=zombie_tip, sport="mlb")])
+        zombie_id = await store.upsert_game(
+            Game(
+                external_id="zombie",
+                home_team="A",
+                away_team="B",
+                scheduled_at=zombie_tip,
+                status="live",
+                sport="mlb",
+            )
+        )
+        await store.insert_odds_snapshots_batch(
+            [
+                OddsSnapshot(
+                    game_id=zombie_id,
+                    bookmaker="tipsport",
+                    market_type="moneyline",
+                    selection="home",
+                    odds=1.9,
+                    captured_at=zombie_tip,
+                    sport="mlb",
+                )
+            ]
+        )
     finally:
         await store.close()
 
@@ -1404,10 +1622,18 @@ def test_parse_args_betting():
     assert args.disarm and not args.arm
     args = cli._parse_args(["betting"])
     assert not args.arm and not args.disarm  # bare = status
-    args = cli._parse_args([
-        "betting", "--reconcile", "42", "--as-placed",
-        "--accepted-odds", "2.08", "--receipt-id", "T123",
-    ])
+    args = cli._parse_args(
+        [
+            "betting",
+            "--reconcile",
+            "42",
+            "--as-placed",
+            "--accepted-odds",
+            "2.08",
+            "--receipt-id",
+            "T123",
+        ]
+    )
     assert args.reconcile_id == 42 and args.reconcile_as == "placed"
 
 
@@ -1436,14 +1662,16 @@ async def test_betting_control_arm_disarm_status(tmp_path, monkeypatch, capsys):
     finally:
         await store.close()
 
-    assert await cli.betting_control() == 0   # bare status
+    assert await cli.betting_control() == 0  # bare status
     out = capsys.readouterr().out
     assert "armed" in out.lower()
     assert "stake" in out.lower()
 
 
 @pytest.mark.asyncio
-async def test_betting_status_prints_effective_clamped_caps(tmp_path, monkeypatch, capsys):
+async def test_betting_status_prints_effective_clamped_caps(
+    tmp_path, monkeypatch, capsys
+):
     """A meta hand-edited past its env ceiling must NOT read back as if it
     were in force — the engine clamps it, so the status line has to show the
     enforced value (with the raw meta called out as clamped)."""
@@ -1463,7 +1691,9 @@ async def test_betting_status_prints_effective_clamped_caps(tmp_path, monkeypatc
     try:
         await store.set_meta("betting_max_bets_per_day", "999")
         await store.set_meta("betting_flat_stake_czk", "9999")
-        await store.set_meta("betting_max_open_stakes_czk", "400.0")   # under the ceiling
+        await store.set_meta(
+            "betting_max_open_stakes_czk", "400.0"
+        )  # under the ceiling
         await store.set_meta("betting_daily_loss_limit_czk", "not-a-number")
     finally:
         await store.close()
@@ -1472,8 +1702,10 @@ async def test_betting_status_prints_effective_clamped_caps(tmp_path, monkeypatc
     out = capsys.readouterr().out
     assert "Max bets/day:           10 (meta 999, clamped)" in out
     assert "Flat stake (Kč):        500 (meta 9999, clamped)" in out
-    assert "Max open stakes (Kč):   400" in out and "clamped" not in out.split(
-        "Max open stakes")[1].split("\n")[0]
+    assert (
+        "Max open stakes (Kč):   400" in out
+        and "clamped" not in out.split("Max open stakes")[1].split("\n")[0]
+    )
     # Garbage falls back to the engine's default, flagged as such.
     assert "Daily loss limit (Kč):  300 (meta not-a-number, invalid)" in out
 
@@ -1489,13 +1721,18 @@ def test_effective_money_knob_matches_the_engine_clamp():
     assert cli._effective_money_knob("-5", 20.0, 500.0) == "0 (meta -5, clamped)"
     # Ints use int parsing, exactly like _bounded_meta_int.
     assert cli._effective_money_knob("7", 10, 10, as_int=True) == "7"
-    assert cli._effective_money_knob("7.5", 10, 10, as_int=True) == "10 (meta 7.5, invalid)"
+    assert (
+        cli._effective_money_knob("7.5", 10, 10, as_int=True)
+        == "10 (meta 7.5, invalid)"
+    )
     # Non-finite is not a cap — it falls back to the default, like _meta_float.
     assert cli._effective_money_knob("inf", 20.0, 500.0) == "20 (meta inf, invalid)"
 
 
 @pytest.mark.asyncio
-async def test_betting_reconcile_reports_whether_it_disarmed(tmp_path, monkeypatch, capsys):
+async def test_betting_reconcile_reports_whether_it_disarmed(
+    tmp_path, monkeypatch, capsys
+):
     from oddsiq.db import migrations
     from oddsiq.db.models import Game, PlacedBet, ValueBet
     from oddsiq.db.store import Store
@@ -1510,21 +1747,40 @@ async def test_betting_reconcile_reports_whether_it_disarmed(tmp_path, monkeypat
         s = Store(db_path)
         await s.initialize()
         try:
-            gid = await s.upsert_game(Game(
-                external_id=external_id, home_team="New York Yankees",
-                away_team="Boston Red Sox",
-                scheduled_at=datetime.now(timezone.utc) + timedelta(hours=2),
-                status="scheduled", sport="mlb",
-            ))
-            vb_id = await s.insert_value_bet(ValueBet(
-                game_id=gid, bookmaker="tipsport", market_type="moneyline",
-                selection=selection, entry_odds=2.1, fair_odds=1.95, edge_pct=7.0,
-                flagged_at=datetime.now(timezone.utc), tier="warm", sport="mlb",
-            ))
-            return await s.insert_placed_bet(PlacedBet(
-                value_bet_id=vb_id, game_id=gid, sport="mlb", status="unknown",
-                stake_czk=20.0, requested_odds=2.1,
-            ))
+            gid = await s.upsert_game(
+                Game(
+                    external_id=external_id,
+                    home_team="New York Yankees",
+                    away_team="Boston Red Sox",
+                    scheduled_at=datetime.now(timezone.utc) + timedelta(hours=2),
+                    status="scheduled",
+                    sport="mlb",
+                )
+            )
+            vb_id = await s.insert_value_bet(
+                ValueBet(
+                    game_id=gid,
+                    bookmaker="tipsport",
+                    market_type="moneyline",
+                    selection=selection,
+                    entry_odds=2.1,
+                    fair_odds=1.95,
+                    edge_pct=7.0,
+                    flagged_at=datetime.now(timezone.utc),
+                    tier="warm",
+                    sport="mlb",
+                )
+            )
+            return await s.insert_placed_bet(
+                PlacedBet(
+                    value_bet_id=vb_id,
+                    game_id=gid,
+                    sport="mlb",
+                    status="unknown",
+                    stake_czk=20.0,
+                    requested_odds=2.1,
+                )
+            )
         finally:
             await s.close()
 
@@ -1538,15 +1794,25 @@ async def test_betting_reconcile_reports_whether_it_disarmed(tmp_path, monkeypat
     finally:
         await store.close()
 
-    assert await cli.betting_control(
-        reconcile_id=first, reconcile_as="rejected", reason="absent_from_history",
-    ) == 0
+    assert (
+        await cli.betting_control(
+            reconcile_id=first,
+            reconcile_as="rejected",
+            reason="absent_from_history",
+        )
+        == 0
+    )
     out = capsys.readouterr().out
     assert "Engine disarmed (was armed)" in out
     assert "remains disarmed" not in out
 
     # Already disarmed: the wording must not claim a disarm that didn't happen.
-    assert await cli.betting_control(
-        reconcile_id=second, reconcile_as="rejected", reason="absent_from_history",
-    ) == 0
+    assert (
+        await cli.betting_control(
+            reconcile_id=second,
+            reconcile_as="rejected",
+            reason="absent_from_history",
+        )
+        == 0
+    )
     assert "Engine remains disarmed" in capsys.readouterr().out

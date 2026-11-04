@@ -53,7 +53,10 @@ class PinnacleScraper(BaseScraper):
         """Best-known total quota for the key. Uses used+remaining once the
         probe has populated both; falls back to the configured monthly budget
         otherwise."""
-        if self._budget_used > 0 or self._budget_remaining != config.ODDS_API_MONTHLY_BUDGET:
+        if (
+            self._budget_used > 0
+            or self._budget_remaining != config.ODDS_API_MONTHLY_BUDGET
+        ):
             return self._budget_used + self._budget_remaining
         return config.ODDS_API_MONTHLY_BUDGET
 
@@ -101,7 +104,8 @@ class PinnacleScraper(BaseScraper):
         except (TypeError, ValueError):
             logger.warning(
                 "Odds API budget probe: quota headers malformed: used=%r remaining=%r",
-                used, remaining,
+                used,
+                remaining,
             )
             return None
         return {"used": self._budget_used, "remaining": self._budget_remaining}
@@ -124,14 +128,17 @@ class PinnacleScraper(BaseScraper):
             logger.warning(
                 "Odds API: malformed quota headers, leaving budget unchanged: "
                 "used=%r remaining=%r",
-                used, remaining,
+                used,
+                remaining,
             )
             return
         if remaining is not None:
             total = self.budget_total
             logger.info(
                 "Odds API budget: %d used / %d remaining (%d total)",
-                self._budget_used, self._budget_remaining, total,
+                self._budget_used,
+                self._budget_remaining,
+                total,
             )
 
     async def fetch_odds(self, game_date: date, profile) -> list[OddsSnapshot]:
@@ -147,7 +154,8 @@ class PinnacleScraper(BaseScraper):
             return []
         try:
             data, captured_at = await with_backoff(
-                lambda: self._fetch_odds_once(profile), label="pinnacle fetch",
+                lambda: self._fetch_odds_once(profile),
+                label="pinnacle fetch",
             )
         except (httpx.HTTPError, RetryableError) as e:
             self.last_fetch_error_count = 1
@@ -208,7 +216,8 @@ class PinnacleScraper(BaseScraper):
                     logger.warning(
                         "Skipping Pinnacle event without a usable id "
                         "(home=%s away=%s commence=%s)",
-                        event.get("home_team"), event.get("away_team"),
+                        event.get("home_team"),
+                        event.get("away_team"),
                         event.get("commence_time"),
                     )
                     continue
@@ -230,17 +239,20 @@ class PinnacleScraper(BaseScraper):
                     for market in bookmaker.get("markets", []):
                         market_key = market["key"]
                         source_updated_at = self._parse_source_updated_at(
-                            market.get("last_update"), observed_at=now)
+                            market.get("last_update"), observed_at=now
+                        )
                         if source_updated_at is None:
                             source_updated_at = self._parse_source_updated_at(
-                                bookmaker.get("last_update"), observed_at=now)
+                                bookmaker.get("last_update"), observed_at=now
+                            )
                         source_freshness_missing = source_updated_at is None
                         if source_freshness_missing:
                             self.last_parse_missing_source_updates += 1
                             logger.warning(
                                 "Pinnacle market missing/invalid last_update "
                                 "(event=%s market=%s)",
-                                event_id, market_key,
+                                event_id,
+                                market_key,
                             )
                         for outcome in market.get("outcomes", []):
                             market_type, selection = self._map_market(
@@ -262,27 +274,32 @@ class PinnacleScraper(BaseScraper):
                                 logger.warning(
                                     "Skipping Pinnacle outcome with invalid price %r "
                                     "(event=%s market=%s selection=%s)",
-                                    price, event.get("id"), market_key, selection,
+                                    price,
+                                    event.get("id"),
+                                    market_key,
+                                    selection,
                                 )
                                 continue
                             line = outcome.get("point")
-                            event_snaps.append(OddsSnapshot(
-                                game_id=0,
-                                bookmaker="pinnacle",
-                                market_type=market_type,
-                                selection=selection,
-                                odds=price,
-                                line=line,
-                                raw_response_path=raw_response_path,
-                                source_updated_at=source_updated_at,
-                                captured_at=now,
-                                sport=sport,
-                                _home_team=home_norm,
-                                _away_team=away_norm,
-                                _commence_time=commence_time,
-                                _source_event_id=event_id,
-                                _source_freshness_missing=source_freshness_missing,
-                            ))
+                            event_snaps.append(
+                                OddsSnapshot(
+                                    game_id=0,
+                                    bookmaker="pinnacle",
+                                    market_type=market_type,
+                                    selection=selection,
+                                    odds=price,
+                                    line=line,
+                                    raw_response_path=raw_response_path,
+                                    source_updated_at=source_updated_at,
+                                    captured_at=now,
+                                    sport=sport,
+                                    _home_team=home_norm,
+                                    _away_team=away_norm,
+                                    _commence_time=commence_time,
+                                    _source_event_id=event_id,
+                                    _source_freshness_missing=source_freshness_missing,
+                                )
+                            )
             except (KeyError, TypeError) as e:
                 logger.warning(
                     "Skipping malformed Pinnacle event %s: %s", event.get("id"), e
@@ -293,7 +310,9 @@ class PinnacleScraper(BaseScraper):
 
     @staticmethod
     def _parse_source_updated_at(
-        value: str | None, *, observed_at: datetime,
+        value: str | None,
+        *,
+        observed_at: datetime,
     ) -> datetime | None:
         """Parse a trustworthy, timezone-aware upstream market timestamp.
 
@@ -337,7 +356,9 @@ class PinnacleScraper(BaseScraper):
         return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
 
     @staticmethod
-    def _map_market(market_key: str, outcome_name: str, home_team: str, away_team: str) -> tuple[str | None, str | None]:
+    def _map_market(
+        market_key: str, outcome_name: str, home_team: str, away_team: str
+    ) -> tuple[str | None, str | None]:
         if market_key == "h2h":
             if outcome_name == home_team:
                 return "moneyline", "home"

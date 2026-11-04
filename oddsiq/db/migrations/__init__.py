@@ -108,7 +108,9 @@ def _discover() -> list[Migration]:
 
 
 def _current_version(conn: sqlite3.Connection) -> int:
-    row = conn.execute("SELECT COALESCE(MAX(version), -1) FROM schema_version").fetchone()
+    row = conn.execute(
+        "SELECT COALESCE(MAX(version), -1) FROM schema_version"
+    ).fetchone()
     return int(row[0])
 
 
@@ -129,7 +131,8 @@ def _apply_one(conn: sqlite3.Connection, migration: Migration) -> None:
             conn.rollback()
             logger.info(
                 "Migration %03d_%s already applied (concurrent runner); skipping",
-                migration.version, migration.name,
+                migration.version,
+                migration.name,
             )
             return
         migration.apply(conn)

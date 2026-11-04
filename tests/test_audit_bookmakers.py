@@ -107,7 +107,9 @@ async def _seed_value_bet(
     bet_id = await store.insert_value_bet(vb)
     # insert_value_bet only persists the initial columns; backfill the rest
     # so audit aggregations can observe them.
-    if bet_id is not None and (clv_pct is not None or result is not None or flagged_at is not None):
+    if bet_id is not None and (
+        clv_pct is not None or result is not None or flagged_at is not None
+    ):
         await store._db.execute(
             "UPDATE value_bets SET clv_pct=?, result=?, "
             "flagged_at=COALESCE(?, flagged_at) WHERE id=?",
@@ -153,8 +155,11 @@ async def test_run_audit_has_no_overlap_section(audit_store):
     audit = await run_audit(audit_store)
     assert "overlap" not in audit
     assert set(audit) == {
-        "snapshot_volumes", "value_bets", "clv_by_bucket",
-        "closing_quality", "coverage_gap_proxy",
+        "snapshot_volumes",
+        "value_bets",
+        "clv_by_bucket",
+        "closing_quality",
+        "coverage_gap_proxy",
     }
 
 
@@ -167,14 +172,22 @@ async def test_snapshot_volumes_counts_per_book_and_match_rate(audit_store):
     """
     from oddsiq.audit.bookmakers import run_audit
 
-    g1 = await _seed_game(audit_store, external_id="g1", home="Boston Celtics", away="Lakers")
-    g2 = await _seed_game(audit_store, external_id="g2", home="Brooklyn Nets", away="Suns")
+    g1 = await _seed_game(
+        audit_store, external_id="g1", home="Boston Celtics", away="Lakers"
+    )
+    g2 = await _seed_game(
+        audit_store, external_id="g2", home="Brooklyn Nets", away="Suns"
+    )
 
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="tipsport", odds=1.95)
-    await _seed_snapshot(audit_store, game_id=g1, bookmaker="tipsport", selection="away", odds=2.05)
+    await _seed_snapshot(
+        audit_store, game_id=g1, bookmaker="tipsport", selection="away", odds=2.05
+    )
     await _seed_snapshot(audit_store, game_id=g2, bookmaker="tipsport", odds=1.50)
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="softbook2", odds=1.90)
-    await _seed_snapshot(audit_store, game_id=g1, bookmaker="softbook2", selection="away", odds=2.10)
+    await _seed_snapshot(
+        audit_store, game_id=g1, bookmaker="softbook2", selection="away", odds=2.10
+    )
 
     result = await run_audit(audit_store)
     volumes = {row["bookmaker"]: row for row in result["snapshot_volumes"]}
@@ -201,12 +214,35 @@ async def test_value_bets_section_counts_with_clv_result_and_avg(audit_store):
 
     # Tipsport: 3 bets. 2 with CLV, 2 with result, 1 with both clv+result populated,
     # one negative CLV.
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", edge_pct=5.0, clv_pct=4.0, result="win")
-    await _seed_value_bet(audit_store, game_id=g2, bookmaker="tipsport", edge_pct=6.0, clv_pct=-1.5, result="loss")
-    await _seed_value_bet(audit_store, game_id=g3, bookmaker="tipsport", edge_pct=4.0)  # no clv, no result
+    await _seed_value_bet(
+        audit_store,
+        game_id=g1,
+        bookmaker="tipsport",
+        edge_pct=5.0,
+        clv_pct=4.0,
+        result="win",
+    )
+    await _seed_value_bet(
+        audit_store,
+        game_id=g2,
+        bookmaker="tipsport",
+        edge_pct=6.0,
+        clv_pct=-1.5,
+        result="loss",
+    )
+    await _seed_value_bet(
+        audit_store, game_id=g3, bookmaker="tipsport", edge_pct=4.0
+    )  # no clv, no result
 
     # softbook2: 1 bet, with clv + result, positive.
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2", edge_pct=5.5, clv_pct=3.0, result="win")
+    await _seed_value_bet(
+        audit_store,
+        game_id=g1,
+        bookmaker="softbook2",
+        edge_pct=5.5,
+        clv_pct=3.0,
+        result="win",
+    )
 
     result = await run_audit(audit_store)
     bets = {row["bookmaker"]: row for row in result["value_bets"]}
@@ -241,16 +277,30 @@ async def test_clv_by_bucket_partitions_edges_correctly(audit_store):
     g4 = await _seed_game(audit_store, external_id="g4")
 
     # Boundary tests
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2", edge_pct=3.0, clv_pct=2.5)   # 3-5%
-    await _seed_value_bet(audit_store, game_id=g2, bookmaker="softbook2", edge_pct=4.99, clv_pct=4.0)  # 3-5%
-    await _seed_value_bet(audit_store, game_id=g3, bookmaker="softbook2", edge_pct=5.0, clv_pct=5.5)   # 5-7%
-    await _seed_value_bet(audit_store, game_id=g4, bookmaker="softbook2", edge_pct=10.5, clv_pct=11.0) # 10%+
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="softbook2", edge_pct=3.0, clv_pct=2.5
+    )  # 3-5%
+    await _seed_value_bet(
+        audit_store, game_id=g2, bookmaker="softbook2", edge_pct=4.99, clv_pct=4.0
+    )  # 3-5%
+    await _seed_value_bet(
+        audit_store, game_id=g3, bookmaker="softbook2", edge_pct=5.0, clv_pct=5.5
+    )  # 5-7%
+    await _seed_value_bet(
+        audit_store, game_id=g4, bookmaker="softbook2", edge_pct=10.5, clv_pct=11.0
+    )  # 10%+
 
     result = await run_audit(audit_store)
-    buckets = {row["edge_bucket"]: row for row in result["clv_by_bucket"] if row["bookmaker"] == "softbook2"}
+    buckets = {
+        row["edge_bucket"]: row
+        for row in result["clv_by_bucket"]
+        if row["bookmaker"] == "softbook2"
+    }
 
     assert buckets["3-5%"]["bets"] == 2
-    assert buckets["3-5%"]["avg_edge"] == 4.0  # (3.0 + 4.99) / 2 = 3.995, round(..., 2) = 4.0
+    assert (
+        buckets["3-5%"]["avg_edge"] == 4.0
+    )  # (3.0 + 4.99) / 2 = 3.995, round(..., 2) = 4.0
     assert buckets["3-5%"]["pos_clv_pct"] == 100.0
     assert buckets["5-7%"]["bets"] == 1
     assert buckets["5-7%"]["avg_clv"] == 5.5
@@ -269,8 +319,12 @@ async def test_closing_quality_separates_with_closing_from_stale_skipped(audit_s
     g3 = await _seed_game(audit_store, external_id="g3")
 
     # Tipsport: 2 resolved bets, 1 has clv (clean), 1 has no clv (stale)
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win")
-    await _seed_value_bet(audit_store, game_id=g2, bookmaker="tipsport", result="loss")  # no clv = stale
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win"
+    )
+    await _seed_value_bet(
+        audit_store, game_id=g2, bookmaker="tipsport", result="loss"
+    )  # no clv = stale
 
     # An unresolved bet with no result must NOT count toward bets_resolved
     await _seed_value_bet(audit_store, game_id=g3, bookmaker="tipsport", clv_pct=2.0)
@@ -296,9 +350,15 @@ async def test_coverage_gap_proxy_counts_resolved_bets_with_null_clv(audit_store
     g1 = await _seed_game(audit_store, external_id="g1")
     g2 = await _seed_game(audit_store, external_id="g2")
 
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win")     # clean
-    await _seed_value_bet(audit_store, game_id=g2, bookmaker="tipsport", result="loss")                  # gap proxy
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2", clv_pct=3.0, result="win")        # clean
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win"
+    )  # clean
+    await _seed_value_bet(
+        audit_store, game_id=g2, bookmaker="tipsport", result="loss"
+    )  # gap proxy
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="softbook2", clv_pct=3.0, result="win"
+    )  # clean
 
     result = await run_audit(audit_store)
     gaps = {row["bookmaker"]: row for row in result["coverage_gap_proxy"]}
@@ -316,12 +376,22 @@ async def test_bookmaker_filter_excludes_other_books_from_every_section(audit_st
 
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="tipsport")
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="softbook2")
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win")
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2",   clv_pct=3.0, result="win")
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="tipsport", clv_pct=4.0, result="win"
+    )
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="softbook2", clv_pct=3.0, result="win"
+    )
 
     result = await run_audit(audit_store, bookmaker="softbook2")
 
-    for section_name in ("snapshot_volumes", "value_bets", "clv_by_bucket", "closing_quality", "coverage_gap_proxy"):
+    for section_name in (
+        "snapshot_volumes",
+        "value_bets",
+        "clv_by_bucket",
+        "closing_quality",
+        "coverage_gap_proxy",
+    ):
         for row in result[section_name]:
             assert row["bookmaker"] == "softbook2", f"{section_name} leaked tipsport"
 
@@ -335,19 +405,43 @@ async def test_since_filter_uses_value_bet_flagged_at(audit_store):
 
     # g_a: snapshot captured BEFORE since, but the bet was flagged AFTER since.
     # flagged_at semantics → included; the old captured_at proxy → excluded.
-    g_a = await _seed_game(audit_store, external_id="a", scheduled_at=_utc(2026, 5, 16, 2, 0))
-    await _seed_snapshot(audit_store, game_id=g_a, bookmaker="softbook2",
-                         captured_at=_utc(2026, 5, 10, 1, 30))
-    await _seed_value_bet(audit_store, game_id=g_a, bookmaker="softbook2",
-                          clv_pct=7.0, result="win", flagged_at=_utc(2026, 5, 16, 1, 35))
+    g_a = await _seed_game(
+        audit_store, external_id="a", scheduled_at=_utc(2026, 5, 16, 2, 0)
+    )
+    await _seed_snapshot(
+        audit_store,
+        game_id=g_a,
+        bookmaker="softbook2",
+        captured_at=_utc(2026, 5, 10, 1, 30),
+    )
+    await _seed_value_bet(
+        audit_store,
+        game_id=g_a,
+        bookmaker="softbook2",
+        clv_pct=7.0,
+        result="win",
+        flagged_at=_utc(2026, 5, 16, 1, 35),
+    )
 
     # g_b: snapshot captured AFTER since, but the bet was flagged BEFORE since.
     # flagged_at semantics → excluded; the old captured_at proxy → included.
-    g_b = await _seed_game(audit_store, external_id="b", scheduled_at=_utc(2026, 5, 16, 2, 0))
-    await _seed_snapshot(audit_store, game_id=g_b, bookmaker="softbook2",
-                         captured_at=_utc(2026, 5, 16, 1, 30))
-    await _seed_value_bet(audit_store, game_id=g_b, bookmaker="softbook2",
-                          clv_pct=5.0, result="loss", flagged_at=_utc(2026, 5, 10, 1, 35))
+    g_b = await _seed_game(
+        audit_store, external_id="b", scheduled_at=_utc(2026, 5, 16, 2, 0)
+    )
+    await _seed_snapshot(
+        audit_store,
+        game_id=g_b,
+        bookmaker="softbook2",
+        captured_at=_utc(2026, 5, 16, 1, 30),
+    )
+    await _seed_value_bet(
+        audit_store,
+        game_id=g_b,
+        bookmaker="softbook2",
+        clv_pct=5.0,
+        result="loss",
+        flagged_at=_utc(2026, 5, 10, 1, 35),
+    )
 
     result = await run_audit(audit_store, since="2026-05-15")
     bets = {row["bookmaker"]: row for row in result["value_bets"]}
@@ -365,10 +459,18 @@ async def test_since_filter_includes_value_bet_without_matching_snapshot(audit_s
     such bets from --since sections; filtering on flagged_at includes them."""
     from oddsiq.audit.bookmakers import run_audit
 
-    g = await _seed_game(audit_store, external_id="no_snap", scheduled_at=_utc(2026, 5, 20, 2, 0))
+    g = await _seed_game(
+        audit_store, external_id="no_snap", scheduled_at=_utc(2026, 5, 20, 2, 0)
+    )
     # No odds_snapshot for this bet at all.
-    await _seed_value_bet(audit_store, game_id=g, bookmaker="softbook2",
-                          clv_pct=5.0, result="win", flagged_at=_utc(2026, 5, 18, 1, 0))
+    await _seed_value_bet(
+        audit_store,
+        game_id=g,
+        bookmaker="softbook2",
+        clv_pct=5.0,
+        result="win",
+        flagged_at=_utc(2026, 5, 18, 1, 0),
+    )
 
     result = await run_audit(audit_store, since="2026-05-15")
     bets = {row["bookmaker"]: row for row in result["value_bets"]}
@@ -384,16 +486,23 @@ async def test_value_bet_sections_dedupe_warm_and_hot_tier_rows(audit_store):
 
     g = await _seed_game(audit_store, external_id="dh")
     for tier in ("warm", "hot"):
-        await _seed_value_bet(audit_store, game_id=g, bookmaker="tipsport",
-                              edge_pct=6.0, clv_pct=4.0, result="win", tier=tier)
+        await _seed_value_bet(
+            audit_store,
+            game_id=g,
+            bookmaker="tipsport",
+            edge_pct=6.0,
+            clv_pct=4.0,
+            result="win",
+            tier=tier,
+        )
 
     result = await run_audit(audit_store)
     bets = {row["bookmaker"]: row for row in result["value_bets"]}
     buckets = [r for r in result["clv_by_bucket"] if r["bookmaker"] == "tipsport"]
 
-    assert bets["tipsport"]["total"] == 1            # not 2 (Section 2)
+    assert bets["tipsport"]["total"] == 1  # not 2 (Section 2)
     assert bets["tipsport"]["with_clv"] == 1
-    assert sum(b["bets"] for b in buckets) == 1      # not 2 (Section 3)
+    assert sum(b["bets"] for b in buckets) == 1  # not 2 (Section 3)
 
 
 @pytest.mark.asyncio
@@ -404,8 +513,15 @@ async def test_far_tier_shadow_rows_excluded_from_value_bets_sections(audit_stor
     from oddsiq.audit.bookmakers import run_audit
 
     g = await _seed_game(audit_store, external_id="shadow")
-    await _seed_value_bet(audit_store, game_id=g, bookmaker="tipsport",
-                          edge_pct=14.3, clv_pct=4.0, result="win", tier="far")
+    await _seed_value_bet(
+        audit_store,
+        game_id=g,
+        bookmaker="tipsport",
+        edge_pct=14.3,
+        clv_pct=4.0,
+        result="win",
+        tier="far",
+    )
 
     result = await run_audit(audit_store)
     assert result["value_bets"] == []
@@ -420,7 +536,14 @@ async def test_format_text_contains_five_section_headers_and_row_data(audit_stor
 
     g1 = await _seed_game(audit_store, external_id="g1")
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="tipsport")
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", edge_pct=5.5, clv_pct=4.0, result="win")
+    await _seed_value_bet(
+        audit_store,
+        game_id=g1,
+        bookmaker="tipsport",
+        edge_pct=5.5,
+        clv_pct=4.0,
+        result="win",
+    )
 
     audit = await run_audit(audit_store)
     text = format_text(audit)
@@ -450,8 +573,11 @@ async def test_format_json_emits_valid_json_with_five_keys(audit_store):
 
     parsed = json.loads(text)
     assert set(parsed.keys()) == {
-        "snapshot_volumes", "value_bets", "clv_by_bucket",
-        "closing_quality", "coverage_gap_proxy",
+        "snapshot_volumes",
+        "value_bets",
+        "clv_by_bucket",
+        "closing_quality",
+        "coverage_gap_proxy",
     }
     assert parsed["snapshot_volumes"][0]["bookmaker"] == "softbook2"
     assert parsed["snapshot_volumes"][0]["snapshots"] == 1
@@ -467,7 +593,9 @@ async def test_audit_handles_value_bet_with_no_matching_snapshot(audit_store):
     g1 = await _seed_game(audit_store, external_id="g1")
     # Bet exists (flagged today by default), but no snapshot for the same
     # (game, bookmaker, market, selection).
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2", clv_pct=4.0, result="win")
+    await _seed_value_bet(
+        audit_store, game_id=g1, bookmaker="softbook2", clv_pct=4.0, result="win"
+    )
 
     # Without --since: bet appears.
     result = await run_audit(audit_store)
@@ -492,8 +620,22 @@ async def test_format_json_matches_text_semantically_on_known_fixture(audit_stor
     g1 = await _seed_game(audit_store, external_id="g1")
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="tipsport")
     await _seed_snapshot(audit_store, game_id=g1, bookmaker="softbook2")
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="tipsport", edge_pct=5.5, clv_pct=4.0, result="win")
-    await _seed_value_bet(audit_store, game_id=g1, bookmaker="softbook2",   edge_pct=4.0, clv_pct=3.0, result="loss")
+    await _seed_value_bet(
+        audit_store,
+        game_id=g1,
+        bookmaker="tipsport",
+        edge_pct=5.5,
+        clv_pct=4.0,
+        result="win",
+    )
+    await _seed_value_bet(
+        audit_store,
+        game_id=g1,
+        bookmaker="softbook2",
+        edge_pct=4.0,
+        clv_pct=3.0,
+        result="loss",
+    )
 
     audit = await run_audit(audit_store)
     text = format_text(audit)

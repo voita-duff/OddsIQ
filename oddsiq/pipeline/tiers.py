@@ -6,6 +6,7 @@ unpollable — the live tier (and the live scout it fed) was removed
 2026-08-27; game lifecycle after tipoff is schedule/clock-driven
 (finals via /scores, closing snapshots marked at tipoff).
 """
+
 from __future__ import annotations
 
 from datetime import datetime

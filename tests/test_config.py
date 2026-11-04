@@ -62,16 +62,33 @@ def test_placement_timeout_exceeds_extension_enforced_budgets():
     once did, let the JS drift past a stale copy without failing."""
     import re
     from pathlib import Path
-    js = Path(__file__).resolve().parents[1].joinpath("extension", "background.js").read_text()
+
+    js = (
+        Path(__file__)
+        .resolve()
+        .parents[1]
+        .joinpath("extension", "background.js")
+        .read_text()
+    )
     nav_ms = int(re.search(r"^const NAV_COMPLETE_CAP_MS = (\d+);", js, re.M).group(1))
     odd_ms = int(re.search(r"^const ODD_WAIT_BUDGET_MS = (\d+);", js, re.M).group(1))
-    stake_ms = int(re.search(r"^const STAKE_VERIFY_BUDGET_MS = (\d+);", js, re.M).group(1))
-    slip_ms = int(re.search(r"waitFor\(tabId,[^;]*slipHasOpp[^;]*?,\s*(\d+)\)", js).group(1))
+    stake_ms = int(
+        re.search(r"^const STAKE_VERIFY_BUDGET_MS = (\d+);", js, re.M).group(1)
+    )
+    slip_ms = int(
+        re.search(r"waitFor\(tabId,[^;]*slipHasOpp[^;]*?,\s*(\d+)\)", js).group(1)
+    )
     ticket_ms = int(re.search(r"waitForTicketPage\(tabId,\s*(\d+)\)", js).group(1))
     enforced_s = (nav_ms + odd_ms + slip_ms + stake_ms + ticket_ms) / 1000
-    default_s = float(re.search(
-        r'"BETTING_PLACEMENT_TIMEOUT_SECONDS", "([\d.]+)"',
-        Path(__file__).resolve().parents[1].joinpath("oddsiq", "config.py").read_text(),
-    ).group(1))
-    assert enforced_s == 44.0                     # the documented cap sum
-    assert default_s > enforced_s + 10            # >=10s headroom for the uncapped CDP tail
+    default_s = float(
+        re.search(
+            r'"BETTING_PLACEMENT_TIMEOUT_SECONDS", "([\d.]+)"',
+            Path(__file__)
+            .resolve()
+            .parents[1]
+            .joinpath("oddsiq", "config.py")
+            .read_text(),
+        ).group(1)
+    )
+    assert enforced_s == 44.0  # the documented cap sum
+    assert default_s > enforced_s + 10  # >=10s headroom for the uncapped CDP tail

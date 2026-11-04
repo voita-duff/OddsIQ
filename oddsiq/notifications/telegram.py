@@ -128,9 +128,7 @@ async def send_telegram(text: str) -> None:
             else:
                 # Delivery audit trail — every real-money notification must be
                 # verifiable from logs after the fact.
-                logger.info(
-                    "telegram_sent: chat_id=%s chars=%d", chat_id, len(text)
-                )
+                logger.info("telegram_sent: chat_id=%s chars=%d", chat_id, len(text))
         except Exception as e:
             logger.warning("Telegram send failed: %s", e)
 
@@ -207,14 +205,21 @@ def format_bet_placed(game: Game, vb: ValueBet, stake_czk: float, result) -> str
     team = escape(_bet_team(game, vb.selection))
     is_home = (vb.selection or "").lower() == "home"
     opp = escape(game.away_team if is_home else game.home_team)
-    pick = "to win" if vb.market_type == "moneyline" else escape((vb.selection or "").title())
+    pick = (
+        "to win"
+        if vb.market_type == "moneyline"
+        else escape((vb.selection or "").title())
+    )
     odds = result.accepted_odds if result.accepted_odds is not None else vb.entry_odds
     lines = [
         f"\U0001f3ab <b>Bet placed · {_czk(stake_czk)}</b>",
         f"{emoji} <b>{team}</b> {pick} — vs {opp}",
     ]
     if odds:
-        if result.accepted_odds is not None and abs(result.accepted_odds - vb.entry_odds) >= 0.005:
+        if (
+            result.accepted_odds is not None
+            and abs(result.accepted_odds - vb.entry_odds) >= 0.005
+        ):
             price = f"@ {_odds(vb.entry_odds)} → {_odds(result.accepted_odds)}"
         else:
             price = f"@ {_odds(odds)}"
@@ -237,11 +242,13 @@ def format_bet_attempt_failed(
     is_home = (vb.selection or "").lower() == "home"
     opp = escape(game.away_team if is_home else game.home_team)
     head = "⚠️ <b>Bet REJECTED</b>" if status == "rejected" else "❗ <b>Bet FAILED</b>"
-    return "\n".join([
-        f"{head} · {_czk(stake_czk)} not placed",
-        f"{emoji} <b>{team}</b> vs {opp} @ {_odds(vb.entry_odds)}",
-        f"Reason: {escape(reason or 'unknown')}",
-    ])
+    return "\n".join(
+        [
+            f"{head} · {_czk(stake_czk)} not placed",
+            f"{emoji} <b>{team}</b> vs {opp} @ {_odds(vb.entry_odds)}",
+            f"Reason: {escape(reason or 'unknown')}",
+        ]
+    )
 
 
 def format_bet_result(
@@ -303,8 +310,7 @@ def format_login_restored() -> str:
     """Paired all-clear for ``format_login_lost`` — sent only after a loss
     alert actually went out, so the phone never sees an unpaired restore."""
     return (
-        "\U0001f513 <b>Tipsport login restored</b>\n"
-        "Auto-betting is operational again."
+        "\U0001f513 <b>Tipsport login restored</b>\nAuto-betting is operational again."
     )
 
 
@@ -318,8 +324,10 @@ def format_bet_skipped_not_logged_in(game: Game, vb: ValueBet) -> str:
     team = escape(_bet_team(game, vb.selection))
     is_home = (vb.selection or "").lower() == "home"
     opp = escape(game.away_team if is_home else game.home_team)
-    return "\n".join([
-        "\U0001f510 <b>Bet SKIPPED — not logged in</b>",
-        f"{emoji} <b>{team}</b> vs {opp} @ {_odds(vb.entry_odds)}",
-        "Re-login via VNC; opportunities are being missed.",
-    ])
+    return "\n".join(
+        [
+            "\U0001f510 <b>Bet SKIPPED — not logged in</b>",
+            f"{emoji} <b>{team}</b> vs {opp} @ {_odds(vb.entry_odds)}",
+            "Re-login via VNC; opportunities are being missed.",
+        ]
+    )

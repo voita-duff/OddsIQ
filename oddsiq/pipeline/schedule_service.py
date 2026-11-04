@@ -7,6 +7,7 @@ Per-sport: fetch_fresh_games iterates enabled_profiles() (NBA/NHL/MLB/WNBA),
 fetching each sport's slate from the Odds API and stamping games with their
 sport.
 """
+
 from __future__ import annotations
 
 import logging
@@ -44,7 +45,10 @@ class ScheduleService:
     async def load_handled_live(self) -> None:
         self._handled_live = await self._store.get_handled_live_game_ids()
         if self._handled_live:
-            logger.info("Restored %d handled-live game(s) from database", len(self._handled_live))
+            logger.info(
+                "Restored %d handled-live game(s) from database",
+                len(self._handled_live),
+            )
 
     async def health_check(self) -> bool:
         return await self._schedule_source.health_check()
@@ -61,7 +65,9 @@ class ScheduleService:
         for profile in enabled_profiles():
             if sports is not None and profile.key not in sports:
                 continue
-            all_games.extend(await self._schedule_source.fetch_games(profile.odds_api_key))
+            all_games.extend(
+                await self._schedule_source.fetch_games(profile.odds_api_key)
+            )
         return all_games
 
     async def refresh(self, sports: set[str] | None = None) -> None:
@@ -72,7 +78,8 @@ class ScheduleService:
         except ScheduleFetchError as e:
             logger.warning(
                 "Schedule refresh failed; keeping %d existing game(s): %s",
-                len(self._games), e,
+                len(self._games),
+                e,
             )
             # _last_schedule_refresh is deliberately NOT updated on failure, so
             # maybe_refresh retries on every scheduler loop (~30s) — NOT at
@@ -100,7 +107,9 @@ class ScheduleService:
                 except Exception:
                     logger.exception(
                         "Final-game recovery failed for game_id=%s (%s @ %s); continuing refresh",
-                        game.id, game.away_team, game.home_team,
+                        game.id,
+                        game.away_team,
+                        game.home_team,
                     )
 
         if sports is None:
@@ -139,7 +148,8 @@ class ScheduleService:
         Odds API quota. Falls back to a full sweep when nothing is active."""
         if (
             self._last_full_sweep is None
-            or (now - self._last_full_sweep).total_seconds() >= config.SCHEDULE_REFRESH_INTERVAL
+            or (now - self._last_full_sweep).total_seconds()
+            >= config.SCHEDULE_REFRESH_INTERVAL
         ):
             return None
         active: set[str] = set()
@@ -167,7 +177,11 @@ class ScheduleService:
             for g in self._games
             if g.status == "scheduled"
         )
-        interval = config.SCHEDULE_GAME_WINDOW_REFRESH if any_active else config.SCHEDULE_REFRESH_INTERVAL
+        interval = (
+            config.SCHEDULE_GAME_WINDOW_REFRESH
+            if any_active
+            else config.SCHEDULE_REFRESH_INTERVAL
+        )
         if elapsed >= interval:
             await self.refresh(sports=self._sports_to_fetch(now))
 
@@ -210,8 +224,11 @@ class ScheduleService:
                     game.away_score = fresh_game.away_score
                     logger.info(
                         "game_final: game_id=%d away=%s home=%s away_score=%d home_score=%d",
-                        game.id, _log_value(game.away_team), _log_value(game.home_team),
-                        fresh_game.away_score, fresh_game.home_score,
+                        game.id,
+                        _log_value(game.away_team),
+                        _log_value(game.home_team),
+                        fresh_game.away_score,
+                        fresh_game.home_score,
                     )
                     await self._store.update_game_status(
                         game.id, "final", fresh_game.home_score, fresh_game.away_score
@@ -245,7 +262,8 @@ class ScheduleService:
                     # cycle.
                     logger.exception(
                         "Live-transition handler failed for game_id=%s; "
-                        "will retry next cycle", game.id,
+                        "will retry next cycle",
+                        game.id,
                     )
                     continue
                 self._handled_live.add(game.id)

@@ -83,18 +83,21 @@ def placed():
 # Bet placed
 # ---------------------------------------------------------------------------
 
+
 def test_format_bet_placed_is_money_first(game, value_bet):
     from oddsiq.pipeline.betting_service import PlacementResult
-    result = PlacementResult(status="placed", accepted_odds=2.30,
-                             receipt_id="T-4711", balance_czk=490.0)
+
+    result = PlacementResult(
+        status="placed", accepted_odds=2.30, receipt_id="T-4711", balance_czk=490.0
+    )
     text = format_bet_placed(game, value_bet, 10.0, result)
     assert "Bet placed · 10 Kč" in text
-    assert "⚾" in text                        # sport emoji cue
+    assert "⚾" in text  # sport emoji cue
     assert "<b>Toronto Blue Jays</b>" in text  # bet team, bold
     assert "to win" in text
     assert "vs Boston Red Sox" in text
     assert "@ 2.34 → 2.30" in text
-    assert "returns <b>23 Kč</b>" in text      # 10 * 2.30
+    assert "returns <b>23 Kč</b>" in text  # 10 * 2.30
     assert "Balance 490 Kč" in text
     # No analytics leak from the old design.
     assert "Edge" not in text and "CLV" not in text and "Tier" not in text
@@ -102,8 +105,10 @@ def test_format_bet_placed_is_money_first(game, value_bet):
 
 def test_format_bet_placed_omits_balance_when_unknown(game, value_bet):
     from oddsiq.pipeline.betting_service import PlacementResult
-    result = PlacementResult(status="placed", accepted_odds=2.30,
-                             receipt_id=None, balance_czk=None)
+
+    result = PlacementResult(
+        status="placed", accepted_odds=2.30, receipt_id=None, balance_czk=None
+    )
     text = format_bet_placed(game, value_bet, 10.0, result)
     assert "Balance" not in text
 
@@ -112,34 +117,39 @@ def test_format_bet_attempt_failed_rejected(game, value_bet):
     # A rejected attempt is a real-money event (the engine tried to stake and
     # couldn't) — added 2026-08-25 after 6/6 silent offer_gone rejections.
     text = format_bet_attempt_failed(
-        game, value_bet, stake_czk=10.0, status="rejected", reason="offer_gone")
+        game, value_bet, stake_czk=10.0, status="rejected", reason="offer_gone"
+    )
     assert "REJECTED" in text
     assert "10 Kč" in text
     assert "offer_gone" in text
     assert "<b>Toronto Blue Jays</b>" in text
-    assert "@ 2.34" in text                    # requested entry odds
+    assert "@ 2.34" in text  # requested entry odds
 
 
 def test_format_bet_attempt_failed_failed(game, value_bet):
     text = format_bet_attempt_failed(
-        game, value_bet, stake_czk=10.0, status="failed", reason="ws send failed")
+        game, value_bet, stake_czk=10.0, status="failed", reason="ws send failed"
+    )
     assert "FAILED" in text and "ws send failed" in text
 
 
 def test_format_bet_attempt_failed_handles_missing_reason(game, value_bet):
     text = format_bet_attempt_failed(
-        game, value_bet, stake_czk=10.0, status="rejected", reason=None)
+        game, value_bet, stake_czk=10.0, status="rejected", reason=None
+    )
     assert "unknown" in text
 
 
 def test_format_bet_placed_nfl_emoji(game, value_bet):
     # NFL joined 2026-08-25 — the pick line carries the 🏈 cue.
     from oddsiq.pipeline.betting_service import PlacementResult
+
     game.sport = "nfl"
     game.home_team = "Kansas City Chiefs"
     game.away_team = "Buffalo Bills"
-    result = PlacementResult(status="placed", accepted_odds=1.55,
-                             receipt_id=None, balance_czk=None)
+    result = PlacementResult(
+        status="placed", accepted_odds=1.55, receipt_id=None, balance_czk=None
+    )
     text = format_bet_placed(game, value_bet, 10.0, result)
     assert "\U0001f3c8" in text
     assert "<b>Kansas City Chiefs</b>" in text
@@ -149,10 +159,11 @@ def test_format_bet_placed_nfl_emoji(game, value_bet):
 # Won / lost
 # ---------------------------------------------------------------------------
 
+
 def test_format_bet_result_win_shows_profit_payout_and_total(game, value_bet, placed):
     value_bet.result = "win"  # home won 5–3, bet was home
     text = format_bet_result(game, value_bet, placed=placed, total_czk=45.0)
-    assert "WON +13 Kč" in text            # 10 * (2.30 - 1)
+    assert "WON +13 Kč" in text  # 10 * (2.30 - 1)
     assert "<b>Toronto Blue Jays</b> 5 – 3 Boston Red Sox" in text
     assert "10 Kč @ 2.30 → 23 Kč back" in text
     assert "Total: +45 Kč" in text
@@ -160,12 +171,12 @@ def test_format_bet_result_win_shows_profit_payout_and_total(game, value_bet, pl
 
 
 def test_format_bet_result_loss_shows_negative_and_no_payout(game, value_bet, placed):
-    game.home_score, game.away_score = 3, 5   # home (bet) lost
+    game.home_score, game.away_score = 3, 5  # home (bet) lost
     value_bet.result = "loss"
     text = format_bet_result(game, value_bet, placed=placed, total_czk=35.0)
     assert "LOST -10 Kč" in text
     assert "<b>Toronto Blue Jays</b> 3 – 5 Boston Red Sox" in text
-    assert "back" not in text               # no payout line on a loss
+    assert "back" not in text  # no payout line on a loss
     assert "Total: +35 Kč" in text
     assert "❌" in text
 
@@ -183,27 +194,34 @@ def test_format_bet_result_uses_accepted_odds_not_entry(game, value_bet, placed)
     placed.accepted_odds = 2.30
     value_bet.entry_odds = 2.34
     text = format_bet_result(game, value_bet, placed=placed, total_czk=13.0)
-    assert "+13 Kč" in text          # 10*(2.30-1), NOT 10*(2.34-1)=13.4→+13? guard exact
+    assert "+13 Kč" in text  # 10*(2.30-1), NOT 10*(2.34-1)=13.4→+13? guard exact
     assert "@ 2.30" in text and "2.34" not in text
 
 
 def test_format_bet_result_without_scores_falls_back_to_vs(value_bet, placed):
-    game = Game(external_id="2", home_team="A Team", away_team="B Team",
-                scheduled_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
-                status="final", sport="mlb", id=1)
+    game = Game(
+        external_id="2",
+        home_team="A Team",
+        away_team="B Team",
+        scheduled_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
+        status="final",
+        sport="mlb",
+        id=1,
+    )
     value_bet.result = "win"
     text = format_bet_result(game, value_bet, placed=placed, total_czk=13.0)
-    assert "<b>A Team</b> vs B Team" in text   # no score line available
+    assert "<b>A Team</b> vs B Team" in text  # no score line available
 
 
 # ---------------------------------------------------------------------------
 # Auto-disarm (slim safety alert)
 # ---------------------------------------------------------------------------
 
+
 def test_format_betting_disarmed_is_slim_and_humanizes_reason():
     text = format_betting_disarmed("consecutive_failures")
     assert "Auto-betting stopped" in text
-    assert "2 consecutive failed placements" in text   # humanized, not the slug
+    assert "2 consecutive failed placements" in text  # humanized, not the slug
     assert "re-arm" in text
 
 
@@ -215,6 +233,7 @@ def test_format_betting_disarmed_falls_back_to_slug_text():
 # ---------------------------------------------------------------------------
 # Login lost / restored / not-logged-in skip (2026-08-30)
 # ---------------------------------------------------------------------------
+
 
 def test_format_login_lost_names_the_fix():
     text = format_login_lost()
@@ -241,15 +260,30 @@ def test_format_bet_skipped_not_logged_in_shows_the_missed_bet(game, value_bet):
 # HTML safety
 # ---------------------------------------------------------------------------
 
+
 def test_formatters_escape_html(value_bet, placed):
     from oddsiq.pipeline.betting_service import PlacementResult
-    g = Game(external_id="3", home_team="A & B", away_team="C <script>",
-             scheduled_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
-             status="final", home_score=1, away_score=0, sport="mlb", id=1)
+
+    g = Game(
+        external_id="3",
+        home_team="A & B",
+        away_team="C <script>",
+        scheduled_at=datetime(2026, 8, 10, tzinfo=timezone.utc),
+        status="final",
+        home_score=1,
+        away_score=0,
+        sport="mlb",
+        id=1,
+    )
     value_bet.result = "win"
     placed_text = format_bet_placed(
-        g, value_bet, 10.0,
-        PlacementResult(status="placed", accepted_odds=2.0, receipt_id=None, balance_czk=None))
+        g,
+        value_bet,
+        10.0,
+        PlacementResult(
+            status="placed", accepted_odds=2.0, receipt_id=None, balance_czk=None
+        ),
+    )
     result_text = format_bet_result(g, value_bet, placed=placed, total_czk=10.0)
     for text in (placed_text, result_text):
         assert "&amp;" in text
@@ -259,6 +293,7 @@ def test_formatters_escape_html(value_bet, placed):
 # ---------------------------------------------------------------------------
 # Send infrastructure (unchanged behavior)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 async def test_send_telegram_disabled_when_no_token(monkeypatch):
@@ -360,7 +395,10 @@ async def test_send_telegram_mirrors_to_both_accounts(monkeypatch):
     monkeypatch.setattr("oddsiq.notifications.telegram._client", mock_client)
     await send_telegram("hello both")
     assert mock_client.post.await_count == 2
-    sent = [(c.args[0], c.kwargs["json"]["chat_id"]) for c in mock_client.post.call_args_list]
+    sent = [
+        (c.args[0], c.kwargs["json"]["chat_id"])
+        for c in mock_client.post.call_args_list
+    ]
     assert any("tok1" in url and chat == "chat1" for url, chat in sent)
     assert any("tok2" in url and chat == "chat2" for url, chat in sent)
 
@@ -420,7 +458,11 @@ def test_is_configured_false_when_no_account_fully_set(monkeypatch):
 
 
 def test_truncate_does_not_split_html_tag():
-    from oddsiq.notifications.telegram import _truncate_for_telegram, _TELEGRAM_MAX_LENGTH
+    from oddsiq.notifications.telegram import (
+        _truncate_for_telegram,
+        _TELEGRAM_MAX_LENGTH,
+    )
+
     text = "a" * (_TELEGRAM_MAX_LENGTH - 4) + "<b>xx</b>"
     assert len(text) > _TELEGRAM_MAX_LENGTH
     out = _truncate_for_telegram(text)
@@ -429,7 +471,11 @@ def test_truncate_does_not_split_html_tag():
 
 
 def test_truncate_closes_dangling_bold_tag():
-    from oddsiq.notifications.telegram import _truncate_for_telegram, _TELEGRAM_MAX_LENGTH
+    from oddsiq.notifications.telegram import (
+        _truncate_for_telegram,
+        _TELEGRAM_MAX_LENGTH,
+    )
+
     text = "<b>" + "a" * _TELEGRAM_MAX_LENGTH
     out = _truncate_for_telegram(text)
     assert len(out) <= _TELEGRAM_MAX_LENGTH

@@ -6,6 +6,7 @@ exception propagates immediately. Used by the two Odds API callers
 (PinnacleScraper, OddsApiScheduleSource) so a transient 429/5xx/transport
 error retries instead of silently dropping a poll.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,8 +45,9 @@ def parse_retry_after(value: str | None) -> float | None:
     return secs if secs >= 0 else None
 
 
-def _backoff_delay(attempt: int, base_delay: float, max_delay: float,
-                   rng: Callable[[], float]) -> float:
+def _backoff_delay(
+    attempt: int, base_delay: float, max_delay: float, rng: Callable[[], float]
+) -> float:
     """Full-jitter exponential backoff: uniform in [0, min(max_delay,
     base*2**(attempt-1)))."""
     capped = min(max_delay, base_delay * (2 ** (attempt - 1)))
@@ -75,11 +77,16 @@ async def with_backoff(
                 logger.warning("%s: giving up after %d attempt(s)", label, n)
                 raise
             delay = (
-                min(e.retry_after, max_delay) if e.retry_after is not None
+                min(e.retry_after, max_delay)
+                if e.retry_after is not None
                 else _backoff_delay(n, base_delay, max_delay, _rng)
             )
             logger.warning(
-                "%s: attempt %d failed (%s); retrying in %.2fs", label, n, e, delay,
+                "%s: attempt %d failed (%s); retrying in %.2fs",
+                label,
+                n,
+                e,
+                delay,
             )
             await _sleep(delay)
     raise RuntimeError("with_backoff: unreachable")  # pragma: no cover

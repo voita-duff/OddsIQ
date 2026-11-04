@@ -30,7 +30,9 @@ def normalize_team(name: str, bookmaker: str, sport: str) -> str | None:
         return mapped
     matches = process.extract(name, canonical, scorer=fuzz.WRatio, limit=2)
     if not matches or matches[0][1] < FUZZY_THRESHOLD:
-        logger.error("Could not normalize team name '%s' from %s (%s)", name, bookmaker, sport)
+        logger.error(
+            "Could not normalize team name '%s' from %s (%s)", name, bookmaker, sport
+        )
         return None
     best_name, best_score = matches[0][0], matches[0][1]
     if len(matches) > 1 and matches[1][1] >= best_score - FUZZY_AMBIGUITY_MARGIN:
@@ -38,11 +40,21 @@ def normalize_team(name: str, bookmaker: str, sport: str) -> str | None:
         logger.warning(
             "Ambiguous fuzzy match for '%s' (%s/%s): '%s' (%.0f) vs '%s' (%.0f); "
             "refusing to guess — add it to the sport's team_mappings.",
-            name, bookmaker, sport, best_name, best_score, matches[1][0], matches[1][1],
+            name,
+            bookmaker,
+            sport,
+            best_name,
+            best_score,
+            matches[1][0],
+            matches[1][1],
         )
         return None
     logger.warning(
         "Fuzzy matched '%s' (%s/%s) -> '%s' (score: %d). Add to the sport's team_mappings.",
-        name, bookmaker, sport, best_name, int(best_score),
+        name,
+        bookmaker,
+        sport,
+        best_name,
+        int(best_score),
     )
     return best_name

@@ -28,5 +28,6 @@ def test_registry_lookup():
 
 def test_profile_is_frozen():
     import dataclasses
+
     with pytest.raises(dataclasses.FrozenInstanceError):
         NBA.key = "x"  # type: ignore[misc]

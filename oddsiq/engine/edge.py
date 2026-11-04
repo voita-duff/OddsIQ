@@ -36,10 +36,15 @@ def find_edges(
         market_key = (czech_snap.market_type, norm_line)
         pin_pair = pin_by_market.get(market_key)
         if not pin_pair:
-            if czech_snap.market_type in ("spread", "total") and czech_snap.line is not None:
+            if (
+                czech_snap.market_type in ("spread", "total")
+                and czech_snap.line is not None
+            ):
                 logger.debug(
                     "Line mismatch: %s %s line=%s (no Pinnacle match)",
-                    czech_snap.market_type, czech_snap.selection, czech_snap.line,
+                    czech_snap.market_type,
+                    czech_snap.selection,
+                    czech_snap.line,
                 )
             continue
 
@@ -71,38 +76,40 @@ def find_edges(
 
         edge = calculate_edge(czech_snap.odds, fair)
         if edge >= threshold:
-            edges.append({
-                "game_id": czech_snap.game_id,
-                "bookmaker": czech_snap.bookmaker,
-                "market_type": czech_snap.market_type,
-                "selection": czech_snap.selection,
-                "line": czech_snap.line,
-                "czech_odds": czech_snap.odds,
-                "fair_odds": fair,
-                "edge": edge,
-                # Exact evidence behind this fair price. captured_at answers
-                # when OddsIQ observed the pair; source_updated_at answers
-                # when Pinnacle/The Odds API last refreshed it. The minimum
-                # is conservative when the two outcomes carry different
-                # timestamps. Parser-marked missing freshness fails closed;
-                # hand-built legacy/test snapshots use captured_at.
-                "sharp_observed_at": min(s.captured_at for s in pin_sides),
-                "sharp_source_updated_at": (
-                    None
-                    if any(s._source_freshness_missing for s in pin_sides)
-                    else min(
-                        (s.source_updated_at or s.captured_at) for s in pin_sides
-                    )
-                ),
-                "sharp_source_unknown": any(
-                    s._source_freshness_missing for s in pin_sides
-                ),
-                # Execution identity: transient parser fields (None for
-                # sources that don't carry them) — persisted on the value
-                # bet by EdgeService (migration 009).
-                "tipsport_match_id": czech_snap._tipsport_match_id,
-                "tipsport_opp_id": czech_snap._tipsport_opp_id,
-                "tipsport_url": czech_snap._tipsport_url,
-            })
+            edges.append(
+                {
+                    "game_id": czech_snap.game_id,
+                    "bookmaker": czech_snap.bookmaker,
+                    "market_type": czech_snap.market_type,
+                    "selection": czech_snap.selection,
+                    "line": czech_snap.line,
+                    "czech_odds": czech_snap.odds,
+                    "fair_odds": fair,
+                    "edge": edge,
+                    # Exact evidence behind this fair price. captured_at answers
+                    # when OddsIQ observed the pair; source_updated_at answers
+                    # when Pinnacle/The Odds API last refreshed it. The minimum
+                    # is conservative when the two outcomes carry different
+                    # timestamps. Parser-marked missing freshness fails closed;
+                    # hand-built legacy/test snapshots use captured_at.
+                    "sharp_observed_at": min(s.captured_at for s in pin_sides),
+                    "sharp_source_updated_at": (
+                        None
+                        if any(s._source_freshness_missing for s in pin_sides)
+                        else min(
+                            (s.source_updated_at or s.captured_at) for s in pin_sides
+                        )
+                    ),
+                    "sharp_source_unknown": any(
+                        s._source_freshness_missing for s in pin_sides
+                    ),
+                    # Execution identity: transient parser fields (None for
+                    # sources that don't carry them) — persisted on the value
+                    # bet by EdgeService (migration 009).
+                    "tipsport_match_id": czech_snap._tipsport_match_id,
+                    "tipsport_opp_id": czech_snap._tipsport_opp_id,
+                    "tipsport_url": czech_snap._tipsport_url,
+                }
+            )
 
     return edges

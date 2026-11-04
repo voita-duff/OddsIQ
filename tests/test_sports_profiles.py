@@ -1,5 +1,13 @@
 from oddsiq.sports.profiles import (
-    ENABLED_SPORTS, SPORTS, enabled_profiles, get_profile, NBA, NHL, MLB, WNBA, NFL,
+    ENABLED_SPORTS,
+    SPORTS,
+    enabled_profiles,
+    get_profile,
+    NBA,
+    NHL,
+    MLB,
+    WNBA,
+    NFL,
 )
 
 

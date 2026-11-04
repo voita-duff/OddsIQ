@@ -13,7 +13,12 @@ import pytest
 from fastapi.testclient import TestClient
 
 from oddsiq.dashboard.log_tail import ScraperHealth
-from oddsiq.dashboard.server import create_app, _scraper_status_rows, _fmt_flagged_at, _selection_team
+from oddsiq.dashboard.server import (
+    create_app,
+    _scraper_status_rows,
+    _fmt_flagged_at,
+    _selection_team,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -56,13 +61,14 @@ def test_live_sections_self_heal_after_failed_initial_load():
     during a pipeline hot/live burst) left the section permanently loading.
     """
     import re
+
     client = TestClient(create_app())
     resp = client.get("/live")
     assert resp.status_code == 200
-    triggers = re.findall(
-        r'data-refresh-section[^>]*?hx-trigger="([^"]*)"', resp.text
+    triggers = re.findall(r'data-refresh-section[^>]*?hx-trigger="([^"]*)"', resp.text)
+    assert len(triggers) >= 4, (
+        f"expected the live refresh sections, found {len(triggers)}"
     )
-    assert len(triggers) >= 4, f"expected the live refresh sections, found {len(triggers)}"
     for t in triggers:
         assert "every" in t, f"section relies on one-shot load only (no retry): {t!r}"
 
@@ -101,6 +107,7 @@ def _hermetic_dashboard_controls(monkeypatch):
 def test_status_strip_partial_loads(tmp_path, monkeypatch):
     # Use a tmp DB so the server's _store() context manager finds something queryable.
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -126,24 +133,39 @@ def test_status_strip_partial_shows_shadow_badge(tmp_path, monkeypatch):
     from oddsiq.db import migrations
     from oddsiq.db.models import Game, ValueBet
     from oddsiq.db.store import Store
+
     db = tmp_path / "shadow.db"
 
     async def _seed():
         migrations.run(db)
         s = Store(db)
         await s.initialize()
-        gid = await s.upsert_game(Game(
-            external_id="nfl-shadow", home_team="Detroit Lions",
-            away_team="New Orleans Saints",
-            scheduled_at=datetime.now(timezone.utc) + timedelta(hours=5),
-            status="scheduled", sport="nfl",
-        ))
-        await s.insert_value_bet(ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=1.4, fair_odds=1.34, edge_pct=4.5,
-            flagged_at=datetime.now(timezone.utc), tier="far", sport="nfl",
-        ))
+        gid = await s.upsert_game(
+            Game(
+                external_id="nfl-shadow",
+                home_team="Detroit Lions",
+                away_team="New Orleans Saints",
+                scheduled_at=datetime.now(timezone.utc) + timedelta(hours=5),
+                status="scheduled",
+                sport="nfl",
+            )
+        )
+        await s.insert_value_bet(
+            ValueBet(
+                game_id=gid,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                entry_odds=1.4,
+                fair_odds=1.34,
+                edge_pct=4.5,
+                flagged_at=datetime.now(timezone.utc),
+                tier="far",
+                sport="nfl",
+            )
+        )
         await s.close()
+
     asyncio.run(_seed())
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
     monkeypatch.setattr(cfg, "LOG_FILE", tmp_path / "absent.log")
@@ -152,7 +174,7 @@ def test_status_strip_partial_shows_shadow_badge(tmp_path, monkeypatch):
     resp = client.get("/live/partials/status-strip")
     assert resp.status_code == 200
     assert "+1 shadow" in resp.text
-    assert "guarded" not in resp.text   # badge is shadow-specific, not the guard one
+    assert "guarded" not in resp.text  # badge is shadow-specific, not the guard one
 
 
 def test_scraper_status_rows_use_warm_tier_freshness_window():
@@ -234,25 +256,37 @@ def test_recent_value_bets_partial_shows_team_name_not_home_away(tmp_path, monke
     async def _seed():
         store = Store(db)
         await store.initialize()
-        gid = await store.upsert_game(Game(
-            external_id="ext-1", home_team="Boston Bruins",
-            away_team="Montreal Canadiens",
-            scheduled_at=datetime(2026, 6, 7, 18, 0, tzinfo=timezone.utc),
-            status="scheduled", sport="nhl",
-        ))
-        await store.insert_value_bet(ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="away", entry_odds=2.05, fair_odds=1.95, edge_pct=5.0,
-            tier="hot", sport="nhl",
-        ))
+        gid = await store.upsert_game(
+            Game(
+                external_id="ext-1",
+                home_team="Boston Bruins",
+                away_team="Montreal Canadiens",
+                scheduled_at=datetime(2026, 6, 7, 18, 0, tzinfo=timezone.utc),
+                status="scheduled",
+                sport="nhl",
+            )
+        )
+        await store.insert_value_bet(
+            ValueBet(
+                game_id=gid,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="away",
+                entry_odds=2.05,
+                fair_odds=1.95,
+                edge_pct=5.0,
+                tier="hot",
+                sport="nhl",
+            )
+        )
         await store.close()
 
     asyncio.run(_seed())
     client = TestClient(create_app())
     resp = client.get("/betting/partials/value-bets")
     assert resp.status_code == 200
-    assert "Montreal Canadiens" in resp.text     # away team name resolved
-    assert ">away<" not in resp.text             # not the raw selection label
+    assert "Montreal Canadiens" in resp.text  # away team name resolved
+    assert ">away<" not in resp.text  # not the raw selection label
 
 
 def test_coverage_matrix_header_says_start_not_tipoff(tmp_path, monkeypatch):
@@ -272,11 +306,16 @@ def test_coverage_matrix_header_says_start_not_tipoff(tmp_path, monkeypatch):
         store = Store(db)
         await store.initialize()
         # A game ~30 min out is in the hot tier -> appears in the coverage matrix.
-        await store.upsert_game(Game(
-            external_id="ext-1", home_team="Boston Celtics", away_team="Miami Heat",
-            scheduled_at=datetime.now(timezone.utc) + timedelta(minutes=30),
-            status="scheduled", sport="nba",
-        ))
+        await store.upsert_game(
+            Game(
+                external_id="ext-1",
+                home_team="Boston Celtics",
+                away_team="Miami Heat",
+                scheduled_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+                status="scheduled",
+                sport="nba",
+            )
+        )
         await store.close()
 
     asyncio.run(_seed())
@@ -287,7 +326,9 @@ def test_coverage_matrix_header_says_start_not_tipoff(tmp_path, monkeypatch):
     assert "Tipoff" not in resp.text
 
 
-def test_recent_value_bets_partial_shows_sport_and_european_datetime(tmp_path, monkeypatch):
+def test_recent_value_bets_partial_shows_sport_and_european_datetime(
+    tmp_path, monkeypatch
+):
     """End-to-end: the partial renders a Sport column (not Book) and a
     European Prague-local date+time for flagged_at."""
     import asyncio
@@ -303,16 +344,26 @@ def test_recent_value_bets_partial_shows_sport_and_european_datetime(tmp_path, m
     async def _seed():
         store = Store(db)
         await store.initialize()
-        gid = await store.upsert_game(Game(
-            external_id="ext-1", home_team="Boston Bruins",
-            away_team="Montreal Canadiens",
-            scheduled_at=datetime(2026, 6, 7, 18, 0, tzinfo=timezone.utc),
-            status="scheduled", sport="nhl",
-        ))
+        gid = await store.upsert_game(
+            Game(
+                external_id="ext-1",
+                home_team="Boston Bruins",
+                away_team="Montreal Canadiens",
+                scheduled_at=datetime(2026, 6, 7, 18, 0, tzinfo=timezone.utc),
+                status="scheduled",
+                sport="nhl",
+            )
+        )
         vb = ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.05, fair_odds=1.95, edge_pct=5.0,
-            tier="hot", sport="nhl",
+            game_id=gid,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.05,
+            fair_odds=1.95,
+            edge_pct=5.0,
+            tier="hot",
+            sport="nhl",
         )
         vb.flagged_at = datetime(2026, 6, 7, 14, 30, tzinfo=timezone.utc)
         await store.insert_value_bet(vb)
@@ -325,7 +376,7 @@ def test_recent_value_bets_partial_shows_sport_and_european_datetime(tmp_path, m
     assert resp.status_code == 200
     assert "<th>Tier</th>" in resp.text
     assert "<th>Book</th>" not in resp.text
-    assert "07.06.2026 16:30" in resp.text    # 14:30 UTC -> 16:30 CEST, day-first
+    assert "07.06.2026 16:30" in resp.text  # 14:30 UTC -> 16:30 CEST, day-first
 
 
 def test_scraper_status_rows_shows_only_tipsport():
@@ -336,18 +387,31 @@ def test_scraper_status_rows_shows_only_tipsport():
 
     def _h(name):
         return ScraperHealth(
-            timestamp=now - timedelta(minutes=1), name=name, duration_ms=100,
-            snapshots=2, matched_snapshots=2, matched_games=1, other_games=0,
-            unmatched_snapshots=0, errors=0,
+            timestamp=now - timedelta(minutes=1),
+            name=name,
+            duration_ms=100,
+            snapshots=2,
+            matched_snapshots=2,
+            matched_games=1,
+            other_games=0,
+            unmatched_snapshots=0,
+            errors=0,
         )
 
-    health = {"pinnacle": _h("pinnacle"), "tipsport": _h("tipsport"), "betano": _h("betano")}
+    health = {
+        "pinnacle": _h("pinnacle"),
+        "tipsport": _h("tipsport"),
+        "betano": _h("betano"),
+    }
     rows = _scraper_status_rows(health, now, {"warm"})
     assert {r["name"] for r in rows} == {"tipsport"}
 
 
-def test_status_strip_partial_shows_unknown_state_when_no_heartbeat(tmp_path, monkeypatch):
+def test_status_strip_partial_shows_unknown_state_when_no_heartbeat(
+    tmp_path, monkeypatch
+):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -361,6 +425,7 @@ def test_status_strip_partial_shows_unknown_state_when_no_heartbeat(tmp_path, mo
 
 def test_live_page_includes_status_strip_loader(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -376,6 +441,7 @@ def test_live_page_includes_status_strip_loader(tmp_path, monkeypatch):
 
 def test_coverage_matrix_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -390,6 +456,7 @@ def test_coverage_matrix_partial_renders(tmp_path, monkeypatch):
 
 def test_recent_value_bets_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -403,6 +470,7 @@ def test_recent_value_bets_partial_renders(tmp_path, monkeypatch):
 
 def test_activity_feed_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -422,15 +490,33 @@ def test_merge_activity_rows_orders_by_instant_across_timezones():
     from oddsiq.dashboard.server import _merge_activity_rows
     from oddsiq.dashboard.log_tail import LogEvent
 
-    db_events = [{"type": "snapshot", "ts": "2026-06-08T20:30:00+00:00",
-                  "bookmaker": "pinnacle", "market": "moneyline",
-                  "selection": "home", "edge_pct": None}]
+    db_events = [
+        {
+            "type": "snapshot",
+            "ts": "2026-06-08T20:30:00+00:00",
+            "bookmaker": "pinnacle",
+            "market": "moneyline",
+            "selection": "home",
+            "edge_pct": None,
+        }
+    ]
     # 22:00 +02:00 == 20:00 UTC — 30 min OLDER than the DB event, yet its "22:00"
     # string sorts after "20:30".
     log_ts = datetime(2026, 6, 8, 22, 0, tzinfo=timezone(timedelta(hours=2)))
-    log_events = [LogEvent(timestamp=log_ts, level="INFO", event_type="clv",
-                           fields={"bookmaker": "tipsport", "market": "moneyline",
-                                   "selection": "home", "clv_pct": "4.20"}, raw="x")]
+    log_events = [
+        LogEvent(
+            timestamp=log_ts,
+            level="INFO",
+            event_type="clv",
+            fields={
+                "bookmaker": "tipsport",
+                "market": "moneyline",
+                "selection": "home",
+                "clv_pct": "4.20",
+            },
+            raw="x",
+        )
+    ]
 
     rows = _merge_activity_rows(db_events, log_events, limit=50)
 
@@ -446,15 +532,29 @@ def test_merge_activity_rows_skips_heartbeats():
 
     base = datetime(2026, 6, 8, 20, 0, tzinfo=timezone.utc)
     log_events = [
-        LogEvent(timestamp=base + timedelta(seconds=i), level="INFO",
-                 event_type="heartbeat",
-                 fields={"state": "polling", "games_tracked": "3"}, raw="h")
+        LogEvent(
+            timestamp=base + timedelta(seconds=i),
+            level="INFO",
+            event_type="heartbeat",
+            fields={"state": "polling", "games_tracked": "3"},
+            raw="h",
+        )
         for i in range(5)
     ]
-    log_events.append(LogEvent(
-        timestamp=base + timedelta(seconds=10), level="INFO", event_type="clv",
-        fields={"bookmaker": "tipsport", "market": "moneyline",
-                "selection": "home", "clv_pct": "4.20"}, raw="c"))
+    log_events.append(
+        LogEvent(
+            timestamp=base + timedelta(seconds=10),
+            level="INFO",
+            event_type="clv",
+            fields={
+                "bookmaker": "tipsport",
+                "market": "moneyline",
+                "selection": "home",
+                "clv_pct": "4.20",
+            },
+            raw="c",
+        )
+    )
 
     rows = _merge_activity_rows([], log_events, limit=50)
 
@@ -485,16 +585,22 @@ def test_activity_feed_renders_db_and_log_rows(tmp_path, monkeypatch):
         await s.initialize()
         try:
             g = Game(
-                external_id="ext1", home_team="Boston Celtics",
+                external_id="ext1",
+                home_team="Boston Celtics",
                 away_team="Miami Heat",
                 scheduled_at=datetime.now(timezone.utc),
                 status="scheduled",
             )
             gid = await s.upsert_game(g)
             vb = ValueBet(
-                game_id=gid, bookmaker="tipsport",
-                market_type="moneyline", selection="home",
-                entry_odds=2.05, fair_odds=1.95, edge_pct=5.0, tier="hot",
+                game_id=gid,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                entry_odds=2.05,
+                fair_odds=1.95,
+                edge_pct=5.0,
+                tier="hot",
             )
             await s.insert_value_bet(vb)
         finally:
@@ -538,6 +644,7 @@ def test_raw_logs_partial_when_log_missing(tmp_path, monkeypatch):
 
 def test_big_numbers_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -548,12 +655,15 @@ def test_big_numbers_partial_renders(tmp_path, monkeypatch):
     assert "Value bets" in resp.text
     assert "Avg CLV" in resp.text
     assert "Win rate" in resp.text
-    assert "Overall ROI" in resp.text   # ROI is the headline metric (replaced Avg edge card)
+    assert (
+        "Overall ROI" in resp.text
+    )  # ROI is the headline metric (replaced Avg edge card)
     assert 'hx-trigger="every 300s' in resp.text
 
 
 def test_clv_trend_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -565,13 +675,16 @@ def test_clv_trend_partial_renders(tmp_path, monkeypatch):
     assert 'hx-trigger="every 300s' in resp.text
     # Canvas + Chart.js init present
     assert "<canvas" in resp.text
-    assert "chart-box" in resp.text  # fixed-height wrapper that prevents the flatten bug
+    assert (
+        "chart-box" in resp.text
+    )  # fixed-height wrapper that prevents the flatten bug
     assert "height:240px" in resp.text  # inline height: immune to dashboard.css caching
     assert "oddsiqChart" in resp.text
 
 
 def test_clv_trend_partial_accepts_days_param(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -583,6 +696,7 @@ def test_clv_trend_partial_accepts_days_param(tmp_path, monkeypatch):
 
 def test_clv_trend_partial_has_period_selectors(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -627,11 +741,14 @@ def test_clv_trend_self_refresh_preserves_days_and_sport(tmp_path, monkeypatch):
     assert hx, "root hx-get not found"
     root_url = hx.group(1)
     assert "days=7" in root_url, f"days dropped from self-refresh hx-get: {root_url}"
-    assert "sport=nhl" in root_url, f"sport dropped from self-refresh hx-get: {root_url}"
+    assert "sport=nhl" in root_url, (
+        f"sport dropped from self-refresh hx-get: {root_url}"
+    )
 
 
 def test_scoreboard_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -647,6 +764,7 @@ def test_edge_buckets_partial_merges_volume_and_calibration(tmp_path, monkeypatc
     """Edge distribution + calibration were the SAME buckets shown twice —
     now one table: volume bar + flagged count + break-even/actual/Δ columns."""
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -655,8 +773,8 @@ def test_edge_buckets_partial_merges_volume_and_calibration(tmp_path, monkeypatc
     resp = client.get("/analysis/partials/edge-buckets")
     assert resp.status_code == 200
     assert "Edge buckets" in resp.text
-    assert "bar-fill" in resp.text                # volume bar
-    assert "Break-even win%" in resp.text         # calibration columns
+    assert "bar-fill" in resp.text  # volume bar
+    assert "Break-even win%" in resp.text  # calibration columns
     assert 'hx-trigger="every 300s' in resp.text
 
 
@@ -672,6 +790,7 @@ def test_pages_use_versioned_asset_urls():
 
 def test_profit_curve_partial_renders(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -680,7 +799,7 @@ def test_profit_curve_partial_renders(tmp_path, monkeypatch):
     resp = client.get("/analysis/partials/profit-curve")
     assert resp.status_code == 200
     assert "Profit curve" in resp.text
-    assert "profit-curve-chart" in resp.text      # Chart.js canvas
+    assert "profit-curve-chart" in resp.text  # Chart.js canvas
     assert 'hx-trigger="every 300s' in resp.text
 
 
@@ -688,6 +807,7 @@ def test_results_detail_route_removed(tmp_path, monkeypatch):
     """The redundant results-detail section was removed 2026-08-08 — its only
     unique stat (avg odds) moved into the big-numbers win-rate tile."""
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -699,6 +819,7 @@ def test_results_detail_route_removed(tmp_path, monkeypatch):
 
 def test_settings_page_shows_config_paths(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     db.write_bytes(b"")  # zero-byte for size test
@@ -719,6 +840,7 @@ def test_settings_page_shows_config_paths(tmp_path, monkeypatch):
 
 def test_settings_never_shows_secret_fragments(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -769,6 +891,7 @@ def test_settings_shows_budget_from_meta(tmp_path, monkeypatch):
 
 def test_settings_includes_ui_prefs_localstorage_script(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -784,6 +907,7 @@ def test_settings_includes_ui_prefs_localstorage_script(tmp_path, monkeypatch):
 
 def test_activity_feed_partial_has_filter_chips(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -792,7 +916,14 @@ def test_activity_feed_partial_has_filter_chips(tmp_path, monkeypatch):
     resp = client.get("/live/partials/activity-feed")
     assert resp.status_code == 200
     # All six chip categories present
-    for chip in ("warnings", "value bets", "CLV", "game lifecycle", "coverage gaps", "poll events"):
+    for chip in (
+        "warnings",
+        "value bets",
+        "CLV",
+        "game lifecycle",
+        "coverage gaps",
+        "poll events",
+    ):
         assert chip in resp.text
     # localStorage key present in inline JS
     assert "feed-filter-" in resp.text
@@ -802,6 +933,7 @@ def test_activity_feed_partial_has_filter_chips(tmp_path, monkeypatch):
 
 def test_refresh_all_button_is_wired(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -819,6 +951,7 @@ def test_refresh_all_button_is_wired(tmp_path, monkeypatch):
 
 def test_autorefresh_preference_script_is_global(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -827,7 +960,7 @@ def test_autorefresh_preference_script_is_global(tmp_path, monkeypatch):
     resp = client.get("/live")
     assert resp.status_code == 200
     assert "oddsiqSetAutoRefresh" in resp.text
-    assert "localStorage.getItem(\"autorefresh\")" in resp.text
+    assert 'localStorage.getItem("autorefresh")' in resp.text
 
 
 def test_charts_js_is_served_with_helper():
@@ -855,6 +988,7 @@ def test_sport_tab_bar_renders_enabled_sports():
 
 def test_partials_accept_sport_param(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -867,6 +1001,7 @@ def test_partials_accept_sport_param(tmp_path, monkeypatch):
 
 def test_invalid_sport_is_treated_as_all(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -889,6 +1024,7 @@ def test_static_asset_304_revalidation_keeps_no_cache():
 
 def test_monthly_partial_self_refreshes_with_sport(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -917,18 +1053,32 @@ def test_monthly_partial_month_chips_and_self_refresh(tmp_path, monkeypatch):
         store = Store(db)
         await store.initialize()
         at = datetime(2026, 6, 10, 1, 0, tzinfo=timezone.utc)
-        gid = await store.upsert_game(Game(
-            external_id="mp-1", home_team="New York Yankees",
-            away_team="Boston Red Sox", scheduled_at=at, status="final", sport="mlb",
-        ))
+        gid = await store.upsert_game(
+            Game(
+                external_id="mp-1",
+                home_team="New York Yankees",
+                away_team="Boston Red Sox",
+                scheduled_at=at,
+                status="final",
+                sport="mlb",
+            )
+        )
         vb = ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.4, fair_odds=2.0, edge_pct=8.0,
-            tier="hot", sport="mlb")
+            game_id=gid,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.4,
+            fair_odds=2.0,
+            edge_pct=8.0,
+            tier="hot",
+            sport="mlb",
+        )
         vb_id = await store.insert_value_bet(vb)
         await store._db.execute(
             "UPDATE value_bets SET result='win', flagged_at=? WHERE id=?",
-            (at.isoformat(), vb_id))
+            (at.isoformat(), vb_id),
+        )
         await store._db.commit()
         await store.close()
 
@@ -936,19 +1086,21 @@ def test_monthly_partial_month_chips_and_self_refresh(tmp_path, monkeypatch):
     client = TestClient(create_app())
     resp = client.get("/analysis/partials/monthly")
     assert resp.status_code == 200
-    assert "Jun 2026" in resp.text            # month chip
+    assert "Jun 2026" in resp.text  # month chip
     assert "All time" in resp.text
-    assert "tradeable set" not in resp.text   # live block removed 2026-08-27
+    assert "tradeable set" not in resp.text  # live block removed 2026-08-27
     resp2 = client.get("/analysis/partials/monthly?month=2026-06")
     assert resp2.status_code == 200
-    assert "+1.40" in resp2.text              # profit units of the won bet (June selected)
+    assert "+1.40" in resp2.text  # profit units of the won bet (June selected)
     assert "monthly?month=2026-06" in resp2.text  # self-refresh keeps month
     resp3 = client.get("/analysis/partials/monthly?month=all")
     assert resp3.status_code == 200
-    assert "monthly?month=all" in resp3.text      # self-refresh keeps all-time
+    assert "monthly?month=all" in resp3.text  # self-refresh keeps all-time
+
 
 def test_settings_shows_budget_governor_section(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -963,6 +1115,7 @@ def test_partial_self_refresh_url_preserves_sport(tmp_path, monkeypatch):
     """The partial's own root hx-get (used for every-Ns self-refresh) must carry
     the sport param, else the filter is lost after the first refresh interval."""
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -981,7 +1134,9 @@ def test_partial_self_refresh_url_preserves_sport(tmp_path, monkeypatch):
         ("/analysis/partials/monthly?sport=mlb", "monthly?sport=mlb"),
     ]:
         body = client.get(url).text
-        assert frag in body, f"{url}: self-refresh hx-get missing sport ({frag} not in body)"
+        assert frag in body, (
+            f"{url}: self-refresh hx-get missing sport ({frag} not in body)"
+        )
 
 
 def test_bets_redirects_to_betting():
@@ -993,6 +1148,7 @@ def test_bets_redirects_to_betting():
 
 def test_betting_route_and_partials_render(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1004,8 +1160,11 @@ def test_betting_route_and_partials_render(tmp_path, monkeypatch):
         assert client.get(f"/betting/partials/{path}").status_code == 200
 
 
-def test_betting_controls_hidden_and_writes_forbidden_when_flag_off(tmp_path, monkeypatch):
+def test_betting_controls_hidden_and_writes_forbidden_when_flag_off(
+    tmp_path, monkeypatch
+):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1018,7 +1177,9 @@ def test_betting_controls_hidden_and_writes_forbidden_when_flag_off(tmp_path, mo
     # Write endpoints refuse.
     assert client.post("/betting/arm").status_code == 403
     assert client.post("/betting/disarm").status_code == 403
-    assert client.post("/betting/config", data={"flat_stake_czk": "50"}).status_code == 403
+    assert (
+        client.post("/betting/config", data={"flat_stake_czk": "50"}).status_code == 403
+    )
 
 
 def test_betting_sports_gate_control(tmp_path, monkeypatch):
@@ -1039,10 +1200,13 @@ def test_betting_sports_gate_control(tmp_path, monkeypatch):
     # Override the autouse 4-sport pin: the checkbox group renders one box per
     # ENABLED sport, and this test is about the NFL box.
     monkeypatch.setattr("oddsiq.dashboard.server.ENABLED_SPORTS", ["mlb", "nfl"])
-    client = TestClient(create_app(), headers={
-        "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
-        "Origin": "http://testserver",
-    })
+    client = TestClient(
+        create_app(),
+        headers={
+            "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
+            "Origin": "http://testserver",
+        },
+    )
 
     async def _meta():
         s = Store(db)
@@ -1058,41 +1222,78 @@ def test_betting_sports_gate_control(tmp_path, monkeypatch):
     assert 'value="nfl"' in body
 
     # Tick mlb + nfl.
-    assert client.post("/betting/config", data={
-        "betting_sports": ["mlb", "nfl"], "betting_sports_present": "1",
-    }).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "betting_sports": ["mlb", "nfl"],
+                "betting_sports_present": "1",
+            },
+        ).status_code
+        == 200
+    )
     assert asyncio.run(_meta()) == "mlb,nfl"
 
     # Unknown key dropped; all-invalid falls back to mlb.
-    assert client.post("/betting/config", data={
-        "betting_sports": ["xxx"], "betting_sports_present": "1",
-    }).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "betting_sports": ["xxx"],
+                "betting_sports_present": "1",
+            },
+        ).status_code
+        == 200
+    )
     assert asyncio.run(_meta()) == "mlb"
 
     # A profiled-but-DISABLED sport is dropped too (validated against
     # ENABLED_SPORTS): a persisted "nba" would otherwise go live at the
     # October re-enable without a fresh operator tick.
-    assert client.post("/betting/config", data={
-        "betting_sports": ["nba", "mlb"], "betting_sports_present": "1",
-    }).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "betting_sports": ["nba", "mlb"],
+                "betting_sports_present": "1",
+            },
+        ).status_code
+        == 200
+    )
     assert asyncio.run(_meta()) == "mlb"
 
     # All unchecked -> conservative mlb, never empty.
-    assert client.post("/betting/config", data={
-        "betting_sports_present": "1",
-    }).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "betting_sports_present": "1",
+            },
+        ).status_code
+        == 200
+    )
     assert asyncio.run(_meta()) == "mlb"
 
     # A POST without the section leaves the meta untouched.
-    assert client.post("/betting/config", data={
-        "betting_sports": ["mlb", "nfl"], "betting_sports_present": "1",
-    }).status_code == 200
-    assert client.post("/betting/config", data={"flat_stake_czk": "10"}).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "betting_sports": ["mlb", "nfl"],
+                "betting_sports_present": "1",
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post("/betting/config", data={"flat_stake_czk": "10"}).status_code == 200
+    )
     assert asyncio.run(_meta()) == "mlb,nfl"
 
 
 def test_betting_sports_checkboxes_hidden_when_controls_off(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1121,21 +1322,30 @@ def test_betting_controls_mutate_meta_when_flag_on(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, "BETTING_MAX_BETS_PER_DAY", 10)
     monkeypatch.setattr(cfg, "BETTING_MAX_OPEN_STAKES_CZK", 500.0)
     monkeypatch.setattr(cfg, "BETTING_MAX_DAILY_LOSS_CZK", 300.0)
-    client = TestClient(create_app(), headers={
-        "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
-        "Origin": "http://testserver",
-    })
+    client = TestClient(
+        create_app(),
+        headers={
+            "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
+            "Origin": "http://testserver",
+        },
+    )
 
     # Controls now rendered.
     assert "/betting/arm" in client.get("/betting/partials/overview").text
 
     assert client.post("/betting/arm").status_code == 200
-    assert client.post("/betting/config", data={
-        "flat_stake_czk": "9999",   # over the hard ceiling -> clamped
-        "max_bets_per_day": "9999",
-        "max_open_stakes_czk": "999999",
-        "daily_loss_limit_czk": "999999",
-    }).status_code == 200
+    assert (
+        client.post(
+            "/betting/config",
+            data={
+                "flat_stake_czk": "9999",  # over the hard ceiling -> clamped
+                "max_bets_per_day": "9999",
+                "max_open_stakes_czk": "999999",
+                "daily_loss_limit_czk": "999999",
+            },
+        ).status_code
+        == 200
+    )
 
     async def _read():
         s = Store(db)
@@ -1150,14 +1360,16 @@ def test_betting_controls_mutate_meta_when_flag_on(tmp_path, monkeypatch):
             )
         finally:
             await s.close()
+
     armed, stake, per_day, max_open, loss_limit = asyncio.run(_read())
     assert armed == "1"
-    assert float(stake) == 500.0   # clamped to BETTING_MAX_STAKE_CZK
+    assert float(stake) == 500.0  # clamped to BETTING_MAX_STAKE_CZK
     assert per_day == "10"
     assert float(max_open) == 500.0
     assert float(loss_limit) == 300.0
 
     assert client.post("/betting/disarm").status_code == 200
+
     async def _armed():
         s = Store(db)
         await s.initialize()
@@ -1165,6 +1377,7 @@ def test_betting_controls_mutate_meta_when_flag_on(tmp_path, monkeypatch):
             return await s.get_meta("betting_armed")
         finally:
             await s.close()
+
     assert asyncio.run(_armed()) == "0"
 
 
@@ -1177,6 +1390,7 @@ def test_live_page_no_longer_has_value_bets_or_live_edges():
 
 def test_bets_page_sections_self_heal():
     import re
+
     client = TestClient(create_app())
     resp = client.get("/bets")
     triggers = re.findall(r'data-refresh-section[^>]*?hx-trigger="([^"]*)"', resp.text)
@@ -1189,6 +1403,7 @@ def test_settings_has_no_live_scout_knobs(tmp_path, monkeypatch):
     """The live-edge subsystem was fully removed 2026-08-27 — /settings must
     show none of its knobs."""
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1207,6 +1422,7 @@ def test_settings_shows_grouped_config_with_betting_and_sports(tmp_path, monkeyp
     pregame guards, schedule cadences, betting gates, and enabled sports all
     appear (they were missing while the inert alert knob was shown)."""
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1214,11 +1430,17 @@ def test_settings_shows_grouped_config_with_betting_and_sports(tmp_path, monkeyp
     client = TestClient(create_app())
     resp = client.get("/settings")
     assert resp.status_code == 200
-    for key in ("POLL_TIER_FAR / WARM / HOT", "PREGAME_MAX_PLAUSIBLE_EDGE",
-                "PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS",
-                "SCHEDULE_COMPLETION_CHECK_INTERVAL", "BETTING_ENABLED",
-                "BETTING_CONFIRM_ENABLED", "ENABLED_SPORTS",
-                "HEARTBEAT_PING_URL", "BACKUP_INTERVAL_HOURS"):
+    for key in (
+        "POLL_TIER_FAR / WARM / HOT",
+        "PREGAME_MAX_PLAUSIBLE_EDGE",
+        "PREGAME_MAX_SHARP_SOURCE_AGE_SECONDS",
+        "SCHEDULE_COMPLETION_CHECK_INTERVAL",
+        "BETTING_ENABLED",
+        "BETTING_CONFIRM_ENABLED",
+        "ENABLED_SPORTS",
+        "HEARTBEAT_PING_URL",
+        "BACKUP_INTERVAL_HOURS",
+    ):
         assert key in resp.text, f"{key} missing from /settings"
 
 
@@ -1227,20 +1449,23 @@ def test_settings_shows_effective_throttled_cadence(tmp_path, monkeypatch):
     120s. Settings must show the EFFECTIVE cadence for the current level."""
     from datetime import datetime, timedelta, timezone
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     log = tmp_path / "oddsiq.log"
     ts = (datetime.now(timezone.utc) - timedelta(seconds=30)).strftime(
-        "%Y-%m-%d %H:%M:%S +0000")
+        "%Y-%m-%d %H:%M:%S +0000"
+    )
     log.write_text(
         f"{ts} [INFO] oddsiq.pipeline.scheduler: heartbeat: "
-        "state=polling games_tracked=5 seconds_since_last_poll=10 budget_throttle=2\n")
+        "state=polling games_tracked=5 seconds_since_last_poll=10 budget_throttle=2\n"
+    )
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
     monkeypatch.setattr(cfg, "LOG_FILE", log)
     client = TestClient(create_app())
     resp = client.get("/settings")
     assert resp.status_code == 200
-    assert "hot 120s" in resp.text     # L2 effective, not the base 90s
+    assert "hot 120s" in resp.text  # L2 effective, not the base 90s
     assert "live 300s" not in resp.text  # live tier removed 2026-08-27
 
 
@@ -1251,6 +1476,7 @@ def test_run_dashboard_applies_migrations(tmp_path, monkeypatch):
     import sqlite3
     import uvicorn
     from oddsiq.dashboard import server
+
     db = tmp_path / "fresh.db"  # never migrated
     monkeypatch.setattr(server.config, "DATABASE_PATH", db)
     monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)  # don't block on serving
@@ -1258,8 +1484,7 @@ def test_run_dashboard_applies_migrations(tmp_path, monkeypatch):
     assert rc == 0
     conn = sqlite3.connect(db)
     try:
-        cols = {r[1] for r in conn.execute(
-            "PRAGMA table_info(placed_bets)").fetchall()}
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(placed_bets)").fetchall()}
     finally:
         conn.close()
     assert "receipt_id" in cols  # migrations (through 011) ran at launch
@@ -1277,6 +1502,7 @@ def test_upcoming_section_self_heals_with_recurring_trigger():
     """The board section must carry an `every Ns` trigger (not just `load`) so a
     failed initial load retries instead of stranding on the placeholder."""
     import re
+
     client = TestClient(create_app())
     resp = client.get("/upcoming")
     triggers = re.findall(r'data-refresh-section[^>]*?hx-trigger="([^"]*)"', resp.text)
@@ -1293,6 +1519,7 @@ def test_nav_includes_upcoming_link():
 
 def test_upcoming_board_partial_loads_empty_db(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1302,9 +1529,9 @@ def test_upcoming_board_partial_loads_empty_db(tmp_path, monkeypatch):
     resp = client.get("/upcoming/partials/board")
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
-    assert "No games scheduled in the next 24h." in resp.text   # empty agenda
-    assert "TOTAL" in resp.text     # tiles still render (4 sports pinned => TOTAL shown)
-    assert 'hx-trigger="every 300s' in resp.text                # self-heal trigger
+    assert "No games scheduled in the next 24h." in resp.text  # empty agenda
+    assert "TOTAL" in resp.text  # tiles still render (4 sports pinned => TOTAL shown)
+    assert 'hx-trigger="every 300s' in resp.text  # self-heal trigger
     assert "refreshAll from:body" in resp.text
 
 
@@ -1322,11 +1549,20 @@ def test_upcoming_board_partial_renders_a_scheduled_game(tmp_path, monkeypatch):
     async def _seed():
         store = Store(db)
         await store.initialize()
-        tip = datetime.now(timezone.utc) + timedelta(minutes=30)   # ~30m out -> hot -> open
-        await store.upsert_game(Game(
-            external_id="up-1", home_team="Boston Celtics", away_team="Miami Heat",
-            scheduled_at=tip, commence_time=tip, status="scheduled", sport="nba",
-        ))
+        tip = datetime.now(timezone.utc) + timedelta(
+            minutes=30
+        )  # ~30m out -> hot -> open
+        await store.upsert_game(
+            Game(
+                external_id="up-1",
+                home_team="Boston Celtics",
+                away_team="Miami Heat",
+                scheduled_at=tip,
+                commence_time=tip,
+                status="scheduled",
+                sport="nba",
+            )
+        )
         await store.close()
 
     asyncio.run(_seed())
@@ -1340,6 +1576,7 @@ def test_upcoming_board_partial_renders_a_scheduled_game(tmp_path, monkeypatch):
 
 def test_analysis_page_has_monthly_section(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "test.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1364,16 +1601,26 @@ def test_monthly_partial_renders_month_tabs_and_profit(tmp_path, monkeypatch):
     async def _seed():
         store = Store(db)
         await store.initialize()
-        gid = await store.upsert_game(Game(
-            external_id="monthly-1", home_team="New York Yankees",
-            away_team="Boston Red Sox",
-            scheduled_at=datetime(2026, 6, 10, 13, 0, tzinfo=timezone.utc),
-            status="final", sport="mlb",
-        ))
+        gid = await store.upsert_game(
+            Game(
+                external_id="monthly-1",
+                home_team="New York Yankees",
+                away_team="Boston Red Sox",
+                scheduled_at=datetime(2026, 6, 10, 13, 0, tzinfo=timezone.utc),
+                status="final",
+                sport="mlb",
+            )
+        )
         vb = ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.5, fair_odds=2.3, edge_pct=5.0,
-            tier="hot", sport="mlb",
+            game_id=gid,
+            bookmaker="tipsport",
+            market_type="moneyline",
+            selection="home",
+            entry_odds=2.5,
+            fair_odds=2.3,
+            edge_pct=5.0,
+            tier="hot",
+            sport="mlb",
         )
         vb.flagged_at = datetime(2026, 6, 10, 12, 0, tzinfo=timezone.utc)
         bet_id = await store.insert_value_bet(vb)
@@ -1385,13 +1632,13 @@ def test_monthly_partial_renders_month_tabs_and_profit(tmp_path, monkeypatch):
     resp = client.get("/analysis/partials/monthly")
     assert resp.status_code == 200
     assert 'class="card-title">Performance' in resp.text
-    assert "Jun 2026" in resp.text            # month tab label
+    assert "Jun 2026" in resp.text  # month tab label
     # Tabs are calendar-true through the current month (2026-09-06 fix: a
     # month with no clean bets used to vanish), and the current month is the
     # default view — so June's profit shows when June is selected.
     assert datetime.now(timezone.utc).strftime("%b %Y") in resp.text
     resp = client.get("/analysis/partials/monthly?month=2026-06")
-    assert "+1.50" in resp.text               # exact profit units for the month
+    assert "+1.50" in resp.text  # exact profit units for the month
     # Explicit month selection keeps working (tab click URL).
     resp2 = client.get("/analysis/partials/monthly?month=2026-06")
     assert resp2.status_code == 200
@@ -1404,16 +1651,23 @@ def test_merge_activity_rows_shows_prague_clock_with_date_for_old_events():
     tonight's. Rows must render Prague time, dated when not 'today'."""
     from datetime import datetime, timezone
     from oddsiq.dashboard.server import _merge_activity_rows
+
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
     db_events = [
         {  # 2026-08-06T23:15:30Z == 07.08. 01:15:30 Prague (CEST)
-            "type": "value_bet", "ts": "2026-08-06T23:15:30+00:00",
-            "bookmaker": "tipsport", "market": "moneyline",
-            "selection": "home", "edge_pct": 4.3,
+            "type": "value_bet",
+            "ts": "2026-08-06T23:15:30+00:00",
+            "bookmaker": "tipsport",
+            "market": "moneyline",
+            "selection": "home",
+            "edge_pct": 4.3,
         },
         {  # today: 05:05:10Z == 07:05:10 Prague
-            "type": "snapshot", "ts": "2026-08-11T05:05:10+00:00",
-            "bookmaker": "pinnacle", "market": "moneyline", "selection": "away",
+            "type": "snapshot",
+            "ts": "2026-08-11T05:05:10+00:00",
+            "bookmaker": "pinnacle",
+            "market": "moneyline",
+            "selection": "away",
         },
     ]
     rows = _merge_activity_rows(db_events, [], limit=10, now=now)
@@ -1429,20 +1683,34 @@ def test_merge_activity_rows_prague_consistent_across_sources():
     from datetime import datetime, timezone, timedelta
     from oddsiq.dashboard.log_tail import LogEvent
     from oddsiq.dashboard.server import _merge_activity_rows
+
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
-    db_events = [{
-        "type": "value_bet", "ts": "2026-08-11T05:05:10+00:00",
-        "bookmaker": "tipsport", "market": "moneyline",
-        "selection": "home", "edge_pct": 3.5,
-    }]
-    log_events = [LogEvent(
-        timestamp=datetime(2026, 8, 11, 7, 5, 10,
-                           tzinfo=timezone(timedelta(hours=2))),
-        level="INFO", event_type="clv",
-        fields={"bookmaker": "tipsport", "market": "moneyline",
-                "selection": "home", "clv_pct": "2.1"},
-        raw="",
-    )]
+    db_events = [
+        {
+            "type": "value_bet",
+            "ts": "2026-08-11T05:05:10+00:00",
+            "bookmaker": "tipsport",
+            "market": "moneyline",
+            "selection": "home",
+            "edge_pct": 3.5,
+        }
+    ]
+    log_events = [
+        LogEvent(
+            timestamp=datetime(
+                2026, 8, 11, 7, 5, 10, tzinfo=timezone(timedelta(hours=2))
+            ),
+            level="INFO",
+            event_type="clv",
+            fields={
+                "bookmaker": "tipsport",
+                "market": "moneyline",
+                "selection": "home",
+                "clv_pct": "2.1",
+            },
+            raw="",
+        )
+    ]
     rows = _merge_activity_rows(db_events, log_events, limit=10, now=now)
     assert len(rows) == 2
     assert rows[0]["ts_short"] == rows[1]["ts_short"] == "07:05:10"
@@ -1454,14 +1722,23 @@ def test_merge_activity_rows_formats_suspect_value_bets():
     from datetime import datetime, timezone
     from oddsiq.dashboard.log_tail import LogEvent
     from oddsiq.dashboard.server import _merge_activity_rows
-    log_events = [LogEvent(
-        timestamp=datetime(2026, 8, 11, 5, 10, tzinfo=timezone.utc),
-        level="INFO", event_type="value_bet_suspect",
-        fields={"bookmaker": "tipsport", "market": "moneyline",
-                "selection": "home", "edge_pct": "12.30",
-                "reason": "incoherent_book_pregame", "tier": "hot"},
-        raw="",
-    )]
+
+    log_events = [
+        LogEvent(
+            timestamp=datetime(2026, 8, 11, 5, 10, tzinfo=timezone.utc),
+            level="INFO",
+            event_type="value_bet_suspect",
+            fields={
+                "bookmaker": "tipsport",
+                "market": "moneyline",
+                "selection": "home",
+                "edge_pct": "12.30",
+                "reason": "incoherent_book_pregame",
+                "tier": "hot",
+            },
+            raw="",
+        )
+    ]
     rows = _merge_activity_rows([], log_events, limit=10)
     assert len(rows) == 1
     assert "guarded" in rows[0]["text"].lower()
@@ -1492,9 +1769,15 @@ def test_scraper_rows_show_neutral_idle_when_no_active_games():
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
     health = {
         "tipsport": ScraperHealth(
-            timestamp=now - timedelta(minutes=485), name="tipsport",
-            duration_ms=100, snapshots=1, matched_snapshots=1,
-            matched_games=1, other_games=0, unmatched_snapshots=0, errors=0,
+            timestamp=now - timedelta(minutes=485),
+            name="tipsport",
+            duration_ms=100,
+            snapshots=1,
+            matched_snapshots=1,
+            matched_games=1,
+            other_games=0,
+            unmatched_snapshots=0,
+            errors=0,
         )
     }
     rows = _scraper_status_rows(health, now, active_tiers=set())
@@ -1507,9 +1790,15 @@ def test_scraper_rows_still_alarm_when_games_are_active():
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
     health = {
         "tipsport": ScraperHealth(
-            timestamp=now - timedelta(minutes=30), name="tipsport",
-            duration_ms=100, snapshots=1, matched_snapshots=1,
-            matched_games=1, other_games=0, unmatched_snapshots=0, errors=0,
+            timestamp=now - timedelta(minutes=30),
+            name="tipsport",
+            duration_ms=100,
+            snapshots=1,
+            matched_snapshots=1,
+            matched_games=1,
+            other_games=0,
+            unmatched_snapshots=0,
+            errors=0,
         )
     }
     rows = _scraper_status_rows(health, now, active_tiers={"hot"})
@@ -1522,19 +1811,21 @@ def test_budget_context_projects_month_end_and_reset():
     date (ODDS_API_QUOTA_RESET_DAY), burn/day since reset, and the projected
     month-end total at that burn."""
     from oddsiq.dashboard.server import _budget_context
+
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
     ctx = _budget_context(8630, 11370, now=now, reset_day=2)
     assert ctx["total"] == 20000
     assert ctx["pct"] == 43
     assert ctx["resets_on"] == "02.09"
     assert ctx["burn_per_day"] == round(8630 / 9)  # reset Aug 2 -> 9 days elapsed
-    assert ctx["days_left"] == 22                  # Aug 11 -> Sep 2
+    assert ctx["days_left"] == 22  # Aug 11 -> Sep 2
     assert ctx["projected"] == 8630 + ctx["burn_per_day"] * 22
     assert ctx["over_budget"] is True
 
 
 def test_budget_context_handles_unknown_budget():
     from oddsiq.dashboard.server import _budget_context
+
     now = datetime(2026, 8, 11, 7, 0, tzinfo=timezone.utc)
     assert _budget_context(None, None, now=now, reset_day=2) is None
 
@@ -1545,6 +1836,7 @@ def test_budget_context_trailing_burn_from_history():
     regime changes forever (the 2026-08-27 live-tier removal cut ~200/day but
     the average kept projecting the old rate until the next reset)."""
     from oddsiq.dashboard.server import _budget_context
+
     now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
     # 15,314 used over 25 days = 613/day avg, but the last 3 days burned only
     # 15,314 - 14,090 = 1,224 => 408/day trailing.
@@ -1556,13 +1848,14 @@ def test_budget_context_trailing_burn_from_history():
     ]
     ctx = _budget_context(15314, 4686, now=now, reset_day=2, history=history)
     assert ctx["burn_basis"] == "3d"
-    assert ctx["burn_per_day"] == round((15314 - 14090) / 3)   # 408
+    assert ctx["burn_per_day"] == round((15314 - 14090) / 3)  # 408
     assert ctx["projected"] == 15314 + ctx["burn_per_day"] * ctx["days_left"]
     assert ctx["over_budget"] is False
 
 
 def test_budget_context_falls_back_to_period_average():
     from oddsiq.dashboard.server import _budget_context
+
     now = datetime(2026, 8, 27, 12, 0, tzinfo=timezone.utc)
     # No history -> period average, labeled as such.
     ctx = _budget_context(15314, 4686, now=now, reset_day=2, history=None)
@@ -1571,14 +1864,20 @@ def test_budget_context_falls_back_to_period_average():
     # History from before the quota reset (used DECREASED since) -> fallback,
     # never a negative trailing burn.
     stale = [{"d": "2026-08-26", "u": 19500}]
-    ctx2 = _budget_context(300, 19700, now=datetime(2026, 9, 3, 12, 0, tzinfo=timezone.utc),
-                           reset_day=2, history=stale)
+    ctx2 = _budget_context(
+        300,
+        19700,
+        now=datetime(2026, 9, 3, 12, 0, tzinfo=timezone.utc),
+        reset_day=2,
+        history=stale,
+    )
     assert ctx2["burn_basis"] == "avg"
     assert ctx2["burn_per_day"] >= 0
 
 
 def test_raw_logs_partial_colors_warning_and_error_lines(tmp_path, monkeypatch):
     from oddsiq import config
+
     p = tmp_path / "oddsiq.log"
     p.write_text(
         "2026-08-11 07:00:00 +0000 [INFO] oddsiq.pipeline.scheduler: all fine\n"
@@ -1595,11 +1894,19 @@ def test_raw_logs_partial_colors_warning_and_error_lines(tmp_path, monkeypatch):
 
 def test_format_db_event_includes_matchup_and_tier():
     from oddsiq.dashboard.server import _format_db_event
-    text = _format_db_event({
-        "type": "value_bet", "bookmaker": "tipsport", "market": "moneyline",
-        "selection": "home", "edge_pct": 4.3, "tier": "hot",
-        "home_team": "Boston Celtics", "away_team": "Miami Heat",
-    })
+
+    text = _format_db_event(
+        {
+            "type": "value_bet",
+            "bookmaker": "tipsport",
+            "market": "moneyline",
+            "selection": "home",
+            "edge_pct": 4.3,
+            "tier": "hot",
+            "home_team": "Boston Celtics",
+            "away_team": "Miami Heat",
+        }
+    )
     assert "Miami Heat @ Boston Celtics" in text
     assert "Boston Celtics" in text  # selection resolved to the team
     assert "hot" in text
@@ -1616,18 +1923,22 @@ def _seed_upcoming_game(db_path, *, hours_from_now=1.5, sport="mlb"):
         s = Store(db_path)
         await s.initialize()
         g = Game(
-            external_id=f"u-{hours_from_now}", home_team="New York Yankees",
+            external_id=f"u-{hours_from_now}",
+            home_team="New York Yankees",
             away_team="Boston Red Sox",
             scheduled_at=datetime.now(timezone.utc) + timedelta(hours=hours_from_now),
-            status="scheduled", sport=sport,
+            status="scheduled",
+            sport=sport,
         )
         await s.upsert_game(g)
         await s.close()
+
     _asyncio.run(_seed())
 
 
 def test_upcoming_board_has_table_headers_and_no_duplicate_title(tmp_path, monkeypatch):
     from oddsiq import config
+
     db = tmp_path / "d.db"
     _seed_upcoming_game(db, hours_from_now=9.0)
     monkeypatch.setattr(config, "DATABASE_PATH", db)
@@ -1642,6 +1953,7 @@ def test_upcoming_board_has_table_headers_and_no_duplicate_title(tmp_path, monke
 
 def test_upcoming_rows_highlight_open_windows_and_tick(tmp_path, monkeypatch):
     from oddsiq import config
+
     db = tmp_path / "d.db"
     _seed_upcoming_game(db, hours_from_now=1.5)  # warm => window open
     monkeypatch.setattr(config, "DATABASE_PATH", db)
@@ -1656,7 +1968,9 @@ def _write_betting_log(p, *, betting="armed", logged_in=True):
     # heartbeat older than 3 intervals to "unknown".
     def _ts(seconds_ago):
         return (datetime.now(timezone.utc) - timedelta(seconds=seconds_ago)).strftime(
-            "%Y-%m-%d %H:%M:%S +0000")
+            "%Y-%m-%d %H:%M:%S +0000"
+        )
+
     p.write_text(
         f"{_ts(90)} [INFO] oddsiq.pipeline.betting_bridge: "
         "betting_bridge: extension connected (version=0.2.0 logged_in=False)\n"
@@ -1672,6 +1986,7 @@ def test_betting_overview_renders_banner_chain_and_caps(tmp_path, monkeypatch):
     """The money page leads with a first-class state banner and the 6-link
     safety chain (enabled → bridge → extension → login → armed → confirm)."""
     from oddsiq.db import migrations
+
     db = tmp_path / "d.db"
     migrations.run(db)
     log = tmp_path / "oddsiq.log"
@@ -1683,9 +1998,16 @@ def test_betting_overview_renders_banner_chain_and_caps(tmp_path, monkeypatch):
     client = TestClient(create_app())
     resp = client.get("/betting/partials/overview")
     assert resp.status_code == 200
-    assert 'engine-banner armed' in resp.text
+    assert "engine-banner armed" in resp.text
     assert 'class="chain' in resp.text
-    for label in ("enabled", "bridge", "extension", "logged in", "armed", "confirm gate"):
+    for label in (
+        "enabled",
+        "bridge",
+        "extension",
+        "logged in",
+        "armed",
+        "confirm gate",
+    ):
         assert label in resp.text, f"chain link {label!r} missing"
     assert "0/10" in resp.text  # bets-per-day cap progress
 
@@ -1709,6 +2031,7 @@ def test_value_bets_partial_suspect_toggle(tmp_path, monkeypatch):
     from oddsiq.db import migrations
     from oddsiq.db.models import Game, ValueBet
     from oddsiq.db.store import Store
+
     db = tmp_path / "d.db"
 
     async def _seed():
@@ -1716,18 +2039,31 @@ def test_value_bets_partial_suspect_toggle(tmp_path, monkeypatch):
         s = Store(db)
         await s.initialize()
         g = Game(
-            external_id="g1", home_team="New York Yankees",
+            external_id="g1",
+            home_team="New York Yankees",
             away_team="Boston Red Sox",
-            scheduled_at=datetime.now(timezone.utc), status="scheduled", sport="mlb",
+            scheduled_at=datetime.now(timezone.utc),
+            status="scheduled",
+            sport="mlb",
         )
         gid = await s.upsert_game(g)
-        await s.insert_value_bet(ValueBet(
-            game_id=gid, bookmaker="tipsport", market_type="moneyline",
-            selection="home", entry_odds=2.05, fair_odds=1.95, edge_pct=5.0,
-            flagged_at=datetime.now(timezone.utc), tier="hot", sport="mlb",
-            excluded_reason="incoherent_book_pregame",
-        ))
+        await s.insert_value_bet(
+            ValueBet(
+                game_id=gid,
+                bookmaker="tipsport",
+                market_type="moneyline",
+                selection="home",
+                entry_odds=2.05,
+                fair_odds=1.95,
+                edge_pct=5.0,
+                flagged_at=datetime.now(timezone.utc),
+                tier="hot",
+                sport="mlb",
+                excluded_reason="incoherent_book_pregame",
+            )
+        )
         await s.close()
+
     asyncio.run(_seed())
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
     client = TestClient(create_app())
@@ -1740,6 +2076,7 @@ def test_value_bets_partial_suspect_toggle(tmp_path, monkeypatch):
 
 def test_betting_config_post_shows_save_flash(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "d.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1747,10 +2084,13 @@ def test_betting_config_post_shows_save_flash(tmp_path, monkeypatch):
     monkeypatch.setattr(cfg, "DASHBOARD_CONTROLS_ENABLED", True)
     monkeypatch.setattr(cfg, "DASHBOARD_CONTROLS_USERNAME", "operator")
     monkeypatch.setattr(cfg, "DASHBOARD_CONTROLS_PASSWORD", "secret")
-    client = TestClient(create_app(), headers={
-        "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
-        "Origin": "http://testserver",
-    })
+    client = TestClient(
+        create_app(),
+        headers={
+            "Authorization": "Basic b3BlcmF0b3I6c2VjcmV0",
+            "Origin": "http://testserver",
+        },
+    )
     resp = client.post("/betting/config", data={"flat_stake_czk": 10})
     assert resp.status_code == 200
     assert "save-flash" in resp.text
@@ -1758,6 +2098,7 @@ def test_betting_config_post_shows_save_flash(tmp_path, monkeypatch):
 
 def test_betting_controls_require_credentials_and_same_origin(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "auth.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1765,18 +2106,30 @@ def test_betting_controls_require_credentials_and_same_origin(tmp_path, monkeypa
     monkeypatch.setattr(cfg, "DASHBOARD_CONTROLS_USERNAME", "operator")
     monkeypatch.setattr(cfg, "DASHBOARD_CONTROLS_PASSWORD", "secret")
     client = TestClient(create_app())
-    assert client.post("/betting/arm", headers={"Origin": "http://testserver"}).status_code == 401
+    assert (
+        client.post("/betting/arm", headers={"Origin": "http://testserver"}).status_code
+        == 401
+    )
     auth = {"Authorization": "Basic b3BlcmF0b3I6c2VjcmV0"}
-    assert client.post(
-        "/betting/arm", headers={**auth, "Origin": "https://evil.example"},
-    ).status_code == 403
-    assert client.post(
-        "/betting/arm", headers={**auth, "Origin": "http://testserver"},
-    ).status_code == 200
+    assert (
+        client.post(
+            "/betting/arm",
+            headers={**auth, "Origin": "https://evil.example"},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            "/betting/arm",
+            headers={**auth, "Origin": "http://testserver"},
+        ).status_code
+        == 200
+    )
 
 
 def test_betting_controls_fail_closed_when_credentials_missing(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "missing-auth.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1796,13 +2149,15 @@ def test_betting_controls_fail_closed_when_credentials_missing(tmp_path, monkeyp
 
 
 def test_betting_page_challenges_for_basic_auth_when_controls_credentialed(
-    tmp_path, monkeypatch,
+    tmp_path,
+    monkeypatch,
 ):
     """The control POSTs are htmx XHRs and htmx does not swap a non-2xx
     response, so an unauthenticated first Arm click would silently no-op.
     Challenging on the PAGE (a top-level navigation) makes the browser prompt
     and then attach the credentials to the same-origin htmx requests."""
     from oddsiq.db import migrations
+
     db = tmp_path / "page-auth.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1839,6 +2194,7 @@ def test_betting_page_challenges_for_basic_auth_when_controls_credentialed(
 
 def test_read_only_tabs_need_no_auth_when_controls_disabled(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "public.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1852,6 +2208,7 @@ def test_control_same_origin_check_honours_forwarded_host(tmp_path, monkeypatch)
     """Behind a reverse proxy Host is the upstream bind while Origin carries
     the public hostname — comparing against Host alone 403s every POST."""
     from oddsiq.db import migrations
+
     db = tmp_path / "proxy.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1869,9 +2226,16 @@ def test_control_same_origin_check_honours_forwarded_host(tmp_path, monkeypatch)
     }
     assert client.post("/betting/arm", headers=proxied).status_code == 200
     # A foreign Origin is still rejected against the forwarded host.
-    assert client.post("/betting/arm", headers={
-        **proxied, "Origin": "https://evil.example",
-    }).status_code == 403
+    assert (
+        client.post(
+            "/betting/arm",
+            headers={
+                **proxied,
+                "Origin": "https://evil.example",
+            },
+        ).status_code
+        == 403
+    )
 
 
 def test_base_template_surfaces_htmx_errors():
@@ -1887,6 +2251,7 @@ def test_status_strip_flags_unsafe_start_snapshots(tmp_path, monkeypatch):
     usable start time — matching fails closed, so this is the tripwire for a
     payload change silently killing every match."""
     from oddsiq.db import migrations
+
     db = tmp_path / "unsafe.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1912,6 +2277,7 @@ def test_status_strip_flags_unsafe_start_snapshots(tmp_path, monkeypatch):
 
 def test_coverage_matrix_surfaces_pinnacle_provenance_warnings(tmp_path, monkeypatch):
     from oddsiq.db import migrations
+
     db = tmp_path / "sharp-health.db"
     migrations.run(db)
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
@@ -1926,8 +2292,7 @@ def test_coverage_matrix_surfaces_pinnacle_provenance_warnings(tmp_path, monkeyp
         encoding="utf-8",
     )
     monkeypatch.setattr(cfg, "LOG_FILE", log)
-    body = TestClient(create_app()).get(
-        "/live/partials/coverage-matrix").text
+    body = TestClient(create_app()).get("/live/partials/coverage-matrix").text
     assert "source=85s" in body
     assert "no timestamp=1" in body
     assert "no id=2" in body
@@ -1939,19 +2304,26 @@ def test_game_page_renders_and_404s(tmp_path, monkeypatch):
     from oddsiq.db import migrations
     from oddsiq.db.models import Game
     from oddsiq.db.store import Store
+
     db = tmp_path / "d.db"
 
     async def _seed():
         migrations.run(db)
         s = Store(db)
         await s.initialize()
-        gid = await s.upsert_game(Game(
-            external_id="gd-1", home_team="New York Yankees",
-            away_team="Boston Red Sox",
-            scheduled_at=datetime.now(timezone.utc), status="scheduled", sport="mlb",
-        ))
+        gid = await s.upsert_game(
+            Game(
+                external_id="gd-1",
+                home_team="New York Yankees",
+                away_team="Boston Red Sox",
+                scheduled_at=datetime.now(timezone.utc),
+                status="scheduled",
+                sport="mlb",
+            )
+        )
         await s.close()
         return gid
+
     gid = asyncio.run(_seed())
     monkeypatch.setattr(cfg, "DATABASE_PATH", db)
     monkeypatch.setattr(cfg, "LOG_FILE", tmp_path / "absent.log")
@@ -1959,7 +2331,7 @@ def test_game_page_renders_and_404s(tmp_path, monkeypatch):
     resp = client.get(f"/game/{gid}")
     assert resp.status_code == 200
     assert "Boston Red Sox @ New York Yankees" in resp.text
-    assert "game-chart-home" in resp.text     # per-selection odds chart canvases
+    assert "game-chart-home" in resp.text  # per-selection odds chart canvases
     assert "game-chart-away" in resp.text
     assert client.get("/game/999999").status_code == 404
 

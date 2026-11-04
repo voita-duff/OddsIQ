@@ -67,10 +67,16 @@ def test_odd_button_atid_grammar_maps_stored_ids(html):
     home = next(a for a in odd_atids if a.endswith("||1"))
     parts = home.split("||")
     assert parts[0] == "content" and parts[1] == "ODD"
-    opp_id, _event_id, odd, match_id, sel_type = parts[2], parts[3], parts[4], parts[5], parts[6]
-    assert opp_id == "2681257493"      # == value_bets.tipsport_opp_id
-    assert match_id == "8355990"       # == value_bets.tipsport_match_id (field 6)
-    assert sel_type == "1"             # 1 = home
+    opp_id, _event_id, odd, match_id, sel_type = (
+        parts[2],
+        parts[3],
+        parts[4],
+        parts[5],
+        parts[6],
+    )
+    assert opp_id == "2681257493"  # == value_bets.tipsport_opp_id
+    assert match_id == "8355990"  # == value_bets.tipsport_match_id (field 6)
+    assert sel_type == "1"  # 1 = home
     assert odd == "1.91"
     # opp_id is unique -> an exact oppId match resolves exactly one button.
     assert sum(1 for a in odd_atids if a.split("||")[2] == opp_id) == 1
@@ -78,11 +84,11 @@ def test_odd_button_atid_grammar_maps_stored_ids(html):
 
 def test_bet_slip_controls_present_in_fixture(html):
     atids = set(_atids(html))
-    assert "txtAmountPaid" in atids                     # stake input
-    assert "btn-betTicket" in atids                     # submit
-    assert "ticketBuilderRemoveOppButton" in atids      # abort-on-price-moved
+    assert "txtAmountPaid" in atids  # stake input
+    assert "btn-betTicket" in atids  # submit
+    assert "ticketBuilderRemoveOppButton" in atids  # abort-on-price-moved
     assert "ticketBuilderChangeBet-2681257493" in atids  # slip echoes our opp_id
-    assert "ticketBuilderOportunity-8355990" in atids    # slip echoes our match_id
+    assert "ticketBuilderOportunity-8355990" in atids  # slip echoes our match_id
     # Live total-odds readout for the min_odds guard.
     assert "Celkový kurz" in html
     assert re.search(r"Celkový kurz</div><div[^>]*>1\.91</div>", html)
@@ -99,7 +105,9 @@ def test_extension_source_references_the_contract(selectors_src):
         "ticketBuilderChangeBet-",
         "Celkový kurz",
     ):
-        assert token in selectors_src, f"extension/selectors.js must reference {token!r}"
+        assert token in selectors_src, (
+            f"extension/selectors.js must reference {token!r}"
+        )
     # Guard against a fragile styled-components-hash selector sneaking in.
     assert "sc-6e89a8b6" not in selectors_src
     assert "hKYbrs" not in selectors_src
@@ -131,11 +139,13 @@ def test_login_probe_keys_on_the_session_timer_only(selectors_src):
     # selectors.js functions are indented inside an IIFE, so slice to the next
     # indented `function` rather than relying on the top-level helper.
     start = _locate("function loggedIn(", selectors_src, "loggedIn")
-    end = _locate("\n  function ", selectors_src, "next selectors.js function", start + 1)
+    end = _locate(
+        "\n  function ", selectors_src, "next selectors.js function", start + 1
+    )
     body = _strip_js_comments(selectors_src[start:end])
     assert "Doba přihlášení" in body
     assert "profile-avatar" not in body
-    assert "loginMarkers" in selectors_src          # diagnostics for status frames
+    assert "loginMarkers" in selectors_src  # diagnostics for status frames
     assert "accountBalance" not in selectors_src
 
 
@@ -148,9 +158,13 @@ def test_place_bet_login_gate_precedes_navigation(background_src):
     body = _strip_js_comments(_function_body(background_src, "handlePlaceBet"))
     set_at = _locate("inFlight = true;", body, "mutex set")
     gate_at = _locate("probeLoggedIn(pinned[0].id)", body, "pre-nav login gate", set_at)
-    report_at = _locate("await sendStatus();", body, "status frame on a dead session", gate_at)
+    report_at = _locate(
+        "await sendStatus();", body, "status frame on a dead session", gate_at
+    )
     refuse_at = _locate('"not_logged_in"', body, "not_logged_in refusal", gate_at)
-    nav_at = _locate("ensureTipsportTab(cmd.url", body, "match-page navigation", gate_at)
+    nav_at = _locate(
+        "ensureTipsportTab(cmd.url", body, "match-page navigation", gate_at
+    )
     assert set_at < gate_at < report_at < nav_at and gate_at < refuse_at < nav_at, body
 
 
@@ -181,8 +195,9 @@ def test_readoutcome_keys_on_the_verified_receipt_contract(background_src):
 def _strip_js_comments(src: str) -> str:
     """Blank out full-line `//` comments. Deliberately does NOT touch trailing
     comments: splitting on `//` would also truncate `startsWith("//")`."""
-    return "\n".join("" if line.lstrip().startswith("//") else line
-                     for line in src.splitlines())
+    return "\n".join(
+        "" if line.lstrip().startswith("//") else line for line in src.splitlines()
+    )
 
 
 def _locate(needle: str, text: str, what: str, start: int = 0) -> int:
@@ -206,9 +221,15 @@ def _function_body(src: str, name: str) -> str:
     top-level function declaration, with full-line comments stripped — so
     ordering assertions read statements, not prose about them."""
     start = _locate(f"async function {name}(", src, name)
-    ends = [i for i in (src.find("\nasync function ", start + 1),
-                        src.find("\nfunction ", start + 1)) if i != -1]
-    return _strip_js_comments(src[start:min(ends)] if ends else src[start:])
+    ends = [
+        i
+        for i in (
+            src.find("\nasync function ", start + 1),
+            src.find("\nfunction ", start + 1),
+        )
+        if i != -1
+    ]
+    return _strip_js_comments(src[start : min(ends)] if ends else src[start:])
 
 
 def test_place_bet_busy_guard_is_atomic(background_src):
@@ -234,7 +255,10 @@ def test_tab_navigating_helpers_yield_to_a_live_placement(background_src):
     interleave could clear `inFlight` between the yield's return and the
     caller's re-check, and a hardcoded false would then read as a real
     logout instead of no observation."""
-    for fn, ret in (("confirmLoginOnProbePage", "return loggedIn;"), ("pruneTipsportTabs", "return;")):
+    for fn, ret in (
+        ("confirmLoginOnProbePage", "return loggedIn;"),
+        ("pruneTipsportTabs", "return;"),
+    ):
         start = _locate(f"async function {fn}(", background_src, fn)
         body = _strip_js_comments(background_src[start:])
         first_stmt = body.split("{", 1)[1].strip().splitlines()[0].strip()
@@ -248,23 +272,34 @@ def test_login_confirm_only_trusts_probe_page_observations(background_src):
     a run of never-reached-the-page confirms into a real 'lost' only after
     INCONCLUSIVE_CONFIRMS_BEFORE_LOST, returning the current state meanwhile.
     probeLoggedIn itself stays a plain boolean: the money path calls it."""
-    start = _locate("async function confirmLoginOnProbePage(", background_src, "confirmLoginOnProbePage")
+    start = _locate(
+        "async function confirmLoginOnProbePage(",
+        background_src,
+        "confirmLoginOnProbePage",
+    )
     end = _locate("async function sendStatus(", background_src, "sendStatus", start)
     body = _strip_js_comments(background_src[start:end])
     assert "probePath(tabId)" in body
     assert "path.startsWith(PROBE_PAGE)" in body
     assert "inconclusiveConfirms >= INCONCLUSIVE_CONFIRMS_BEFORE_LOST" in body
     assert "return loggedIn;" in body
-    assert re.search(r"^const INCONCLUSIVE_CONFIRMS_BEFORE_LOST = \d+;", background_src, re.M)
-    probe = background_src[_locate("async function probeLoggedIn(", background_src, "probeLoggedIn"):]
+    assert re.search(
+        r"^const INCONCLUSIVE_CONFIRMS_BEFORE_LOST = \d+;", background_src, re.M
+    )
+    probe = background_src[
+        _locate("async function probeLoggedIn(", background_src, "probeLoggedIn") :
+    ]
     assert "return !!(res && res.result);" in probe.split("\n}", 1)[0]
     # every conclusive exit resets the run counter; only the inconclusive
     # `return loggedIn;` leaves it standing
     assert body.count("inconclusiveConfirms = 0") == 3, body
     # a reading taken off the probe page must skip the iteration WITHOUT
     # recording an observation — inverting this is the bug being fixed
-    gate = _must_find(r"if \(path == null \|\| !path\.startsWith\(PROBE_PAGE\)\)\s*\{([^}]*)\}",
-                      body, "probe-page gate").group(1)
+    gate = _must_find(
+        r"if \(path == null \|\| !path\.startsWith\(PROBE_PAGE\)\)\s*\{([^}]*)\}",
+        body,
+        "probe-page gate",
+    ).group(1)
     assert "continue;" in gate and "observed" not in gate, gate
     # once the page is here, the header gets render grace before a verdict
     assert "deadline = Math.max(deadline, Date.now() + 3000)" in body
@@ -284,12 +319,16 @@ def test_positive_plain_probe_clears_the_inconclusive_run(background_src):
     end = _locate("const PROBE_PAGE", background_src, "PROBE_PAGE", start)
     body = _strip_js_comments(background_src[start:end])
     probe_at = _locate("let now = await probeLoggedIn();", body, "plain probe")
-    reset_at = _locate("if (now) inconclusiveConfirms = 0;", body, "positive-probe reset")
+    reset_at = _locate(
+        "if (now) inconclusiveConfirms = 0;", body, "positive-probe reset"
+    )
     assert probe_at < reset_at
     assert reset_at < _locate("confirmLoginOnProbePage()", body, "confirm call")
 
 
-def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_src, html):
+def test_slip_singleton_guard_present_and_fail_safe(
+    background_src, selectors_src, html
+):
     """The bet slip is shared mutable state across placements, and nothing
     guarantees it starts empty: any attempt that died between its odd click and
     a terminal remove (the slip wait timing out, setStake throwing, a CDP
@@ -320,15 +359,19 @@ def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_sr
     assert html.count('data-atid="ticketBuilderChangeBet-') == 1
 
     # Page-context counter keys on that same control and is exported.
-    c_start = _locate("function slipLegCount()", selectors_src, "selectors.slipLegCount")
-    counter = selectors_src[c_start:_locate("\n  }", selectors_src, "slipLegCount body", c_start)]
-    assert 'ticketBuilderChangeBet-' in counter
-    assert "return -1" in counter, counter          # fail-safe sentinel
-    assert "slipLegCount," in selectors_src         # on window.__ots
+    c_start = _locate(
+        "function slipLegCount()", selectors_src, "selectors.slipLegCount"
+    )
+    counter = selectors_src[
+        c_start : _locate("\n  }", selectors_src, "slipLegCount body", c_start)
+    ]
+    assert "ticketBuilderChangeBet-" in counter
+    assert "return -1" in counter, counter  # fail-safe sentinel
+    assert "slipLegCount," in selectors_src  # on window.__ots
     # ...counting distinct ids, not matched nodes (duplicated markup is fatal).
     assert "new Set(" in counter, counter
     assert "ids.size" in counter, counter
-    assert not re.search(r"\)\.length", counter), counter   # not a node count
+    assert not re.search(r"\)\.length", counter), counter  # not a node count
 
     body = _function_body(background_src, "runPlacement")
     click_at = _locate("trustedClick(tabId, meta.rect)", body, "odd click")
@@ -344,7 +387,9 @@ def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_sr
     # click onto a slip we failed to empty. The threshold is pinned too — a
     # `legsLeft >= 99` typo leaves the refusal unreachable while every
     # positional assertion above still passes.
-    assert _locate('"slip_not_cleared"', body, "slip_not_cleared refusal") < click_at, body
+    assert _locate('"slip_not_cleared"', body, "slip_not_cleared refusal") < click_at, (
+        body
+    )
     assert "legsLeft !== 0" in body, body
     assert "legsBefore < 0" in body, body
     # ...then the rect is re-measured, after the mutating cleanup and before
@@ -352,7 +397,9 @@ def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_sr
     # collapses the ticket aside and React re-renders the odds list, which is
     # exactly the moment a single look comes back {found:false} and silently
     # falls back to the stale point the re-measure exists to replace.
-    remeasure_at = _locate("waitForOdd(tabId, cmd.opp_id, ", body, "rect re-measure poll", clear_at)
+    remeasure_at = _locate(
+        "waitForOdd(tabId, cmd.opp_id, ", body, "rect re-measure poll", clear_at
+    )
     # ...and the re-probed button's match id is re-checked BEFORE its rect is
     # trusted, exactly as the first probe checked it. findOddButton compares
     # the parsed oppId exactly, so this is not about a substring collision:
@@ -362,9 +409,15 @@ def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_sr
     # a page carrying this opp under another match is no longer the page the
     # first rect was measured on either, so clicking it is blind, and
     # slipHasOpp (oppId only) would not catch the wrong leg.
-    recheck_at = _locate("String(fresh.matchId) !== String(cmd.match_id)", body,
-                         "re-measured match id re-check", remeasure_at)
-    refuse_at = _locate('"match_id_mismatch"', body, "re-measure mismatch refusal", recheck_at)
+    recheck_at = _locate(
+        "String(fresh.matchId) !== String(cmd.match_id)",
+        body,
+        "re-measured match id re-check",
+        remeasure_at,
+    )
+    refuse_at = _locate(
+        '"match_id_mismatch"', body, "re-measure mismatch refusal", recheck_at
+    )
     assign_at = _locate("meta.rect = fresh.rect", body, "rect re-measure", clear_at)
     assert clear_at < remeasure_at < recheck_at < refuse_at < assign_at < click_at, body
 
@@ -384,8 +437,13 @@ def test_slip_singleton_guard_present_and_fail_safe(background_src, selectors_sr
     # Bounded cleanup + a counter that maps anything non-numeric to -1. The
     # bound is what makes the worst case ~3.5s and keeps slip_not_cleared
     # reachable at all rather than looping on an undismissable slip.
-    max_legs = int(_must_find(r"async function clearSlip\(tabId, maxLegs = (\d+)\)",
-                              background_src, "clearSlip bound").group(1))
+    max_legs = int(
+        _must_find(
+            r"async function clearSlip\(tabId, maxLegs = (\d+)\)",
+            background_src,
+            "clearSlip bound",
+        ).group(1)
+    )
     assert 1 <= max_legs <= 5, max_legs
     assert 'typeof n === "number" ? n : -1' in background_src
 
@@ -419,10 +477,13 @@ def test_stake_is_read_back_before_the_money_gate(background_src, selectors_src)
     # a `== expected` check the moment the trusted input silently failed and
     # the expected stake happened to be 0 — and, worse, reads as a real stake.
     s_start = _locate("function stakeAmount()", selectors_src, "selectors.stakeAmount")
-    reader = selectors_src[s_start:_locate("\n  }", selectors_src, "stakeAmount body", s_start)]
+    reader = selectors_src[
+        s_start : _locate("\n  }", selectors_src, "stakeAmount body", s_start)
+    ]
     assert "if (!raw) return null;" in reader, reader
-    assert _locate("if (!raw) return null;", reader, "empty guard") < \
-        _locate("Number(raw)", reader, "numeric parse"), reader
+    assert _locate("if (!raw) return null;", reader, "empty guard") < _locate(
+        "Number(raw)", reader, "numeric parse"
+    ), reader
 
 
 def test_probe_odd_refuses_a_degenerate_rect(background_src):
@@ -435,8 +496,11 @@ def test_probe_odd_refuses_a_degenerate_rect(background_src):
     it stays inside waitForOdd's poll: a not-yet-laid-out button is simply
     retried, and only a full budget is a real offer_gone."""
     start = _locate("const probeOdd = ", background_src, "probeOdd")
-    body = _strip_js_comments(background_src[start:_locate("const slipHasOpp", background_src,
-                                                          "probeOdd end", start)])
+    body = _strip_js_comments(
+        background_src[
+            start : _locate("const slipHasOpp", background_src, "probeOdd end", start)
+        ]
+    )
     rect_at = _locate("getBoundingClientRect()", body, "rect measurement")
     guard_at = _locate("r.width === 0", body, "degenerate-rect guard")
     found_at = _locate("found: true", body, "found:true return")
@@ -444,7 +508,7 @@ def test_probe_odd_refuses_a_degenerate_rect(background_src):
     for term in ("r.height === 0", "r.x < 0", "r.y < 0"):
         assert term in body, body
     # The guard's own return keeps the caller polling.
-    guard_line = body[guard_at:body.index("\n", guard_at)]
+    guard_line = body[guard_at : body.index("\n", guard_at)]
     assert "return { found: false }" in guard_line, guard_line
 
 
@@ -456,9 +520,15 @@ def test_extension_version_in_lockstep_across_manifest_config_and_entrypoint():
     config_src = CONFIG_DEFAULT_JS.read_text(encoding="utf-8")
     entry_src = CHROME_ENTRYPOINT.read_text(encoding="utf-8")
     manifest = _must_find(r'"version":\s*"([^"]+)"', manifest_src, "manifest").group(1)
-    config = _must_find(r'EXTENSION_VERSION:\s*"([^"]+)"', config_src, "config").group(1)
-    entry = _must_find(r'EXTENSION_VERSION:=([0-9][^}"]*)\}', entry_src, "entrypoint").group(1)
-    assert manifest == config == entry, f"manifest={manifest} config={config} entrypoint={entry}"
+    config = _must_find(r'EXTENSION_VERSION:\s*"([^"]+)"', config_src, "config").group(
+        1
+    )
+    entry = _must_find(
+        r'EXTENSION_VERSION:=([0-9][^}"]*)\}', entry_src, "entrypoint"
+    ).group(1)
+    assert manifest == config == entry, (
+        f"manifest={manifest} config={config} entrypoint={entry}"
+    )
 
 
 def test_session_refresh_keepalive_is_hourly_and_migrates_the_period(background_src):
@@ -467,12 +537,19 @@ def test_session_refresh_keepalive_is_hourly_and_migrates_the_period(background_
     Login logs motivate the experiment but do not prove cookie expiry causes.
     Ordinary worker restarts must preserve the existing alarm countdown.
     """
-    period = int(_must_find(r"const SESSION_REFRESH_MINUTES = (\d+);",
-                            background_src, "session-refresh period").group(1))
+    period = int(
+        _must_find(
+            r"const SESSION_REFRESH_MINUTES = (\d+);",
+            background_src,
+            "session-refresh period",
+        ).group(1)
+    )
     assert 0 < period <= 60, f"keepalive cadence too coarse: {period} min"
     src = _strip_js_comments(background_src)
-    reg = _locate('chrome.alarms.get("session-refresh"', src, "session-refresh registration")
-    window = src[reg:reg + 400]
+    reg = _locate(
+        'chrome.alarms.get("session-refresh"', src, "session-refresh registration"
+    )
+    window = src[reg : reg + 400]
     # migrate on a period change (not just absence)…
     assert "a.periodInMinutes !== SESSION_REFRESH_MINUTES" in window, window
     assert 'chrome.alarms.create("session-refresh"' in window
@@ -480,7 +557,9 @@ def test_session_refresh_keepalive_is_hourly_and_migrates_the_period(background_
     assert "!a" in window
 
 
-def test_click_targets_are_scrolled_on_screen_and_offer_gone_explains_itself(background_src, selectors_src):
+def test_click_targets_are_scrolled_on_screen_and_offer_gone_explains_itself(
+    background_src, selectors_src
+):
     """Every trusted click target — the odd button, stake input, remove and
     submit — must be brought into the viewport BEFORE its rect is measured,
     and an off-screen or unsized target must refuse rather than click a
@@ -488,14 +567,25 @@ def test_click_targets_are_scrolled_on_screen_and_offer_gone_explains_itself(bac
     offer_gone exits must attach the per-opp diagnostics so the next failure
     says whether the node was absent, hidden, or off-screen."""
     start = _locate("const probeOdd = ", background_src, "probeOdd")
-    body = _strip_js_comments(background_src[start:_locate("const slipHasOpp", background_src, "probeOdd end", start)])
-    assert _locate("scrollIntoView", body, "scroll before measure") < _locate("getBoundingClientRect()", body, "rect")
+    body = _strip_js_comments(
+        background_src[
+            start : _locate("const slipHasOpp", background_src, "probeOdd end", start)
+        ]
+    )
+    assert _locate("scrollIntoView", body, "scroll before measure") < _locate(
+        "getBoundingClientRect()", body, "rect"
+    )
     assert "innerHeight" in body and "innerWidth" in body, body
     for fn in ("setStake", "clickRemove"):
         fb = _function_body(background_src, fn)
         assert "window.__ots.clickPoint(" in fb, (fn, fb)
-    submit = background_src[_locate("const readSubmitRect", background_src, "readSubmitRect"):]
-    assert "window.__ots.clickPoint(window.__ots.submitButton())" in submit.split("\n", 1)[0]
+    submit = background_src[
+        _locate("const readSubmitRect", background_src, "readSubmitRect") :
+    ]
+    assert (
+        "window.__ots.clickPoint(window.__ots.submitButton())"
+        in submit.split("\n", 1)[0]
+    )
     run = _function_body(background_src, "runPlacement")
     assert run.count("(${pageDebug})(") == 2, "both offer_gone exits carry diagnostics"
     assert "submit_unreachable" in run

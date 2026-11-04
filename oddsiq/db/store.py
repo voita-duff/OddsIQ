@@ -87,10 +87,17 @@ class Store:
                    away_score=CASE WHEN games.status='final' THEN games.away_score
                                    ELSE COALESCE(excluded.away_score, games.away_score) END
                RETURNING id, commence_time""",
-            (game.external_id, game.home_team, game.away_team,
-             game.scheduled_at.isoformat(),
-             game.commence_time.isoformat() if game.commence_time else None,
-             game.status, game.home_score, game.away_score, game.sport),
+            (
+                game.external_id,
+                game.home_team,
+                game.away_team,
+                game.scheduled_at.isoformat(),
+                game.commence_time.isoformat() if game.commence_time else None,
+                game.status,
+                game.home_score,
+                game.away_score,
+                game.sport,
+            ),
         )
         row = await cursor.fetchone()
         await self._db.commit()
@@ -105,7 +112,8 @@ class Store:
         CET tipoffs) could mismatch — prefer querying by status/id in real code."""
         date_str = date.strftime("%Y-%m-%d")
         cursor = await self._db.execute(
-            "SELECT * FROM games WHERE date(scheduled_at) = ?", (date_str,),
+            "SELECT * FROM games WHERE date(scheduled_at) = ?",
+            (date_str,),
         )
         rows = await cursor.fetchall()
         return [self._row_to_game(row) for row in rows]
@@ -117,7 +125,13 @@ class Store:
         rows = await cursor.fetchall()
         return [self._row_to_game(row) for row in rows]
 
-    async def update_game_status(self, game_id: int, status: str, home_score: int | None = None, away_score: int | None = None) -> None:
+    async def update_game_status(
+        self,
+        game_id: int,
+        status: str,
+        home_score: int | None = None,
+        away_score: int | None = None,
+    ) -> None:
         # COALESCE keeps existing scores when callers omit them (e.g. the
         # live-transition path passes status only) — passing None must not
         # wipe scores already recorded at finalization.
@@ -129,7 +143,9 @@ class Store:
         )
         await self._db.commit()
 
-    async def update_game_commence_time(self, game_id: int, commence_time: datetime) -> None:
+    async def update_game_commence_time(
+        self, game_id: int, commence_time: datetime
+    ) -> None:
         await self._db.execute(
             "UPDATE games SET commence_time=? WHERE id=?",
             (commence_time.isoformat(), game_id),
@@ -146,11 +162,19 @@ class Store:
                 raw_response_path, source_updated_at, captured_at, sport)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id""",
-            (snap.game_id, snap.bookmaker, snap.market_type, snap.selection,
-             snap.line, snap.odds, snap.is_closing, snap.raw_response_path,
-             snap.source_updated_at.isoformat() if snap.source_updated_at else None,
-             snap.captured_at.isoformat(),
-             snap.sport),
+            (
+                snap.game_id,
+                snap.bookmaker,
+                snap.market_type,
+                snap.selection,
+                snap.line,
+                snap.odds,
+                snap.is_closing,
+                snap.raw_response_path,
+                snap.source_updated_at.isoformat() if snap.source_updated_at else None,
+                snap.captured_at.isoformat(),
+                snap.sport,
+            ),
         )
         row = await cursor.fetchone()
         await self._db.commit()
@@ -178,19 +202,31 @@ class Store:
         to_bump: list[tuple[str, str | None, str | None, int]] = []
         for snap in snapshots:
             latest = await self.get_latest_odds(
-                snap.game_id, snap.bookmaker, snap.market_type, snap.selection, snap.line
+                snap.game_id,
+                snap.bookmaker,
+                snap.market_type,
+                snap.selection,
+                snap.line,
             )
-            if (latest is not None and latest.odds == snap.odds
-                    and latest.line == snap.line and not latest.is_closing):
+            if (
+                latest is not None
+                and latest.odds == snap.odds
+                and latest.line == snap.line
+                and not latest.is_closing
+            ):
                 # Dedup hit on a non-closing row — bump captured_at ("last seen").
                 # Without this, captured_at drifts when odds are stable and CLV
                 # reads a stale closing timestamp.
-                to_bump.append((
-                    snap.captured_at.isoformat(),
-                    snap.raw_response_path,
-                    snap.source_updated_at.isoformat() if snap.source_updated_at else None,
-                    latest.id,
-                ))
+                to_bump.append(
+                    (
+                        snap.captured_at.isoformat(),
+                        snap.raw_response_path,
+                        snap.source_updated_at.isoformat()
+                        if snap.source_updated_at
+                        else None,
+                        latest.id,
+                    )
+                )
                 continue
             # Otherwise insert. Never bump an is_closing=1 row: moving its
             # captured_at past tipoff would break the "is_closing => pre-tipoff"
@@ -212,10 +248,24 @@ class Store:
                    (game_id, bookmaker, market_type, selection, line, odds, is_closing,
                     raw_response_path, source_updated_at, captured_at, sport)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                [(s.game_id, s.bookmaker, s.market_type, s.selection, s.line, s.odds,
-                  s.is_closing, s.raw_response_path,
-                  s.source_updated_at.isoformat() if s.source_updated_at else None,
-                  s.captured_at.isoformat(), s.sport) for s in to_insert],
+                [
+                    (
+                        s.game_id,
+                        s.bookmaker,
+                        s.market_type,
+                        s.selection,
+                        s.line,
+                        s.odds,
+                        s.is_closing,
+                        s.raw_response_path,
+                        s.source_updated_at.isoformat()
+                        if s.source_updated_at
+                        else None,
+                        s.captured_at.isoformat(),
+                        s.sport,
+                    )
+                    for s in to_insert
+                ],
             )
         if to_bump or to_insert:
             await self._db.commit()
@@ -243,7 +293,9 @@ class Store:
         row = await cursor.fetchone()
         return self._row_to_snapshot(row) if row else None
 
-    async def mark_closing_snapshots(self, game_id: int, freshness_minutes: int) -> None:
+    async def mark_closing_snapshots(
+        self, game_id: int, freshness_minutes: int
+    ) -> None:
         """Mark the latest snapshot per (bookmaker, market_type, selection, line)
         as closing — but only if its captured_at is within `freshness_minutes`
         before the game's effective tipoff time. Stale or post-tipoff snapshots are
@@ -375,18 +427,34 @@ class Store:
                            IFNULL(line, -999.0), tier,
                            IFNULL(excluded_reason, '')) DO NOTHING
                RETURNING id""",
-            (vb.game_id, vb.bookmaker, vb.market_type, vb.selection, vb.line,
-             vb.entry_odds, vb.fair_odds, vb.edge_pct, vb.flagged_at.isoformat(), vb.tier, vb.sport,
-             vb.excluded_reason,
-             vb.tipsport_match_id, vb.tipsport_opp_id, vb.tipsport_url,
-             vb.sharp_source_updated_at.isoformat()
-             if vb.sharp_source_updated_at else None),
+            (
+                vb.game_id,
+                vb.bookmaker,
+                vb.market_type,
+                vb.selection,
+                vb.line,
+                vb.entry_odds,
+                vb.fair_odds,
+                vb.edge_pct,
+                vb.flagged_at.isoformat(),
+                vb.tier,
+                vb.sport,
+                vb.excluded_reason,
+                vb.tipsport_match_id,
+                vb.tipsport_opp_id,
+                vb.tipsport_url,
+                vb.sharp_source_updated_at.isoformat()
+                if vb.sharp_source_updated_at
+                else None,
+            ),
         )
         row = await cursor.fetchone()
         await self._db.commit()
         return row[0] if row else None
 
-    async def update_value_bet_closing(self, bet_id: int, closing_odds: float, pinnacle_closing: float, clv_pct: float) -> None:
+    async def update_value_bet_closing(
+        self, bet_id: int, closing_odds: float, pinnacle_closing: float, clv_pct: float
+    ) -> None:
         await self._db.execute(
             "UPDATE value_bets SET closing_odds=?, pinnacle_closing=?, clv_pct=? WHERE id=?",
             (closing_odds, pinnacle_closing, clv_pct, bet_id),
@@ -413,8 +481,13 @@ class Store:
         return rows
 
     async def mark_rows_excluded(
-        self, *, sports: list[str], from_iso: str, until_iso: str,
-        reason: str, dry_run: bool = False,
+        self,
+        *,
+        sports: list[str],
+        from_iso: str,
+        until_iso: str,
+        reason: str,
+        dry_run: bool = False,
     ) -> dict[str, int]:
         """Stamp `excluded_reason` on value_bets (by flagged_at) for the
         given sports inside the [from_iso, until_iso) window. Rows already
@@ -427,9 +500,7 @@ class Store:
         """
         placeholders = ", ".join("?" for _ in sports)
         counts: dict[str, int] = {}
-        for table, ts_col in (
-            ("value_bets", "flagged_at"),
-        ):
+        for table, ts_col in (("value_bets", "flagged_at"),):
             predicate = (
                 f"sport IN ({placeholders}) AND excluded_reason IS NULL "
                 f"AND {ts_col} >= ? AND {ts_col} < ?"
@@ -502,7 +573,8 @@ class Store:
 
     async def get_pending_value_bets(self, game_id: int) -> list[ValueBet]:
         cursor = await self._db.execute(
-            "SELECT * FROM value_bets WHERE game_id=? AND result IS NULL", (game_id,),
+            "SELECT * FROM value_bets WHERE game_id=? AND result IS NULL",
+            (game_id,),
         )
         rows = await cursor.fetchall()
         return [self._row_to_value_bet(row) for row in rows]
@@ -517,7 +589,8 @@ class Store:
         set without CLV — that path is for resolution, not CLV repair.
         """
         cursor = await self._db.execute(
-            "SELECT * FROM value_bets WHERE game_id=? AND clv_pct IS NULL", (game_id,),
+            "SELECT * FROM value_bets WHERE game_id=? AND clv_pct IS NULL",
+            (game_id,),
         )
         rows = await cursor.fetchall()
         return [self._row_to_value_bet(row) for row in rows]
@@ -554,7 +627,9 @@ class Store:
         operator action behind ``oddsiq delete-zombie-games``.
         """
         counts = {
-            "games": 0, "odds_snapshots": 0, "value_bets": 0,
+            "games": 0,
+            "odds_snapshots": 0,
+            "value_bets": 0,
             "placed_bets": 0,
         }
         if not game_ids:
@@ -598,22 +673,40 @@ class Store:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(value_bet_id) DO NOTHING
                RETURNING id""",
-            (pb.value_bet_id, pb.game_id, pb.sport, pb.status, pb.skip_reason,
-             pb.stake_czk, pb.requested_odds, pb.min_odds, pb.accepted_odds,
-             pb.receipt_id, pb.error, pb.balance_after_czk,
-             pb.commanded_at.isoformat() if pb.commanded_at else None,
-             pb.resolved_at.isoformat() if pb.resolved_at else None,
-             pb.latency_detect_ms, pb.latency_place_ms, pb.settled_pl_czk,
-             pb.created_at.isoformat()),
+            (
+                pb.value_bet_id,
+                pb.game_id,
+                pb.sport,
+                pb.status,
+                pb.skip_reason,
+                pb.stake_czk,
+                pb.requested_odds,
+                pb.min_odds,
+                pb.accepted_odds,
+                pb.receipt_id,
+                pb.error,
+                pb.balance_after_czk,
+                pb.commanded_at.isoformat() if pb.commanded_at else None,
+                pb.resolved_at.isoformat() if pb.resolved_at else None,
+                pb.latency_detect_ms,
+                pb.latency_place_ms,
+                pb.settled_pl_czk,
+                pb.created_at.isoformat(),
+            ),
         )
         row = await cursor.fetchone()
         await self._db.commit()
         return row[0] if row else None
 
     async def update_placed_bet_result(
-        self, pb_id: int, *, status: str,
-        accepted_odds: float | None = None, receipt_id: str | None = None,
-        balance_after_czk: float | None = None, error: str | None = None,
+        self,
+        pb_id: int,
+        *,
+        status: str,
+        accepted_odds: float | None = None,
+        receipt_id: str | None = None,
+        balance_after_czk: float | None = None,
+        error: str | None = None,
         latency_place_ms: int | None = None,
     ) -> None:
         """Record the executor's outcome for a pending decision; stamps
@@ -622,21 +715,33 @@ class Store:
             """UPDATE placed_bets SET status=?, accepted_odds=?, receipt_id=?,
                balance_after_czk=?, error=?, latency_place_ms=?, resolved_at=?
                WHERE id=?""",
-            (status, accepted_odds, receipt_id, balance_after_czk, error,
-             latency_place_ms, datetime.now(timezone.utc).isoformat(), pb_id),
+            (
+                status,
+                accepted_odds,
+                receipt_id,
+                balance_after_czk,
+                error,
+                latency_place_ms,
+                datetime.now(timezone.utc).isoformat(),
+                pb_id,
+            ),
         )
         await self._db.commit()
 
-    async def get_placed_bet_for_value_bet(self, value_bet_id: int) -> "PlacedBet | None":
+    async def get_placed_bet_for_value_bet(
+        self, value_bet_id: int
+    ) -> "PlacedBet | None":
         cursor = await self._db.execute(
-            "SELECT * FROM placed_bets WHERE value_bet_id=?", (value_bet_id,),
+            "SELECT * FROM placed_bets WHERE value_bet_id=?",
+            (value_bet_id,),
         )
         row = await cursor.fetchone()
         return self._row_to_placed_bet(row) if row else None
 
     async def get_placed_bet(self, pb_id: int) -> "PlacedBet | None":
         cursor = await self._db.execute(
-            "SELECT * FROM placed_bets WHERE id=?", (pb_id,),
+            "SELECT * FROM placed_bets WHERE id=?",
+            (pb_id,),
         )
         row = await cursor.fetchone()
         return self._row_to_placed_bet(row) if row else None
@@ -712,11 +817,14 @@ class Store:
             current = await result_cursor.fetchone()
             if current is not None and current["result"] is not None:
                 await self.settle_placed_bet(
-                    existing["value_bet_id"], current["result"],
+                    existing["value_bet_id"],
+                    current["result"],
                 )
         return changed
 
-    async def has_open_decision_for_selection(self, game_id: int, selection: str) -> bool:
+    async def has_open_decision_for_selection(
+        self, game_id: int, selection: str
+    ) -> bool:
         """True when a decision that may carry money (pending/placed/unknown/
         settled) already exists for this game+selection — the CROSS-TIER
         double-bet guard (2026-08-30, shipped with warm-tier betting): warm and
@@ -740,7 +848,8 @@ class Store:
         realized P&L by settlement time."""
         cursor = await self._db.execute(
             "SELECT id, stake_czk, requested_odds, accepted_odds FROM placed_bets "
-            "WHERE value_bet_id=? AND status='placed'", (value_bet_id,),
+            "WHERE value_bet_id=? AND status='placed'",
+            (value_bet_id,),
         )
         row = await cursor.fetchone()
         if row is None:
@@ -806,14 +915,25 @@ class Store:
     @staticmethod
     def _row_to_placed_bet(row: aiosqlite.Row) -> "PlacedBet":
         return PlacedBet(
-            id=row["id"], value_bet_id=row["value_bet_id"], game_id=row["game_id"],
-            sport=row["sport"], status=row["status"], skip_reason=row["skip_reason"],
-            stake_czk=row["stake_czk"], requested_odds=row["requested_odds"],
-            min_odds=row["min_odds"], accepted_odds=row["accepted_odds"],
-            receipt_id=row["receipt_id"], error=row["error"],
+            id=row["id"],
+            value_bet_id=row["value_bet_id"],
+            game_id=row["game_id"],
+            sport=row["sport"],
+            status=row["status"],
+            skip_reason=row["skip_reason"],
+            stake_czk=row["stake_czk"],
+            requested_odds=row["requested_odds"],
+            min_odds=row["min_odds"],
+            accepted_odds=row["accepted_odds"],
+            receipt_id=row["receipt_id"],
+            error=row["error"],
             balance_after_czk=row["balance_after_czk"],
-            commanded_at=datetime.fromisoformat(row["commanded_at"]) if row["commanded_at"] else None,
-            resolved_at=datetime.fromisoformat(row["resolved_at"]) if row["resolved_at"] else None,
+            commanded_at=datetime.fromisoformat(row["commanded_at"])
+            if row["commanded_at"]
+            else None,
+            resolved_at=datetime.fromisoformat(row["resolved_at"])
+            if row["resolved_at"]
+            else None,
             latency_detect_ms=row["latency_detect_ms"],
             latency_place_ms=row["latency_place_ms"],
             settled_pl_czk=row["settled_pl_czk"],
@@ -836,28 +956,38 @@ class Store:
     @staticmethod
     def _row_to_game(row: aiosqlite.Row) -> Game:
         return Game(
-            id=row["id"], external_id=row["external_id"],
-            home_team=row["home_team"], away_team=row["away_team"],
+            id=row["id"],
+            external_id=row["external_id"],
+            home_team=row["home_team"],
+            away_team=row["away_team"],
             scheduled_at=datetime.fromisoformat(row["scheduled_at"]),
             commence_time=(
                 datetime.fromisoformat(row["commence_time"])
                 if row["commence_time"] is not None
                 else None
             ),
-            status=row["status"], home_score=row["home_score"], away_score=row["away_score"],
+            status=row["status"],
+            home_score=row["home_score"],
+            away_score=row["away_score"],
             sport=row["sport"],
         )
 
     @staticmethod
     def _row_to_snapshot(row: aiosqlite.Row) -> OddsSnapshot:
         return OddsSnapshot(
-            id=row["id"], game_id=row["game_id"], bookmaker=row["bookmaker"],
-            market_type=row["market_type"], selection=row["selection"],
-            line=row["line"], odds=row["odds"], is_closing=bool(row["is_closing"]),
+            id=row["id"],
+            game_id=row["game_id"],
+            bookmaker=row["bookmaker"],
+            market_type=row["market_type"],
+            selection=row["selection"],
+            line=row["line"],
+            odds=row["odds"],
+            is_closing=bool(row["is_closing"]),
             raw_response_path=row["raw_response_path"],
             source_updated_at=(
                 datetime.fromisoformat(row["source_updated_at"])
-                if row["source_updated_at"] else None
+                if row["source_updated_at"]
+                else None
             ),
             captured_at=datetime.fromisoformat(row["captured_at"]),
             sport=row["sport"],
@@ -866,12 +996,20 @@ class Store:
     @staticmethod
     def _row_to_value_bet(row: aiosqlite.Row) -> ValueBet:
         return ValueBet(
-            id=row["id"], game_id=row["game_id"], bookmaker=row["bookmaker"],
-            market_type=row["market_type"], selection=row["selection"],
-            line=row["line"], entry_odds=row["entry_odds"], fair_odds=row["fair_odds"],
-            edge_pct=row["edge_pct"], closing_odds=row["closing_odds"],
-            pinnacle_closing=row["pinnacle_closing"], clv_pct=row["clv_pct"],
-            result=row["result"], stake=row["stake"],
+            id=row["id"],
+            game_id=row["game_id"],
+            bookmaker=row["bookmaker"],
+            market_type=row["market_type"],
+            selection=row["selection"],
+            line=row["line"],
+            entry_odds=row["entry_odds"],
+            fair_odds=row["fair_odds"],
+            edge_pct=row["edge_pct"],
+            closing_odds=row["closing_odds"],
+            pinnacle_closing=row["pinnacle_closing"],
+            clv_pct=row["clv_pct"],
+            result=row["result"],
+            stake=row["stake"],
             tier=row["tier"],
             sport=row["sport"],
             excluded_reason=row["excluded_reason"],
@@ -880,7 +1018,8 @@ class Store:
             tipsport_url=row["tipsport_url"],
             sharp_source_updated_at=(
                 datetime.fromisoformat(row["sharp_source_updated_at"])
-                if row["sharp_source_updated_at"] else None
+                if row["sharp_source_updated_at"]
+                else None
             ),
             flagged_at=datetime.fromisoformat(row["flagged_at"]),
         )

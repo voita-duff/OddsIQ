@@ -6,6 +6,7 @@ fair_sel is the wanted side); mark_closing_snapshots freshness; CLV uses the
 opposite-signed Pinnacle line for spreads. (Live-candidate settlement was
 removed with the live-edge subsystem, 2026-08-27.)
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,7 +35,9 @@ class SettlementService:
         game.status = "live"
         logger.info(
             "game_live: game_id=%d away=%s home=%s",
-            game.id, _log_value(game.away_team), _log_value(game.home_team),
+            game.id,
+            _log_value(game.away_team),
+            _log_value(game.home_team),
         )
         await self._store.update_game_status(game.id, "live")
         await self._store.mark_closing_snapshots(
@@ -55,7 +58,9 @@ class SettlementService:
         """
         games = await self._store.get_final_games_with_incomplete_bets()
         if games:
-            logger.info("Backfilling %d historical game(s) with incomplete bets", len(games))
+            logger.info(
+                "Backfilling %d historical game(s) with incomplete bets", len(games)
+            )
             for game in games:
                 await self.recover_finalized_game(game)
 
@@ -80,7 +85,11 @@ class SettlementService:
         pending = await self._store.get_value_bets_without_clv(game.id)
         for vb in pending:
             closing_snap = await self._store.get_closing_odds(
-                game.id, vb.bookmaker, vb.market_type, vb.selection, vb.line,
+                game.id,
+                vb.bookmaker,
+                vb.market_type,
+                vb.selection,
+                vb.line,
             )
             # Get both sides of the Pinnacle closing market for vig removal.
             # The bet selection uses the exact bet line; spread opposites use
@@ -89,10 +98,18 @@ class SettlementService:
             opposite = _opposite_selection(vb.selection)
             opposite_line = self._opposite_line(vb.market_type, vb.line)
             pin_sel = await self._store.get_closing_odds(
-                game.id, "pinnacle", vb.market_type, vb.selection, vb.line,
+                game.id,
+                "pinnacle",
+                vb.market_type,
+                vb.selection,
+                vb.line,
             )
             pin_opp = await self._store.get_closing_odds(
-                game.id, "pinnacle", vb.market_type, opposite, opposite_line,
+                game.id,
+                "pinnacle",
+                vb.market_type,
+                opposite,
+                opposite_line,
             )
             if closing_snap and pin_sel and pin_opp:
                 # Explicit mapping: remove_vig returns (fair_sel, fair_opp) in argument order.
@@ -118,9 +135,14 @@ class SettlementService:
                     logger.info(
                         "clv_suspect: bookmaker=%s game_id=%d market=%s "
                         "selection=%s line=%s clv_pct=%.2f reason=%s tier=%s",
-                        vb.bookmaker, vb.game_id, vb.market_type, vb.selection,
+                        vb.bookmaker,
+                        vb.game_id,
+                        vb.market_type,
+                        vb.selection,
                         "" if vb.line is None else f"{vb.line}",
-                        clv * 100, vb.excluded_reason, vb.tier,
+                        clv * 100,
+                        vb.excluded_reason,
+                        vb.tier,
                     )
                     continue
                 if vb.tier == SHADOW_TIER:
@@ -134,7 +156,10 @@ class SettlementService:
                     logger.info(
                         "clv_shadow: bookmaker=%s game_id=%d market=%s "
                         "selection=%s line=%s clv_pct=%.2f",
-                        vb.bookmaker, vb.game_id, vb.market_type, vb.selection,
+                        vb.bookmaker,
+                        vb.game_id,
+                        vb.market_type,
+                        vb.selection,
                         "" if vb.line is None else f"{vb.line}",
                         clv * 100,
                     )
@@ -150,7 +175,10 @@ class SettlementService:
                 )
                 logger.info(
                     "clv: bookmaker=%s game_id=%d market=%s selection=%s line=%s clv_pct=%.2f",
-                    vb.bookmaker, vb.game_id, vb.market_type, vb.selection,
+                    vb.bookmaker,
+                    vb.game_id,
+                    vb.market_type,
+                    vb.selection,
                     "" if vb.line is None else f"{vb.line}",
                     clv * 100,
                 )
@@ -166,8 +194,11 @@ class SettlementService:
         pending = await self._store.get_pending_value_bets(game.id)
         for vb in pending:
             result = resolve_bet_result(
-                vb.market_type, vb.selection, vb.line,
-                game.home_score, game.away_score,
+                vb.market_type,
+                vb.selection,
+                vb.line,
+                game.home_score,
+                game.away_score,
             )
             await self._store.update_value_bet_result(vb.id, result)
             # Settle the linked auto-betting decision (real-money P&L) — a
@@ -181,16 +212,24 @@ class SettlementService:
                 logger.info(
                     "result_suspect: bookmaker=%s game_id=%d market=%s "
                     "selection=%s line=%s result=%s reason=%s tier=%s",
-                    vb.bookmaker, game.id, vb.market_type, vb.selection,
+                    vb.bookmaker,
+                    game.id,
+                    vb.market_type,
+                    vb.selection,
                     "" if vb.line is None else f"{vb.line}",
-                    result, vb.excluded_reason, vb.tier,
+                    result,
+                    vb.excluded_reason,
+                    vb.tier,
                 )
                 continue
             self._print_result(game, vb, result)
             logger.info(
                 "result: bookmaker=%s game_id=%d market=%s selection=%s line=%s "
                 "result=%s clv_pct=%s",
-                vb.bookmaker, game.id, vb.market_type, vb.selection,
+                vb.bookmaker,
+                game.id,
+                vb.market_type,
+                vb.selection,
                 "" if vb.line is None else f"{vb.line}",
                 result,
                 "" if vb.clv_pct is None else f"{vb.clv_pct:.2f}",
