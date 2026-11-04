@@ -6,11 +6,11 @@ Personal cheat sheet for OddsIQ. Read this when you sit down with the project af
 
 ## What this is, in two sentences
 
-Async Python pipeline (multi-sport, live-first) that detects +EV moneyline opportunities by comparing **Tipsport** (the sole soft book) against **Pinnacle** sharp lines via The Odds API, across **NBA, NHL, MLB, WNBA, and NFL** (MLB + NFL enabled since 2026-08-25). The 2026-06-02 refactor shipped: sport-axis fan-out via `SportProfile`, The Odds API as both sharp reference and schedule/scores source (balldontlie retired), pipeline decomposed into focused services, and data-driven far/warm/hot tiers with a budget governor. (The live scout that also shipped then was FULLY REMOVED 2026-08-27 — no post-tipoff polling; dataset archived offline.)
+Async Python pipeline (multi-sport) that detects +EV moneyline opportunities by comparing **Tipsport** (the sole soft book) against **Pinnacle** sharp lines via The Odds API, across **NBA, NHL, MLB, WNBA, and NFL** (MLB + NFL enabled since 2026-08-25). The 2026-06-02 refactor shipped: sport-axis fan-out via `SportProfile`, The Odds API as both sharp reference and schedule/scores source (balldontlie retired), pipeline decomposed into focused services, and data-driven far/warm/hot tiers with a budget governor. (The live scout that also shipped then was FULLY REMOVED 2026-08-27 — no post-tipoff polling; dataset archived offline.)
 
 ## Project mode — evaluation, not commitment
 
-You are collecting CLV data passively. **P3 (dashboard) has shipped. P4 (resilience) is partially shipped — Docker, Telegram heartbeat, and Odds-API backoff landed 2026-06-09; recovery, log-rotation monitoring, and season-boundary handling are still deferred. You will decide whether to build the remaining P4 items + P5-P6 (auto-betting, Kelly staking) based on accumulated CLV alone.** Bug fixes are fair game; new feature work for still-open phases is not, unless you decide otherwise.
+You are collecting CLV data passively. **P3 (dashboard) has shipped. P4 (resilience) is partially shipped — Docker, Telegram heartbeat, and Odds-API backoff landed 2026-06-09; recovery, log-rotation monitoring, and season-boundary handling are still deferred. The auto-betting engine shipped separately on 2026-08-09; whether to build the remaining P4 items and P5-P6 depends on the accumulated CLV.** Bug fixes are fair game; new feature work for still-open phases is not, unless you decide otherwise.
 
 The roadmap's "200 manually placed bets" gate in P5 is a known dead gate — you sleep through 3 AM CET tipoffs. When you actually commit to P5, revise that gate.
 
