@@ -16,7 +16,7 @@ related:
 
 # CLI Entry Point
 
-Entry point for the OddsIQ pipeline. Argparse-driven dispatch over a default run, a budget-probe flag, and 7 subcommands (data hygiene, data-quality exclusion, zombie-game deletion, auto-betting control, a per-book audit, a smoke pre-flight, and the dashboard). Wires startup/shutdown backups, runs pending migrations, validates env, and hands off to [[Pipeline Services]]. (The `live-scout-report` and `live-discover` subcommands were deleted 2026-08-27 with the live-edge subsystem — `oddsiq/audit/live_scout.py` went with them; code archived at git tag `archive/live-edges-2026-08-27`.)
+Entry point for the OddsIQ pipeline. Argparse-driven dispatch over a default run, a budget-probe flag, and 7 subcommands (data hygiene, data-quality exclusion, zombie-game deletion, auto-betting control, a per-book audit, a smoke pre-flight, and the dashboard). Wires startup/shutdown backups, runs pending migrations, validates env, and hands off to [[Pipeline Services]]. (The `live-scout-report` and `live-discover` subcommands were deleted 2026-08-27 with the live-edge subsystem — `oddsiq/audit/live_scout.py` went with them; code archived in the pre-release history.)
 
 ## Source Files
 

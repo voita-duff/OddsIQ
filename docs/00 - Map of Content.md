@@ -71,7 +71,7 @@ Async Python pipeline for detecting +EV moneyline betting opportunities across f
 ## Decisions
 
 - [[Markets]] — Pinnacle scope reduction to moneyline by default
-- [[Live-First]] — The retired live-first thesis: original rationale, why the live-edge subsystem was removed 2026-08-27, and the lifecycle facts that survive. (The companion Live Tier Scout decision note was deleted with the subsystem; git history + tag `archive/live-edges-2026-08-27` retain it.)
+- [[Live-First]] — The retired live-first thesis: original rationale, why the live-edge subsystem was removed 2026-08-27, and the lifecycle facts that survive. (The companion Live Tier Scout decision note was deleted with the subsystem; the pre-release history retains it.)
 - [[Multi-Sport Expansion]] — Tipsport coverage map + deferred sports (NFL/NCAAF/NCAAB) with competition IDs
 
 ---

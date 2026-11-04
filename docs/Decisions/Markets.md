@@ -109,7 +109,7 @@ Po P2: spusť Tipsport spread/total vs Fortuna spread/total comparison. Jestli i
 
 ## Note (2026-06-02)
 
-The multi-book era (Betano/Allwyn/Fortuna) was archived on 2026-06-02 in the multi-sport / live-first refactor (git tag `archive/multibook-2026-06-02`). Tipsport is again the single soft book. The system remains moneyline-only (`PINNACLE_MARKETS=h2h`), so the inter-book spread/total match-rate question raised in "Triggers to revisit" §1 (and the 2026-05-31 note) is now fully retired — there are no other Czech books to compare spread/total match rates against. If spread/total is revisited in the future, it would be within a single-book scope.
+The multi-book era (Betano/Allwyn/Fortuna) was archived on 2026-06-02 in the multi-sport / live-first refactor (kept in the pre-release history). Tipsport is again the single soft book. The system remains moneyline-only (`PINNACLE_MARKETS=h2h`), so the inter-book spread/total match-rate question raised in "Triggers to revisit" §1 (and the 2026-05-31 note) is now fully retired — there are no other Czech books to compare spread/total match rates against. If spread/total is revisited in the future, it would be within a single-book scope.
 
 ---
 

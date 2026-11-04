@@ -105,7 +105,7 @@ sqlite3 "$LATEST" "
 ### Verification Checklist
 
 - File size is non-zero and close to the live database size.
-- **All six tables exist** with row counts matching or slightly behind the live DB: `games`, `odds_snapshots`, `value_bets`, `placed_bets`, `meta`, `schema_version`. (Backups taken before 2026-08-27 additionally contain `live_edge_candidates` — migration 011 dropped it with the live-edge subsystem removal; the dataset also lives in the standalone archive at `~/dev/oddsiq-live-edge-archive/`.)
+- **All six tables exist** with row counts matching or slightly behind the live DB: `games`, `odds_snapshots`, `value_bets`, `placed_bets`, `meta`, `schema_version`. (Backups taken before 2026-08-27 additionally contain `live_edge_candidates` — migration 011 dropped it with the live-edge subsystem removal; the dataset also lives in a standalone offline archive.)
 - `PRAGMA integrity_check` returns `ok` — already run automatically by `oddsiq/backup.py` after every backup write; a corrupt destination is deleted and the function returns `None`. A manual re-check is belt-and-suspenders.
 - The most recent `captured_at` timestamp is from tonight's session.
 
@@ -146,7 +146,7 @@ SQLite handles millions of rows without issue. The database itself will not beco
 | --- | --- | --- |
 | `games` table | Keep forever | Tiny (< 5,000 rows/season across all sports), needed for joins |
 | `value_bets` table | Keep forever | The core analytical dataset, irreplaceable |
-| `live_edge_candidates` (dropped 2026-08-27) | Archived at `~/dev/oddsiq-live-edge-archive/` | Table dropped by migration 011 with the live-edge subsystem; pre-removal backups still contain it |
+| `live_edge_candidates` (dropped 2026-08-27) | Archived offline | Table dropped by migration 011 with the live-edge subsystem; pre-removal backups still contain it |
 | `odds_snapshots` table | Keep forever (active season), archive after season end | Needed for CLV recalculation and historical analysis |
 | Raw JSON | Auto-pruned after `RAW_RESPONSE_KEEP_DAYS` (default 14) | Only useful for debugging parser changes; not long-term analysis |
 | Backup copies | Keep last 7 daily + 6 monthly archives (configurable) | Prevents backup directory from growing unbounded |

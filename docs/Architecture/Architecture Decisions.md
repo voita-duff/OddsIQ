@@ -99,7 +99,7 @@ See [[Budget Governor]] for the throttle level table and math.
 
 ## D8 · Betano / Allwyn / Fortuna Deleted Entirely
 
-**Decision:** The three opt-in Czech books are removed from the codebase — code, tests, config, docs. Recoverable via the git tag `archive/multibook-2026-06-02`.
+**Decision:** The three opt-in Czech books are removed from the codebase — code, tests, config, docs. Recoverable from the pre-release history.
 
 **Why:** All three price more sharply than Tipsport (tighter vig, fewer exploitable gaps). Operational cost (Playwright + session management for Betano; key rotation for Allwyn; two-step REST + tournament ID changes for Fortuna) outweighs the marginal signal. Tipsport is the proven soft book (+5.87% avg CLV). The archive tag preserves full recoverability if a Tipsport-ban fallback is ever needed.
 
@@ -139,7 +139,7 @@ See [[TipsportScraper]] for the Cloudflare/Playwright/JSESSIONID-sync mechanics.
 
 **What survives (lifecycle, unchanged):** `status='live'` game transitions + `game_live:`/`game_final:` logs, closing snapshots marked at tipoff (clock-driven — CLV provably unaffected), finals via `/scores` + settlement, `SportProfile.live_backstop_hours` as a pure lifecycle window (zombie-game detection + `/scores` refresh scoping), and `delete-zombie-games` (cascade no longer includes the dropped table).
 
-**Archive:** dataset at `~/dev/oddsiq-live-edge-archive/`; pre-removal code at git tag `archive/live-edges-2026-08-27`. See [[Live-First]] for the full retirement record.
+**Archive:** the dataset and the pre-removal code are kept offline, outside this repository. See [[Live-First]] for the full retirement record.
 
 ---
 

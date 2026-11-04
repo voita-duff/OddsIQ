@@ -148,7 +148,7 @@ Pinnacle's `_commence_time` is reconciled into `games.commence_time` once per ga
 
 ### 4b. Live Scout — removed 2026-08-27
 
-There is no post-tipoff detection stage anymore. The live scout (`LiveScoutService.detect_live_edges()` → `live_edge_candidates`, markout confirmation, live-tier Pinnacle polling) was removed with the live-edge subsystem; the dataset is archived at `~/dev/oddsiq-live-edge-archive/`. See [[Live-First]].
+There is no post-tipoff detection stage anymore. The live scout (`LiveScoutService.detect_live_edges()` → `live_edge_candidates`, markout confirmation, live-tier Pinnacle polling) was removed with the live-edge subsystem; the dataset is archived offline. See [[Live-First]].
 
 ### 5. Detection output + betting handoff
 

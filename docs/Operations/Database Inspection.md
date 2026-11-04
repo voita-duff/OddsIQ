@@ -23,7 +23,7 @@ SQLite queries for inspecting the OddsIQ database during and after game night se
 sqlite3 oddsiq.db
 ```
 
-The schema has 6 tables: `games`, `odds_snapshots`, `value_bets`, `placed_bets`, `meta`, `schema_version`. (The `live_edge_candidates` table was dropped by migration 011 on 2026-08-27 with the live-edge subsystem removal; the dataset is archived at `~/dev/oddsiq-live-edge-archive/`.) The data tables carry a `sport` column (added in migration `005_add_sport_to_tables.py`) — filter or group by it to separate NBA, NHL, MLB, and WNBA data. See [[Data Model]] for the full schema.
+The schema has 6 tables: `games`, `odds_snapshots`, `value_bets`, `placed_bets`, `meta`, `schema_version`. (The `live_edge_candidates` table was dropped by migration 011 on 2026-08-27 with the live-edge subsystem removal; the dataset is archived offline.) The data tables carry a `sport` column (added in migration `005_add_sport_to_tables.py`) — filter or group by it to separate NBA, NHL, MLB, and WNBA data. See [[Data Model]] for the full schema.
 
 ## Games Today (all sports)
 
@@ -96,7 +96,7 @@ LIMIT 21;
 
 ## Live Edge Candidates — table dropped 2026-08-27
 
-The `live_edge_candidates` table (the live scout's time series) was dropped by migration 011 with the live-edge subsystem removal. Query the archived copy at `~/dev/oddsiq-live-edge-archive/` if the historical dataset is needed; backups predating 2026-08-27 also still contain it.
+The `live_edge_candidates` table (the live scout's time series) was dropped by migration 011 with the live-edge subsystem removal. Query the offline archived copy if the historical dataset is needed; backups predating 2026-08-27 also still contain it.
 
 ## Schema Version Check
 

@@ -54,7 +54,7 @@ oddsiq tipsport-smoke --sport nhl                                  # same, for N
 oddsiq tipsport-smoke --sport mlb                                  # same, for MLB
 ```
 
-(The `live-discover` and `live-scout-report` subcommands were removed 2026-08-27 with the live-edge subsystem; the dataset they reported on is archived at `~/dev/oddsiq-live-edge-archive/`.)
+(The `live-discover` and `live-scout-report` subcommands were removed 2026-08-27 with the live-edge subsystem; the dataset they reported on is archived offline.)
 
 `cleanup-closing-flags` is a data-hygiene tool from the closing-snapshot integrity track. Use it once if you have historical rows where `is_closing=1` was set under the old (no-freshness) logic and you want them re-evaluated under the current `CLOSING_FRESHNESS_MINUTES` gate. Per-game work is two transactions; mid-game failure leaves all rows for that game at `is_closing=0` (a SAFE state — recoverable by re-running).
 
@@ -64,7 +64,7 @@ oddsiq tipsport-smoke --sport mlb                                  # same, for M
 
 `mark-excluded` is a one-shot data-quality tool. It stamps `excluded_reason` on `value_bets` (by `flagged_at`) for the named sports inside a half-open `[--from, --until)` UTC window, hiding known-bad rows from every reporting surface (dashboard, audit) without deleting them. (It stamps `value_bets` only since 2026-08-27 — the `live_edge_candidates` table it also used to stamp was dropped with the live-edge subsystem.) All four of `--sports`, `--from`, `--until`, `--reason` are required; bounds are normalized to UTC (naive = UTC; an explicit offset is converted). Re-running is a no-op (already-excluded rows are skipped). `--dry-run` prints per-table counts without writing. Built for the 2026-06 basketball matchView incident — set `--until` to the *deploy* time of fix `a1669a4` on the host running the pipeline, not the commit date. Take a backup first (the startup backup in `BACKUP_DIR` is the safety net).
 
-**Live scout — removed 2026-08-27.** There is no post-tipoff polling: in-progress games are lifecycle-tracked only (`game_live:`/`game_final:` logs, finals via `/scores`, closing snapshots marked at tipoff). The live-scout table/commands are gone; the dataset is archived at `~/dev/oddsiq-live-edge-archive/`.
+**Live scout — removed 2026-08-27.** There is no post-tipoff polling: in-progress games are lifecycle-tracked only (`game_live:`/`game_final:` logs, finals via `/scores`, closing snapshots marked at tipoff). The live-scout table/commands are gone; the dataset is archived offline.
 
 ## Expected Startup Output
 

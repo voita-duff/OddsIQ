@@ -141,7 +141,7 @@ at a normal 5.1% vig, aligning with Pinnacle h2h). NBA and WNBA now use
 `WINNER_FINAL_DECISION` with `superSportId=7`; **only MLB** rides the default
 `WINNER_WHOLE_MATCH` tab (baseball cannot tie). The contamination predates the
 refactor: the legacy NBA-only scraper also read `WINNER_WHOLE_MATCH` (verified
-against `archive/multibook-2026-06-02`), so **every NBA Tipsport moneyline row
+against the pre-refactor code), so **every NBA Tipsport moneyline row
 since collection began (April 2026) — `value_bets` AND `live_edge_candidates`
 (markout confirmation re-checks Pinnacle fair, so it cannot catch this
 structural mislabel) — carries the systematic positive bias** until the fix is
@@ -153,6 +153,6 @@ deployed. Remediation: stamp the window with `oddsiq mark-excluded` on the VM
 ## Related
 
 - `docs/Decisions/Markets.md` — Pinnacle market scope (moneyline-only)
-- The multi-book validation gate this refactor supersedes — doc removed in the 2026-06-02 cleanup; the full pre-refactor state is preserved at git tag `archive/multibook-2026-06-02`
+- The multi-book validation gate this refactor supersedes — doc removed in the 2026-06-02 cleanup; the full pre-refactor state is preserved in the pre-release history
 - `docs/Known Issues/Fixed - Moneyline Tie Not Handled.md` — draw/tie handling (shipped)
 - `oddsiq/scrapers/normalize.py`, `oddsiq/scrapers/tipsport.py`, `oddsiq/config.py`

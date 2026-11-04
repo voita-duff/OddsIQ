@@ -6,7 +6,7 @@ Personal cheat sheet for OddsIQ. Read this when you sit down with the project af
 
 ## What this is, in two sentences
 
-Async Python pipeline (multi-sport, live-first) that detects +EV moneyline opportunities by comparing **Tipsport** (the sole soft book) against **Pinnacle** sharp lines via The Odds API, across **NBA, NHL, MLB, WNBA, and NFL** (MLB + NFL enabled since 2026-08-25). The 2026-06-02 refactor shipped: sport-axis fan-out via `SportProfile`, The Odds API as both sharp reference and schedule/scores source (balldontlie retired), pipeline decomposed into focused services, and data-driven far/warm/hot tiers with a budget governor. (The live scout that also shipped then was FULLY REMOVED 2026-08-27 — no post-tipoff polling; dataset archived at `~/dev/oddsiq-live-edge-archive/`.)
+Async Python pipeline (multi-sport, live-first) that detects +EV moneyline opportunities by comparing **Tipsport** (the sole soft book) against **Pinnacle** sharp lines via The Odds API, across **NBA, NHL, MLB, WNBA, and NFL** (MLB + NFL enabled since 2026-08-25). The 2026-06-02 refactor shipped: sport-axis fan-out via `SportProfile`, The Odds API as both sharp reference and schedule/scores source (balldontlie retired), pipeline decomposed into focused services, and data-driven far/warm/hot tiers with a budget governor. (The live scout that also shipped then was FULLY REMOVED 2026-08-27 — no post-tipoff polling; dataset archived offline.)
 
 ## Project mode — evaluation, not commitment
 

@@ -166,7 +166,7 @@ Migration 010 records exactly one betting decision per `value_bets` row (`value_
 
 #### `live_edge_candidates` — dropped by migration 011 (2026-08-27)
 
-The live-scout time series (created by migration 004, extended by 006/008) was dropped by migration 011 with the removal of the live-edge subsystem. It recorded passive live Tipsport-vs-Pinnacle moneyline edges post-tipoff, deliberately outside the `value_bets`/CLV lifecycle — which is why dropping it removed no pregame data. The full dataset is archived at `~/dev/oddsiq-live-edge-archive/` and the pre-removal code at git tag `archive/live-edges-2026-08-27`; migrations 004/006/008 stay in the forward-only chain (a fresh DB creates the table in 004 and drops it in 011). See [[Live-First]] for the retirement rationale.
+The live-scout time series (created by migration 004, extended by 006/008) was dropped by migration 011 with the removal of the live-edge subsystem. It recorded passive live Tipsport-vs-Pinnacle moneyline edges post-tipoff, deliberately outside the `value_bets`/CLV lifecycle — which is why dropping it removed no pregame data. The full dataset is archived offline and the pre-removal code in the pre-release history; migrations 004/006/008 stay in the forward-only chain (a fresh DB creates the table in 004 and drops it in 011). See [[Live-First]] for the retirement rationale.
 
 #### `meta` — key/value scratchpad for cross-restart state
 

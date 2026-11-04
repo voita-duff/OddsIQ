@@ -80,7 +80,7 @@ Pregame +EV detection → `value_bets` (+ the `PendingBet`s handed to the bettin
 - Writes `ValueBet` rows with the tier stamped (warm- and hot-tier observations of the same selection coexist as independent rows via `ON CONFLICT ... DO NOTHING`); since migration 013 the conflict identity also carries `IFNULL(excluded_reason, '')`, so a guard-stamped observation and a later CLEAN detection of the same selection/tier coexist rather than the stamp swallowing the clean one.
 - Logs (and prints) a detection on NEW inserts only — a dedup hit is silent (`insert_value_bet` returns `None` and the loop `continue`s). No Telegram: every bettor-facing message comes from `BettingService` (bet placed / rejected-failed / not-logged-in skip / auto-disarm), `SettlementService` (won/lost for a real `placed_bets` row), or the scheduler's login hook.
 
-> **LiveScoutService — removed 2026-08-27.** The live-edge subsystem (post-tipoff polling, `live_scout_service.py`, markout classification, the `live_edge_candidates` table) was deleted entirely; the dataset is archived at `~/dev/oddsiq-live-edge-archive/` (code at git tag `archive/live-edges-2026-08-27`). See [[Live-First]].
+> **LiveScoutService — removed 2026-08-27.** The live-edge subsystem (post-tipoff polling, `live_scout_service.py`, markout classification, the `live_edge_candidates` table) was deleted entirely; the dataset is archived offline (code in the pre-release history). See [[Live-First]].
 
 ## SettlementService
 

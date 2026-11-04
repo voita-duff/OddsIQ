@@ -25,7 +25,7 @@ End-to-end async pipeline: Tipsport scraper fetches moneyline odds per sport on 
 | CLV calculation + bet resolution | Done | |
 | Pipeline services (Scheduler, PollCoordinator, EdgeService, SettlementService, BudgetGovernor, CoverageMonitor) | Done | Decomposed in the 2026-06-02 refactor |
 | Budget Governor | Done | Throttles Pinnacle cadence as monthly quota tightens |
-| Live scout | Removed 2026-08-27 | The live-edge subsystem (post-tipoff polling, `live_edge_candidates`, markout) was deleted; dataset archived at `~/dev/oddsiq-live-edge-archive/` (see [[Live-First]]) |
+| Live scout | Removed 2026-08-27 | The live-edge subsystem (post-tipoff polling, `live_edge_candidates`, markout) was deleted; dataset archived offline (see [[Live-First]]) |
 | Bettor-facing Telegram | Done (rebranded 2026-08-10) | Bet placed / won-lost / rejected-failed / auto-disarm / login lost-restored, plus the rate-limited not-logged-in skip. The original value-bet, CLV and session-summary alerts were deleted with their formatters — those events are log-only ([[Telegram Notifications]]) |
 | Auto-betting engine | Shipped 2026-08-09 | Commissioned ahead of the phase order; three phases (`placed_bets` ledger + `BettingService`, Chrome actuator + MV3 extension, `/betting` dashboard tab) |
 | CLI entry point | Done | |
@@ -37,7 +37,7 @@ End-to-end async pipeline: Tipsport scraper fetches moneyline odds per sport on 
 | --- | --- | --- |
 | P0 | [[P0 - Telegram Alerts]] | Complete (its alert set was retired by the 2026-08-10 bettor-facing rebrand) |
 | P1 | [[P1 - State Persistence and Bug Fixes]] | Complete (not the auto-betting track's own "P1" — that numbering is separate) |
-| P2 | More Czech Bookmakers | Archived (Betano/Allwyn/Fortuna shipped P2.1–P2.4 then archived 2026-06-02; multi-sport / live-first refactor superseded multi-book as the expansion axis; recoverable via git tag `archive/multibook-2026-06-02`) |
+| P2 | More Czech Bookmakers | Archived (Betano/Allwyn/Fortuna shipped P2.1–P2.4 then archived 2026-06-02; multi-sport / live-first refactor superseded multi-book as the expansion axis; recoverable from the pre-release history) |
 | P2.5 | Multi-Sport / Live-First Refactor | Complete (shipped 2026-06-02): NBA/NHL/MLB/WNBA, Tipsport-only, Odds API schedule, pipeline decomposition, Budget Governor, live scout promoted, multi-sport dashboard |
 | P3 | [[P3 - Dashboard and Reporting]] | Complete (shipped 2026-05-28; multi-sport dashboard updated 2026-06-02; see [[Dashboard]]) |
 | P4 | [[P4 - Resilience and Deployment]] | In progress (Docker + Odds-API backoff shipped; the Telegram heartbeat shipped then was removed 2026-08-10 for the `HEARTBEAT_PING_URL` dead-man ping; recovery / log-rotation monitoring / season boundaries deferred) |
@@ -50,7 +50,7 @@ Cross-phase open questions (Kelly fraction, bookmaker limits / ban timing, multi
 
 The phase order is value-driven, not "least-blocked first." Each phase compounds with the next:
 
-- **P2 multi-book era -- archived 2026-06-02.** Betano/Allwyn/Fortuna shipped P2.1–P2.4 but the multi-book expansion axis was superseded by the multi-sport / live-first refactor. As of the archive, only Tipsport produced value bets (50, avg CLV +5.87%). The git tag `archive/multibook-2026-06-02` preserves the multi-book codebase.
+- **P2 multi-book era -- archived 2026-06-02.** Betano/Allwyn/Fortuna shipped P2.1–P2.4 but the multi-book expansion axis was superseded by the multi-sport / live-first refactor. As of the archive, only Tipsport produced value bets (50, avg CLV +5.87%). The pre-release history preserves the multi-book codebase.
 - **P2.5 multi-sport / live-first refactor -- shipped 2026-06-02.** NBA/NHL/MLB/WNBA now covered via the `SportProfile` registry. Tipsport is the single soft book. The Odds API is both the sharp reference and the schedule/scores source; balldontlie is retired. The pipeline is decomposed into focused services under `oddsiq/pipeline/`. Live scout promoted to first-class service at the time (the live-edge subsystem was later removed entirely, 2026-08-27).
 - **P3 (Dashboard) -- shipped 2026-05-28, multi-sport update 2026-06-02; `/bets` + `/upcoming` tabs added 2026-06-08.** Local FastAPI process started via `oddsiq dashboard`. `/upcoming` is the read-only 24h multi-sport schedule with bet-window badges; `/live` is the game-night console (status strip, coverage matrix — pregame-only since 2026-08-27 — activity feed, raw logs); `/betting` (which replaced `/bets`) holds the auto-betting engine surface + recent value bets; `/analysis` provides decision-support analytics (big numbers, CLV trend, per-book scoreboard, edge distribution, calibration); `/settings` is read-only config. The dashboard reads `oddsiq.db` (WAL — concurrent readers OK) and tails `logs/oddsiq.log`. See [[Dashboard]] for the implementation surface.
 - **P4 (Resilience) third** -- harden the foundation before automating real money flow. Unattended placement (P5) needs reliable recovery, log rotation, season-boundary handling, and graceful failure on every scraper.

@@ -48,7 +48,7 @@ class BaseScraper(ABC):
 
 Three members, two abstract:
 
-- **`name` (property)** — a short identifier used in logs, health metrics, and coverage tracking. Current values: `"pinnacle"`, `"tipsport"`. Deleted soft-book scrapers (`betano`, `allwyn`, `fortuna`) followed the same pattern — archived at git tag `archive/multibook-2026-06-02`.
+- **`name` (property)** — a short identifier used in logs, health metrics, and coverage tracking. Current values: `"pinnacle"`, `"tipsport"`. Deleted soft-book scrapers (`betano`, `allwyn`, `fortuna`) followed the same pattern — archived in the pre-release history.
 - **`fetch_odds(game_date, profile)` (async)** — returns a list of `OddsSnapshot` instances for the given date and sport profile. Implementations set `game_id=0` (placeholder — [[Scheduler]] resolves real IDs via [[Team Name Normalization]]) and attach `_home_team` / `_away_team`. Must be **non-raising for operational errors** — return `[]` on HTTP failure, API-structure changes, or empty markets. Raising is reserved for programmer bugs.
 - **`close()` (async, concrete)** — default no-op. Override when the subclass owns resources needing explicit teardown (HTTP client, Playwright browser, etc.). [[Scheduler]] calls this during graceful shutdown.
 

@@ -108,8 +108,7 @@ Per-sport competition id / superSportId / moneyline matchView now live on each [
 The live-edge subsystem — post-tipoff polling, `LiveScoutService`, markout
 classification, the `live_edge_candidates` table, and all nine `POLL_TIER_LIVE`/
 `LIVE_*` knobs — was fully removed 2026-08-27. Post-tipoff games are unpollable;
-game lifecycle is schedule/clock-driven. Dataset + re-implementation guide:
-`~/dev/oddsiq-live-edge-archive/`; code tag `archive/live-edges-2026-08-27`.
+game lifecycle is schedule/clock-driven. Dataset, code and a re-implementation guide are archived offline.
 
 ## Schedule Refresh
 

@@ -160,7 +160,7 @@ Deferred sports (NCAAF / NCAAB) with their competition IDs are tracked in [[Mult
 The `live_tipsport_coverage` field and the live-tier Pinnacle poll it gated were
 removed with the whole live-edge subsystem (2026-08-27). Post-tipoff games are
 unpollable; `live_backstop_hours` survives purely as the game-lifecycle window
-(zombie detection, /scores refresh scoping). Archive: `~/dev/oddsiq-live-edge-archive/`.
+(zombie detection, /scores refresh scoping). Archive: kept offline, outside this repository.
 
 ## Team Name Normalization
 

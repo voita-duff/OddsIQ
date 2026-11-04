@@ -4,8 +4,8 @@ the live tier cost ~150-225 Odds API credits/day for data nobody acted on).
 
 The complete dataset (46,921 rows, 2026-06-07 → 2026-08-27) was archived
 BEFORE this migration ran on production: SQL dump + CSV + restore/reimplement
-guide at ~/dev/oddsiq-live-edge-archive/ (outside the repo), plus the git tag
-`archive/live-edges-2026-08-27` for the code. VM backups predating the drop
+guide in an offline archive outside the repo, plus a tagged copy of
+the code in the pre-release history. VM backups predating the drop
 retain the table as well.
 
 Idempotent: DROP TABLE IF EXISTS, so a DB that never had the table (or had it

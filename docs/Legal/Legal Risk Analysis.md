@@ -20,7 +20,7 @@ OddsIQ scrapes Tipsport's public-facing REST API without authentication. This do
 
 This document covers **Phase 1 operations only** -- scraping public odds data. It does NOT cover automated bet placement, which is a separate planned feature ([[P5 - Auto-Betting]]) with a different risk profile. The auto-betting section below summarizes the additional risk surface; a full legal reassessment should be done before P5 implementation.
 
-**Single-book reality.** The pipeline now scrapes only Tipsport. The multi-book era (Betano, Allwyn, Fortuna) was archived on 2026-06-02 in the multi-sport / live-first refactor (recoverable via git tag `archive/multibook-2026-06-02`). The analysis below is written around Tipsport — the sole soft book — and the public-endpoint / factual-data reasoning is unchanged from the original single-book baseline.
+**Single-book reality.** The pipeline now scrapes only Tipsport. The multi-book era (Betano, Allwyn, Fortuna) was archived on 2026-06-02 in the multi-sport / live-first refactor (recoverable from the pre-release history). The analysis below is written around Tipsport — the sole soft book — and the public-endpoint / factual-data reasoning is unchanged from the original single-book baseline.
 
 ## Czech Legal Context
 
