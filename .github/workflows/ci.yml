@@ -36,6 +36,9 @@ jobs:
       - name: Lint (ruff)
         run: ruff check oddsiq/ tests/ scripts/
 
+      - name: Format check (ruff)
+        run: ruff format --check oddsiq/ tests/ scripts/
+
       - name: Tests
         run: pytest tests/ -q
 
