@@ -9,8 +9,9 @@ PYTHON := $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || echo pytho
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-install:  ## Editable install (pip install -e .)
-	pip install -e .
+install:  ## Editable install with dev tools, plus the Playwright Chromium build
+	$(PYTHON) -m pip install -e '.[dev]'
+	$(PYTHON) -m playwright install chromium
 
 test:  ## Run the full test suite
 	$(PYTHON) -m pytest tests/
