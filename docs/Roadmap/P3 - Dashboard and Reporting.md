@@ -55,4 +55,3 @@ The original "ROI by market type" success criterion is partially met: `PINNACLE_
 
 - [[Phase Overview]]
 - [[First Game Night]] -- initial production data
-- [[Edge Distribution]] -- detailed edge analysis

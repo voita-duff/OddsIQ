@@ -95,14 +95,9 @@ ORDER BY night DESC LIMIT 7;
 
 Check: CLV should be populated on bets whose closing snapshot was captured within `CLOSING_FRESHNESS_MINUTES` (default 30) **before** effective tipoff (the gate rejects snapshots both too old and post-tipoff). **NULL `clv_pct` is not always failure** — the freshness gate intentionally leaves `is_closing=0` (and therefore `clv_pct` NULL) when the latest snapshot is too stale or was captured after tipoff, so the bet shows up here as "missing CLV" but that's correct behavior. To distinguish capture failure from gate rejection, query `is_closing` on the bet's game: if no snapshot was marked closing for the bookmaker/market/selection but snapshots exist near tipoff, the gate ran and rejected; if no snapshots exist near tipoff at all, polling actually missed the window. NULL `result` on final games still means the resolver didn't run (clean failure).
 
-## Edge Distribution Tracking
-
-The canonical query lives in [[Edge Distribution]] — run it after every 5 game nights (or before any Pinnacle-market-scope decision) to update the market-type breakdown. The Edge Distribution doc owns the future-safe version of the query (counts all flagged edges and reports `edges_with_clv` separately, so "edges detected" and "edges with CLV" don't get conflated). Don't duplicate the SQL here.
-
 ## See Also
 
 - [[SQLite Store]] -- database engine and WAL mode details
 - [[Data Model]] -- schema for `games`, `odds_snapshots`, `value_bets`
 - [[Database Inspection]] -- how to open and browse the database
 - [[CLV Analysis Framework]] -- analysis process that uses these queries
-- [[Edge Distribution]] -- tracking framework for per-market data

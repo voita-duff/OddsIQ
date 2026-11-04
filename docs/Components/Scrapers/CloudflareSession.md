@@ -13,7 +13,6 @@ related:
   - "[[TipsportScraper]]"
   - "[[Mitigated - Cloudflare Session Lifecycle]]"
   - "[[First Game Night]]"
-  - "[[Observed Latency]]"
 ---
 
 # CloudflareSession
@@ -58,7 +57,6 @@ This file also covers `chromium_available()` from `oddsiq/scrapers/preflight.py`
 - [[TipsportScraper]] — sole consumer. Uses `export_cookies` to copy `JSESSIONID` into the curl jar; falls back to in-page `post()` only when curl still fails after that sync. Proactively refreshes sessions at `SESSION_MAX_AGE` (20 min) via `_maybe_refresh_session()`.
 - [[Scheduler]] / [[Pipeline Services]] — `Scheduler._check_browser_preflight()` calls `chromium_available()` once at boot when Tipsport is enabled; logs a WARNING with the `playwright install chromium` remediation on failure, then continues (REST books are unaffected).
 - [[Mitigated - Cloudflare Session Lifecycle]] — proactive refresh at `SESSION_MAX_AGE` prevents the expired-cookie dead cycle.
-- [[Observed Latency]] — initial CF solve ~2s typical, up to 30s (timeout); API requests via Playwright 2-10s vs ~200ms for curl_cffi.
 
 ## Internal Logic
 

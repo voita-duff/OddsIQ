@@ -70,8 +70,6 @@ Affected: [[Edge Detection]], [[Polling Tiers]], [[CLV Calculation]], [[Schedule
 
 ## See Also
 
-- [[Observed Latency]] -- timing data from this night
 - [[Config Constants]] -- every constant tuned by this session
 - [[Production Lessons]] -- generalized takeaways
-- [[Edge Distribution]] -- per-market breakdown (TBD)
 - [[Validation Guide]] -- what to check after each night

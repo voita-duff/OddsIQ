@@ -12,7 +12,7 @@ tags:
 
 Once you have 50+ bets with CLV data, run through these steps in order against the database.
 
-> **Status (2026-05-25):** the single-book CLV gate has already cleared — Tipsport reached a "Go" at **+5.87% avg CLV** over 48 resolved bets. The steps below remain the standing procedure for re-running the analysis on fresh data.
+> **Status:** a May 2026 run of this procedure reported a "Go" at +5.87% avg CLV over 48 resolved NBA bets. That result is void. Every NBA row recorded before 2026-06-12 carries inflated edge and CLV values from the matchView bug ([[Fixed - Basketball MatchView Data Contamination]]), and those rows are now excluded from reporting. The steps below are the procedure for re-running the analysis on clean data.
 
 ## Step 1: Raw Data Dump
 
@@ -58,7 +58,7 @@ If any enabled scraper was down >50% of the time, edge detection on that book is
 
 > Show me a distribution of detected edges -- how many at 3-5%, 5-7%, 7-10%, 10%+? Do larger edges correlate with better CLV?
 
-If large edges have worse CLV, the model overestimates edge on extreme lines. This indicates a [[Vig Removal]] bias on wide-spread markets. See [[Edge Distribution]] for the tracking framework.
+If large edges have worse CLV, the model overestimates edge on extreme lines. This indicates a [[Vig Removal]] bias on wide-spread markets.
 
 ## Step 7: Go/No-Go Decision
 
@@ -72,5 +72,4 @@ Use the CLV gating table in `HANDBOOK.md` § "CLV gating" to map the CLV result 
 - [[Edge Detection]] -- the algorithm being validated
 - [[TipsportScraper]] -- primary data quality concern
 - `HANDBOOK.md` § "CLV gating" — maps CLV results to actions (canonical decision framework under evaluation mode)
-- [[Edge Distribution]] -- per-market breakdown
 - [[Useful Queries]] -- SQL queries for manual inspection

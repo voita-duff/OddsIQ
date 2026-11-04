@@ -79,10 +79,8 @@ Async Python pipeline for detecting +EV moneyline betting opportunities across f
 ## Production
 
 - [[First Game Night]] — 2026-04-10: 15 games, 5 value bets, four issues discovered and fixed
-- [[Observed Latency]] — Real timing data: Pinnacle ~500ms, Tipsport curl_cffi ~200ms, Playwright 2-30s
 - [[Config Constants]] — Every production-tuned constant with its rationale
 - [[Production Lessons]] — Timeouts, throttling, proactive sessions, early edges are noise, CLV matters
-- [[Edge Distribution]] — Market-type breakdown, key question for P2 prioritization
 
 ---
 
@@ -135,9 +133,3 @@ Async Python pipeline for detecting +EV moneyline betting opportunities across f
 - [[Test Suite Overview]] — canonical test count and coverage breakdown; integration test gap documented
 
 ---
-
-## Templates
-
-- [[Component Template]] — Standard structure for component notes
-- [[Issue Template]] — Standard structure for known issue notes
-- [[Phase Template]] — Standard structure for roadmap phase notes

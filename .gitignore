@@ -39,11 +39,8 @@ htmlcov/
 *.swp
 *~
 
-# Obsidian per-session UI noise (vault content under docs/ is versioned)
-docs/.obsidian/workspace.json
-docs/.obsidian/workspace-mobile.json
-docs/.obsidian/cache
-docs/.obsidian/graph.json
+# Obsidian vault state (the notes under docs/ are versioned, the app config is not)
+docs/.obsidian/
 docs/.trash/
 
 # OS junk

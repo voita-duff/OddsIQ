@@ -1,30 +1,30 @@
 # Markets — Pinnacle scope reduction
 
-> **Accumulated decision log** for choices made NOW that future-me might want to revisit. Not specs, not plans. Short, fact-heavy, reversible.
+> **Accumulated decision log** for choices made now that might be worth revisiting later. Not specs, not plans. Short, fact-heavy, reversible.
 
 ---
 
 ## TL;DR
 
-Snížili jsme Pinnacle API call na pouze `h2h` (moneyline). Ušetřili jsme 3× budget při nulové ztrátě reálné hodnoty. Reverzibilní změnou jednoho env varu.
+The Pinnacle API call was reduced to `h2h` (moneyline) only. That cut the quota cost per request by 3× with no loss of real value, and it is reversible by changing one environment variable.
 
 ---
 
 ## Decision (2026-04-22)
 
-- **Co změněno:** `oddsiq/scrapers/pinnacle.py` — parametr `markets` v Odds API callu
-  - Z: `"h2h,spreads,totals"`
-  - Na: `"h2h"` (default přes env var `PINNACLE_MARKETS`)
-- **Dopad:** Pinnacle přestane vracet spread/total data. Tyto snapshots se přestanou zapisovat do `odds_snapshots`. `find_edges()` přestane mít Pinnacle baseline pro spread/total → žádné edge nevygeneruje pro tyto markety.
-- **Tipsport scraper beze změny** — stále fetchuje všechny 3 markety (nezávislé na budgetu).
+- **What changed:** `oddsiq/scrapers/pinnacle.py`, the `markets` parameter of the Odds API call
+  - From: `"h2h,spreads,totals"`
+  - To: `"h2h"` (default, via the `PINNACLE_MARKETS` env var)
+- **Effect:** Pinnacle stops returning spread/total data, so those snapshots are no longer written to `odds_snapshots`. `find_edges()` then has no Pinnacle baseline for spread/total and generates no edges for those markets.
+- **Tipsport scraper unchanged at the time:** it still fetched all three markets, since its requests do not count against the budget. (It has since become moneyline-only.)
 
 ---
 
-## Context (proč)
+## Context (why)
 
 ### Budget math
 
-The Odds API účtuje `regions × markets` per request. Náš původní call:
+The Odds API charges `regions × markets` per request. The original call:
 
 ```
 ?regions=us&markets=h2h,spreads,totals&bookmakers=pinnacle
@@ -32,18 +32,18 @@ The Odds API účtuje `regions × markets` per request. Náš původní call:
 
 = 1 × 3 = **3 quota per request**.
 
-Po změně: 1 × 1 = **1 quota per request**.
+After the change: 1 × 1 = **1 quota per request**.
 
-### Pozorování z produkce (noc 2026-04-21 → 2026-04-22)
+### Production observation (night of 2026-04-21 → 2026-04-22)
 
-- 42 Pinnacle requestů (spočítáno z logu)
-- Stará kvóta: 42 × 3 = 126 units
-- Nová by byla: 42 × 1 = 42 units
-- Free tier 500/měsíc: z ~3-4 nocí na ~12 nocí
+- 42 Pinnacle requests (counted from the log)
+- Old quota cost: 42 × 3 = 126 units
+- New cost would be: 42 × 1 = 42 units
+- Free tier of 500/month: from ~3–4 nights to ~12 nights
 
-### Data-driven argument pro drop
+### Data-driven argument for the drop
 
-DB k datu change:
+Database state at the time of the change:
 
 | Market    | Pinnacle snapshots (48h) | Tipsport snapshots (48h) | Value bets ever |
 | --------- | ------------------------ | ------------------------ | --------------- |
@@ -51,59 +51,57 @@ DB k datu change:
 | Spread    | 58                       | 77                       | **0**           |
 | Total     | 60                       | 67                       | **0**           |
 
-Sbíráme spread/total data rovnoměrně, ale produkují **nula value betů** napříč 11 dny produkce. Důvody (per vault Edge Distribution + Architecture Decisions 8.4):
+Spread/total data was collected at the same rate but produced **zero value bets** across 11 days of production. The reasons (see Architecture Decisions §8.4):
 
-1. **Line mismatch** — Pinnacle a Tipsport nabízí různé lines pro spread/total. Edge detection vyžaduje exact match (po `abs(line)` normalizaci). Málokdy matchují.
-2. I když matchují, málokdy edge ≥ 3%. Tipsport má na spread/total relativně úzké hodnoty.
-3. Vault cite: "Most value is in moneylines where lines always match".
+1. **Line mismatch:** Pinnacle and Tipsport offer different lines for spreads and totals. Edge detection requires an exact match (after `abs(line)` normalization), and they rarely match.
+2. Even when they match, the edge is rarely ≥ 3%. Tipsport's spread/total prices are relatively tight.
+3. Most value is in moneylines, where lines always match.
 
-**Závěr:** sbíráme data, která produkují 0 signal, za cenu 2/3 našeho Pinnacle budgetu.
+**Conclusion:** the system was collecting data that produced no signal, at the cost of two thirds of the Pinnacle budget.
 
 ---
 
 ## What we gave up
 
-1. **Historické Pinnacle spread/total odds** po datumu změny. Retrospektivní analýzy typu "co kdyby P3 P4 implementoval line interpolation" budou mít Pinnacle baseline chybějící pro období po dropu.
-2. **Schopnost detekovat spread/total value bety** dokud nevrátíme. Vzhledem k tomu, že generovaly 0 bets historicky, praktická ztráta ~0.
+1. **Historical Pinnacle spread/total odds** after the change. Retrospective analyses such as "what if line interpolation had been implemented" have no Pinnacle baseline for the period after the drop.
+2. **The ability to detect spread/total value bets** until the change is reversed. Since those markets had produced no bets, the practical loss was close to zero.
 
 ---
 
 ## What we gained
 
-1. **3× úspora Pinnacle kvóty okamžitě.**
-2. **Praktická neexistence budget constraint** pro běžné používání:
+1. **An immediate 3× saving in Pinnacle quota.**
+2. **Effectively no budget constraint** for normal use:
    - 3-game night: 126 → 42 quota
    - 15-game night: ~135 → ~45 quota
-   - Free tier 500 pokryje celý měsíc i při husté NBA sezoně.
-3. **Cleaner mental model:** "OddsIQ Phase 1 = moneyline only" matching reality (user bets jen ML, value bets historicky všechny ML).
+   - The free tier of 500 would cover a whole month even in a busy NBA season.
+3. **A cleaner mental model:** "moneyline only" matches reality. The operator only bets moneylines, and every value bet so far had been a moneyline.
 
 ---
 
 ## Triggers to revisit
 
-Zvaž vrátit `PINNACLE_MARKETS=h2h,spreads,totals` když:
+Consider restoring `PINNACLE_MARKETS=h2h,spreads,totals` when:
 
-1. **P2 přidá Fortuna.cz / Betano.cz** a tyto knihy mají spread/total lines které častěji matchují s Pinnacle. Multi-book coverage může změnit match rate.
-2. **Implementujeme line interpolation** → i mismatched lines se dají porovnat.
-3. **Upgradneme na paid plan** ($20/měsíc, 10,000 quota) → budget constraint zmizí, nemáme důvod omezovat scope.
-4. **Empirické sledování:** pokud kdykoliv během Phase 1 zjistíš že user bets nebo chtěl bys betovat spread/total → to je signál že nám chybí data.
+1. **More Czech bookmakers are added** and their spread/total lines match Pinnacle more often. Multi-book coverage could change the match rate.
+2. **Line interpolation is implemented**, so mismatched lines can still be compared.
+3. **The Odds API plan is upgraded** ($20/month, 10,000 quota). The budget constraint then disappears and there is no reason to limit scope.
+4. **Empirical signal:** if it ever turns out that spread/total bets are wanted, that is a sign the data is missing.
 
-### Jak ověřit zda stojí za to vrátit
+### How to check whether restoring is worth it
 
-Po P2: spusť Tipsport spread/total vs Fortuna spread/total comparison. Jestli inter-book match rate pro spreads/totals > ~60%, má smysl vrátit Pinnacle fetching, protože teď máme víc chancí na match.
+After adding another bookmaker, compare its spread/total lines with Tipsport's. If the inter-book match rate for spreads/totals exceeds ~60%, restoring Pinnacle fetching makes sense, because there are more chances of a match.
 
-> **Poznámka (2026-05-31):** Trigger #1 (P2 přidá další knihy) fakticky vystřelil — Betano/Allwyn/Fortuna jsou shipped. Ale spread/total match-rate check je momentálně bezpředmětný (moot): při `PINNACLE_MARKETS=h2h` nemáme žádný Pinnacle spread/total baseline, takže inter-book match rate proti Pinnacle nelze spočítat bez nejdřív vrácení `PINNACLE_MARKETS=h2h,spreads,totals`. Kontrolu lze dělat jen Tipsport-vs-Czech (bez Pinnacle), dokud nerozšíříme scope zpět.
+> **Note (2026-05-31):** Trigger #1 effectively fired when Betano, Allwyn and Fortuna shipped. The match-rate check against Pinnacle is moot for now, though: with `PINNACLE_MARKETS=h2h` there is no Pinnacle spread/total baseline, so it cannot be computed without first restoring `PINNACLE_MARKETS=h2h,spreads,totals`. Until the scope is widened again, the check can only be done Tipsport-versus-Czech-books, without Pinnacle.
 
 ---
 
 ## How to reverse
 
-1. V `.env` (nebo `.env.example` default): nastav `PINNACLE_MARKETS=h2h,spreads,totals`
-2. Restart pipeline.
+1. In `.env` (or the `.env.example` default), set `PINNACLE_MARKETS=h2h,spreads,totals`.
+2. Restart the pipeline.
 
-Žádné code changes, žádné DB migrace. Historická data z gap periodu chybí, ale nový collection resume ihned.
-
----
+No code changes and no database migrations are needed. Data from the gap period is missing, but collection resumes immediately.
 
 ---
 
@@ -115,7 +113,6 @@ The multi-book era (Betano/Allwyn/Fortuna) was archived on 2026-06-02 in the mul
 
 ## Related
 
-- `oddsiq/scrapers/pinnacle.py` — místo změny
-- `docs/Production/Edge Distribution.md` — empirical data supporting the decision
-- `docs/Architecture/Architecture Decisions.md` §8.4 Exact Line Matching — design rationale for exact-match requirement
-- Terminal log noc 2026-04-21 — evidence pro 42 requests × 3 quota calculation
+- `oddsiq/scrapers/pinnacle.py` — where the change lives
+- `docs/Architecture/Architecture Decisions.md` §8.4 Exact Line Matching — design rationale for the exact-match requirement
+- Terminal log of the night of 2026-04-21 — evidence for the 42 requests × 3 quota calculation

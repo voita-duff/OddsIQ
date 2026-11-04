@@ -54,7 +54,7 @@ TESTS_DIR = ROOT / "tests"
 
 # Folders inside docs/ that are historical/frozen or contain placeholder
 # scaffolding, and are not subject to drift checks.
-SKIP_DIRS = {"Design", "Templates"}
+SKIP_DIRS = {"Design"}
 
 
 def collect_active_md(root: Path) -> list[Path]:
@@ -409,7 +409,7 @@ def check_stale_exemptions(active: list[Path]) -> list[str]:
     are dead on arrival and reported the same way:
 
       * a target outside the deleted-identifier scan set (anything under
-        docs/Design/ or docs/Templates/, say) — the sweep never reads that
+        docs/Design/, say) — the sweep never reads that
         file, so the carve-out protects nothing and can only mislead;
       * a name that is no longer in DELETED_IDENTIFIERS — there is nothing left
         to be exempt from.

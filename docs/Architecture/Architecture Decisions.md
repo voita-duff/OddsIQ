@@ -30,7 +30,7 @@ Foundational architecture decisions for OddsIQ, with rationale, tradeoffs, and c
 
 **Decision:** The pipeline's primary fan-out axis is **sport**, not bookmaker. `enabled_profiles()` returns the active [[SportProfile]] list (NBA / NHL / MLB / WNBA); the orchestrator iterates it per tick.
 
-**Why:** The multi-book era (Betano/Allwyn/Fortuna) revealed that Tipsport has the most exploitable pricing gaps (+5.87% avg CLV over 48 resolved bets). Adding NHL and MLB (both confirmed on Tipsport, both in season) gives more signal without the operational cost of multi-book maintenance. Sport is a cleaner axis than bookmaker for a single-soft-book pipeline.
+**Why:** The multi-book era (Betano/Allwyn/Fortuna) revealed that Tipsport has the most exploitable pricing gaps (+5.87% avg CLV over 48 resolved bets at the time; that figure was later found to be inflated by the basketball matchView bug, see [[Fixed - Basketball MatchView Data Contamination]]). Adding NHL and MLB (both confirmed on Tipsport, both in season) gives more signal without the operational cost of multi-book maintenance. Sport is a cleaner axis than bookmaker for a single-soft-book pipeline.
 
 **Implemented:** `oddsiq/sports/profiles.py` — `ENABLED_SPORTS = ["nba", "nhl", "mlb", "wnba"]`; `enabled_profiles()` drives both `ScheduleService.fetch_fresh_games()` and `PollCoordinator.poll()`.
 
