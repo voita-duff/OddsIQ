@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pagebar"><div class="pb-left"><h1>Betting</h1><span class="pb-meta">auto-betting engine &amp; execution ledger</span></div></div>
+<section class="section" id="betting-overview"
+         data-refresh-section
+         hx-get="/betting/partials/overview{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading engine…</div>
+</section>
+<section class="section" id="placed-bets"
+         data-refresh-section
+         hx-get="/betting/partials/placed-bets{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading placed bets…</div>
+</section>
+<section class="section" id="value-bets"
+         data-refresh-section
+         hx-get="/betting/partials/value-bets{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading detections…</div>
+</section>
+{% endblock %}

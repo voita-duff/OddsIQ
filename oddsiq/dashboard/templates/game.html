@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ d.game.away_team }} @ {{ d.game.home_team }}{% endblock %}
+{% block content %}
+<div class="pagebar">
+  <div class="pb-left">
+    <h1>{{ d.game.away_team }} @ {{ d.game.home_team }}</h1>
+    <span class="pb-meta">{{ d.game.sport | upper }} · {{ d.tipoff_local or "?" }} · {{ d.game.status }}{% if d.game.home_score is not none and d.game.away_score is not none %} · {{ d.game.away_score }}–{{ d.game.home_score }}{% endif %}</span>
+  </div>
+  <div class="pb-right"><span class="small">{{ d.n_snapshots }} snapshots</span></div>
+</div>
+
+{% for sel, title in (("home", d.game.home_team), ("away", d.game.away_team)) %}
+<section class="section card">
+  <div class="card-head bare"><div class="card-title">{{ title }} — moneyline odds over time</div></div>
+  {% if d.labels %}
+    <div class="chart-box chart-box--short"><canvas id="game-chart-{{ sel }}"></canvas></div>
+  {% else %}
+    <p class="small">No snapshots recorded for this game yet.</p>
+    <div class="hidden"><canvas id="game-chart-{{ sel }}"></canvas></div>
+  {% endif %}
+</section>
+{% endfor %}
+
+<section class="section card flush">
+  <div class="card-head" style="padding:14px 20px;margin:0"><div class="card-title">Value-bet flags on this game</div></div>
+  {% if d.flags %}
+    <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Flagged</th><th>Tier</th><th>Selection</th><th class="num right">Odds</th><th class="num right">Fair</th><th class="num right">Edge</th><th class="num right">CLV</th><th>Result</th><th>Guard</th></tr>
+      </thead>
+      <tbody>
+        {% for f in d.flags %}
+        <tr{% if f.excluded_reason %} class="suspect"{% endif %}>
+          <td class="num">{{ f.flagged_label }}</td>
+          <td><span class="tag">{{ f.tier or "—" }}</span></td>
+          <td>{{ f.selection | team(d.game.home_team, d.game.away_team) }}</td>
+          <td class="num right">{{ "%.2f"|format(f.entry_odds) }}</td>
+          <td class="num right dim">{{ "%.2f"|format(f.fair_odds) }}</td>
+          <td class="num right">{{ "%+.2f"|format(f.edge_pct) }}%</td>
+          <td class="num right {{ 'pos' if f.clv_pct is not none and f.clv_pct > 0 else 'neg' if f.clv_pct is not none and f.clv_pct < 0 else '' }}">{% if f.clv_pct is not none %}{{ "%+.2f"|format(f.clv_pct) }}%{% else %}—{% endif %}</td>
+          <td>{% if f.result %}<span class="pill {{ 'good' if f.result == 'win' else 'bad' if f.result == 'loss' else '' }}">{{ f.result }}</span>{% else %}—{% endif %}</td>
+          <td class="dim mono">{{ f.excluded_reason or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="small" style="padding:0 20px 18px">No value bets flagged on this game.</p>
+  {% endif %}
+</section>
+
+<script>
+(function () {
+  function draw() {
+    if (!window.oddsiqChart || !window.Chart) { setTimeout(draw, 100); return; }
+    const labels = {{ d.labels | tojson }};
+    const series = {{ d.series | tojson }};
+    const flags = {{ d.flags | tojson }};
+    if (!labels.length) return;
+    for (const sel of ["home", "away"]) {
+      const datasets = [];
+      if (series[sel] && series[sel].tipsport) {
+        datasets.push({ label: "tipsport", data: series[sel].tipsport,
+          borderColor: "#B8FF3C", borderWidth: 2, pointRadius: 1.5, spanGaps: true, tension: 0.1 });
+      }
+      if (series[sel] && series[sel].pinnacle) {
+        datasets.push({ label: "pinnacle", data: series[sel].pinnacle,
+          borderColor: "rgba(150,155,141,0.9)", borderWidth: 1.5, pointRadius: 1, spanGaps: true, tension: 0.1 });
+      }
+      // Flag markers: one scatter point per flag at (its snapshot-time bucket,
+      // entry odds). A flag whose exact minute isn't in the label list (edge
+      // case: snapshot dedup bumped the row) is simply not drawn — the flags
+      // table below always carries the full list.
+      const merged = new Array(labels.length).fill(null);
+      let any = false;
+      flags.filter(f => f.selection === sel).forEach(f => {
+        const idx = labels.indexOf(f.flagged_label);
+        if (idx >= 0) { merged[idx] = f.entry_odds; any = true; }
+      });
+      if (any) {
+        datasets.push({ label: "flagged", data: merged, showLine: false,
+          pointRadius: 5, pointStyle: "rectRot", borderColor: "#E0A23E",
+          backgroundColor: "#E0A23E" });
+      }
+      oddsiqChart("game-chart-" + sel, {
+        type: "line",
+        data: { labels: labels, datasets: datasets },
+        options: {
+          plugins: { legend: { display: true } },
+          scales: { x: { ticks: { autoSkip: true, maxTicksLimit: 10 } },
+                    y: { title: { display: true, text: "decimal odds" } } },
+        },
+      });
+    }
+  }
+  document.addEventListener("DOMContentLoaded", draw);
+})();
+</script>
+{% endblock %}

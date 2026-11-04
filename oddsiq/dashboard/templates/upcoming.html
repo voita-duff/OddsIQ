@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pagebar"><div class="pb-left"><h1>Upcoming</h1><span class="pb-meta">next 24h</span></div></div>
+<section class="section" id="upcoming-board"
+         data-refresh-section
+         hx-get="/upcoming/partials/board{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading upcoming games…</div>
+</section>
+{% endblock %}

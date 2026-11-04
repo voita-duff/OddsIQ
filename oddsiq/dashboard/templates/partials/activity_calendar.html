@@ -1,0 +1,48 @@
+<div class="card-head bare">
+  <div class="card-title">Activity calendar</div>
+  <div class="cal-legend small">
+    <span><i class="cal-sw lvl-1"></i> guarded / shadow only</span>
+    <span><i class="cal-sw lvl-2"></i> 1 clean</span>
+    <span><i class="cal-sw lvl-3"></i> 2–4</span>
+    <span><i class="cal-sw lvl-4"></i> 5+</span>
+    <span><i class="cal-sw placed"></i> bet placed</span>
+    <span><i class="cal-sw attempt"></i> attempt failed</span>
+    <span><i class="cal-sw ms"></i> milestone</span>
+  </div>
+</div>
+{% if not cal.months %}
+  <p class="small">No activity yet — the calendar fills in once odds are collected.</p>
+{% else %}
+<div class="cal-months">
+  {% for m in cal.months %}
+  <div class="cal-month">
+    <div class="cal-mhead">
+      <span class="cal-mlabel">{{ m.label }}</span>
+      <span class="cal-msum small">{{ m.clean }} clean · {{ m.guarded }} guarded{% if m.shadow %} · {{ m.shadow }} shadow{% endif %}{% if m.placed %} · {{ m.placed }} placed{% endif %}{% if m.attempts %} · {{ m.attempts }} failed{% endif %}{% if m.pl_czk %} · {{ "%+.0f"|format(m.pl_czk) }} Kč{% endif %}</span>
+    </div>
+    <div class="cal-grid">
+      {% for dow in ["Mo","Tu","We","Th","Fr","Sa","Su"] %}<span class="cal-dow">{{ dow }}</span>{% endfor %}
+      {% for week in m.weeks %}{% for c in week %}
+        {% if c is none %}<span class="cal-pad"></span>
+        {% else %}
+        <button type="button"
+                class="cal-day lvl-{{ c.level }}{% if c.placed %} placed{% endif %}{% if c.attempts %} attempt{% endif %}{% if c.milestones %} ms{% endif %}{% if c.is_today %} today{% endif %}{% if c.future %} future{% endif %}"
+                {% if not c.future %}hx-get="/analysis/partials/day?date={{ c.date }}{% if sport %}&sport={{ sport }}{% endif %}" hx-target="#cal-day-detail" hx-swap="innerHTML"{% else %}disabled{% endif %}
+                title="{{ c.date }}: {{ c.clean }} clean, {{ c.guarded }} guarded{% if c.shadow %}, {{ c.shadow }} shadow{% endif %}{% if c.placed %}, {{ c.placed }} placed{% endif %}{% if c.attempts %}, {{ c.attempts }} failed{% endif %}{% if c.skipped %}, {{ c.skipped }} skipped{% endif %}{% if c.pl_czk %}, {{ "%+.0f"|format(c.pl_czk) }} Kč{% endif %}{% if c.first_time %} · {{ c.first_time }}–{{ c.last_time }}{% endif %}{% for ms in c.milestones %} · ★ {{ ms }}{% endfor %}">
+          {{ c.dom }}
+        </button>
+        {% endif %}
+      {% endfor %}{% endfor %}
+    </div>
+    {% if m.milestones %}
+    <ul class="cal-ms-list small">
+      {% for ms in m.milestones %}<li><span class="cal-ms-date">{{ ms.date.strftime("%d.%m") }}</span> <span class="cal-ms-kind {{ ms.kind }}">{{ ms.kind }}</span> {{ ms.label }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<div id="cal-day-detail" class="cal-detail">
+  <p class="small">Click a day for its detections, decisions and times (Prague time).</p>
+</div>
+{% endif %}

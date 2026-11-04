@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pagebar"><div class="pb-left"><h1>Settings</h1><span class="pb-meta">read-only config</span></div></div>
+<div class="grid grid-2">
+  <section class="card">
+    <div class="card-head bare"><div class="card-title">Budget governor</div><span class="kicker">odds api</span></div>
+    {% if governor.budget %}
+      <div class="bar-row" style="margin-bottom:12px">
+        <span class="dim">{{ governor.budget_used }} used</span>
+        <div class="bar-track"><div class="bar-fill{% if governor.budget.over_budget %} warn-fill{% endif %}" style="width:{{ governor.budget.pct }}%"></div></div>
+        <span class="right">{{ governor.budget.pct }}%</span>
+      </div>
+      <div class="kv"><span class="k">Quota used / remaining</span><span class="v">{{ governor.budget_used }} / {{ governor.budget_remaining }}</span></div>
+      <div class="kv"><span class="k">Burn per day ({{ "trailing 3d" if governor.budget.burn_basis == "3d" else "period avg" }})</span><span class="v">{{ governor.budget.burn_per_day }}</span></div>
+      <div class="kv"><span class="k">Resets on</span><span class="v">{{ governor.budget.resets_on }} ({{ governor.budget.days_left }}d)</span></div>
+      <div class="kv"><span class="k">Projected at reset</span><span class="v {{ 'warn' if governor.budget.over_budget else 'ok' }}">{{ governor.budget.projected }} / {{ governor.budget.total }}</span></div>
+    {% else %}
+      <div class="kv"><span class="k">Quota used / remaining</span><span class="v">—</span></div>
+    {% endif %}
+    <div class="kv"><span class="k">Throttle level</span><span class="v">{% if governor.throttle_level is not none %}L{{ governor.throttle_level }}{% else %}—{% endif %}</span></div>
+    <div class="kv"><span class="k">Effective cadence (now)</span><span class="v">{{ governor.effective_cadence }}</span></div>
+    <div class="kv"><span class="k">Base cadence (unthrottled)</span><span class="v dim">{{ governor.base_cadence }}</span></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head bare"><div class="card-title">System</div></div>
+    <div class="kv"><span class="k">Package version</span><span class="v">{{ system.version }}</span></div>
+    <div class="kv"><span class="k">Python</span><span class="v">{{ system.python }}</span></div>
+    <div class="kv"><span class="k">DB schema migration</span><span class="v">{{ system.schema_version if system.schema_version is not none else "—" }}</span></div>
+    <div class="kv"><span class="k">Pipeline heartbeat</span><span class="v">{% if system.heartbeat_state %}{{ system.heartbeat_state }} · {{ system.heartbeat_age_s }}s ago{% else %}—{% endif %}</span></div>
+    <div class="kv"><span class="k">Telegram</span><span class="v">{% if telegram_configured %}<span class="pill good"><span class="dot"></span>configured</span>{% else %}<span class="pill">not configured</span>{% endif %}</span></div>
+  </section>
+
+  {% for section in config_sections %}
+  <section class="card">
+    <div class="card-head bare"><div class="card-title">{{ section.title }}</div><span class="kicker">.env</span></div>
+    {% for row in section.rows %}
+      <div class="kv"><span class="k">{{ row.name }}</span><span class="v">{{ row.value }}</span></div>
+    {% endfor %}
+  </section>
+  {% endfor %}
+
+  <section class="card">
+    <div class="card-head bare"><div class="card-title">Paths</div></div>
+    <div class="kv"><span class="k">Database</span><span class="v"><code>{{ paths.db }}</code> · {{ paths.db_size }}</span></div>
+    <div class="kv"><span class="k">Logs</span><span class="v"><code>{{ paths.log }}</code> · {{ paths.log_size }}</span></div>
+    <div class="kv"><span class="k">Raw responses</span><span class="v"><code>{{ paths.raw }}</code> · {{ paths.raw_size }}</span></div>
+    <div class="kv"><span class="k">Backups</span><span class="v"><code>{{ paths.backup }}</code> · {{ paths.backup_count }} file{{ "s" if paths.backup_count != 1 else "" }}</span></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head bare"><div class="card-title">Dashboard UI preferences</div></div>
+    <label class="row-wrap" style="cursor:pointer">
+      <input type="checkbox" id="autorefresh-toggle" data-autorefresh-toggle checked>
+      Auto-refresh
+    </label>
+    <p class="small" style="margin-top:8px">Stored in localStorage. UI-only, no server impact.</p>
+    <script>
+      (function() {
+        const cb = document.getElementById('autorefresh-toggle');
+        cb.addEventListener('change', () => {
+          window.oddsiqSetAutoRefresh(cb.checked);
+        });
+      })();
+    </script>
+  </section>
+</div>
+<p class="small warn" style="margin-top:14px">Changes require editing <code>.env</code> and restarting <code>oddsiq</code>. Betting money knobs (stake, caps) live on the <a href="/betting"><u>Betting</u></a> tab.</p>
+{% endblock %}

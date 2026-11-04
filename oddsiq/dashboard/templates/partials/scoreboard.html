@@ -1,0 +1,22 @@
+<section class="section"
+         data-refresh-section
+         hx-get="/analysis/partials/scoreboard{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  {% if rows %}
+    {# Single soft book -> one compact strip, no card-in-card ceremony. #}
+    {% for r in rows %}
+      <div class="card-head bare"><div class="card-title">{{ r.bookmaker }} coverage</div><span class="kicker">soft book</span></div>
+      <div class="cellgrid">
+        <div class="gcell"><div class="lbl">Snapshots</div><div class="big mono" style="font-size:18px">{{ r.snapshots }}</div></div>
+        <div class="gcell"><div class="lbl">Games</div><div class="big mono" style="font-size:18px">{{ r.games_matched }}</div></div>
+        <div class="gcell"><div class="lbl">Days active</div><div class="big mono" style="font-size:18px">{{ r.days_active }}</div></div>
+        <div class="gcell"><div class="lbl">First → last</div><div class="big mono" style="font-size:13px">{{ r.first_seen }} → {{ r.last_seen }}</div></div>
+        <div class="gcell"><div class="lbl">Bets</div><div class="big mono" style="font-size:18px">{{ r.bets }}</div></div>
+        <div class="gcell"><div class="lbl">Avg edge / CLV</div><div class="big mono {{ 'pos' if r.avg_clv is not none and r.avg_clv > 0 else 'neg' if r.avg_clv is not none and r.avg_clv < 0 else '' }}" style="font-size:15px">{% if r.avg_edge is not none %}{{ "%+.2f"|format(r.avg_edge) }}%{% else %}—{% endif %} / {% if r.avg_clv is not none %}{{ "%+.2f"|format(r.avg_clv) }}%{% else %}—{% endif %}</div></div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="small">No bookmaker coverage yet.</p>
+  {% endif %}
+</section>

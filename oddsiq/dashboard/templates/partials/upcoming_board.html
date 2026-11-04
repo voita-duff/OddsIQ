@@ -1,0 +1,69 @@
+<section class="section" id="upcoming-board"
+         data-refresh-section
+         hx-get="/upcoming/partials/board{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="cellgrid">
+    {% for t in board.tiles %}
+      <div class="gcell">
+        <div class="lbl">{{ t.display }}</div>
+        <div class="big">{{ t.count }}</div>
+        <div class="sm">{% if t.next_local %}next {{ t.next_local }}{% else %}—{% endif %}</div>
+      </div>
+    {% endfor %}
+    {% if board.first_window_opens_local %}
+      <div class="gcell">
+        <div class="lbl">Bet window</div>
+        <div class="big {{ 'ok' if board.first_window_opens_local == 'now' }}">{{ board.first_window_opens_local }}</div>
+        <div class="sm">{% if board.first_window_opens_local == 'now' %}engine window open{% else %}first window opens (tipoff − 2h){% endif %}</div>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if board.groups %}
+    {% for group in board.groups %}
+      <div class="game-group">
+        <div class="group-head"><h4>{{ group.label }}</h4><span class="count">{{ group.games | length }} games</span></div>
+        <div class="card flush"><div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>Tipoff</th><th>Sport</th><th>Matchup</th><th class="right">In</th><th>Bet window</th></tr>
+            </thead>
+            <tbody>
+              {% for g in group.games %}
+                <tr{% if g.tier in ("warm", "hot") %} class="window-open"{% endif %}>
+                  <td class="num">{{ g.tipoff_local }}</td>
+                  <td class="sport-tag">{{ g.display }}</td>
+                  <td class="game-cell">{{ g.away }} @ {{ g.home }}</td>
+                  <td class="num dim right" data-tipoff="{{ g.tipoff_iso }}">{{ g.countdown }}</td>
+                  <td><span class="tag">{{ g.window_label }}</span></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div></div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="small" style="margin-top:16px">No games scheduled in the next 24h.</p>
+  {% endif %}
+  <script>
+    // Client-side ticking countdowns — the section itself only refreshes every
+    // 300s, so the server-rendered "in Xh Ym" would silently go stale between
+    // polls. Re-runs on every htmx swap (script executes with the fragment).
+    (function () {
+      const root = document.currentScript.closest("section");
+      if (!root) return;
+      function tick() {
+        if (!document.body.contains(root)) { clearInterval(timer); return; }
+        root.querySelectorAll("[data-tipoff]").forEach((cell) => {
+          const mins = Math.floor((new Date(cell.dataset.tipoff) - Date.now()) / 60000);
+          if (mins <= 0) { cell.textContent = "live"; return; }
+          cell.textContent = mins < 60 ? `in ${mins}m` : `in ${Math.floor(mins / 60)}h ${mins % 60}m`;
+        });
+      }
+      const timer = setInterval(tick, 30000);
+      tick();
+    })();
+  </script>
+</section>

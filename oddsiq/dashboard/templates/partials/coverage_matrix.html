@@ -1,0 +1,62 @@
+<section class="section card flush"
+         data-refresh-section
+         hx-get="/live/partials/coverage-matrix{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head" style="padding:14px 20px;margin:0">
+    <div class="card-title">Active games × scraper coverage</div>
+    {% if health.get("pinnacle") %}{% set ph = health["pinnacle"] %}
+      <div class="dim" style="font-size:.78rem">
+        Pinnacle source={{ (ph.sharp_source_age_max_ms / 1000) | round(0) | int }}s
+        {% if ph.missing_source_updates %} · <span class="fresh warn" title="Pinnacle markets without a trustworthy upstream last_update">no timestamp={{ ph.missing_source_updates }}</span>{% endif %}
+        {% if ph.missing_event_ids %} · <span class="fresh warn" title="Pinnacle events dropped because the provider event id was missing">no id={{ ph.missing_event_ids }}</span>{% endif %}
+        {% if ph.event_id_mismatches %} · <span class="fresh warn" title="Pinnacle snapshots whose exact provider event id was not on the current schedule slate">id miss={{ ph.event_id_mismatches }}</span>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+  {% if rows %}
+    <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Game</th><th>Start</th><th>Tier</th><th>Status</th>
+          {% for s in scrapers %}
+            <th>{{ s }}<br><span class="dim" style="font-weight:400;letter-spacing:0">
+              {# Pinnacle provenance badges live once, in the card head above. #}
+              {% if health.get(s) %}d_ms={{ health[s].duration_ms }} · m={{ health[s].matched_games }} · err={{ health[s].errors }}{% else %}—{% endif %}
+            </span></th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% set game_ids = [] %}
+        {% for r in rows %}{% if r.game_id not in game_ids %}{{ game_ids.append(r.game_id) or "" }}{% endif %}{% endfor %}
+        {% for gid in game_ids %}
+          {% set game_rows = rows | selectattr("game_id", "equalto", gid) | list %}
+          {% set first = game_rows[0] %}
+          <tr>
+            <td class="game-cell"><a href="/game/{{ gid }}">{{ first.away }} @ {{ first.home }}</a></td>
+            <td class="num">{{ first.tipoff[11:16] }}</td>
+            <td><span class="tag">{{ first.tier }}</span></td>
+            <td><span class="tag">{{ first.status }}</span></td>
+            {% for s in scrapers %}
+              {% set cell = (game_rows | selectattr("bookmaker", "equalto", s) | first) %}
+              <td>
+                {% if cell %}
+                  {% if cell.state == "fresh" %}<span class="fresh ok">✓ {{ cell.age_s | int }}s</span>
+                  {% elif cell.state == "stale" %}<span class="fresh warn">⚠ {{ (cell.age_s / 60) | int }}m</span>
+                  {% else %}<span class="fresh bad">✗</span>{% endif %}
+                {% else %}<span class="fresh na">N/A</span>{% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="small" style="padding:0 20px 18px">No active games (hot/warm/live) right now.
+      {% if next_window %}Next: <strong>{{ next_window.away }} @ {{ next_window.home }}</strong> tips off {{ next_window.tipoff_local }} — bet window opens <strong>{{ next_window.opens_local }}</strong>.{% endif %}
+    </p>
+  {% endif %}
+</section>

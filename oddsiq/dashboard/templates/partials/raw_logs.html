@@ -1,0 +1,13 @@
+<details class="section"
+         data-refresh-section
+         hx-get="/live/partials/raw-logs"
+         hx-trigger="every 8s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <summary>Raw logs · {{ lines | length }} lines · oddsiq.log</summary>
+  {% if lines %}
+    <pre class="feed">{% for l in lines %}{% if "[ERROR]" in l or "[CRITICAL]" in l %}<span class="logline-err">{{ l }}</span>{% elif "[WARNING]" in l %}<span class="logline-warn">{{ l }}</span>{% else %}{{ l }}{% endif %}
+{% endfor %}</pre>
+  {% else %}
+    <p class="small">No log file at <code>{{ log_path }}</code> yet.</p>
+  {% endif %}
+</details>

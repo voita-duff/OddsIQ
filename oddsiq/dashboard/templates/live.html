@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pagebar"><div class="pb-left"><h1>Live</h1><span class="pb-meta">operations · pipeline health &amp; coverage</span></div></div>
+{#
+  Each section is a self-healing placeholder: `load` paints it immediately, and
+  `every Ns` retries if that initial load is ever dropped (e.g. a transient
+  failure during a pipeline hot/live burst) — otherwise a single failed load
+  would strand the section on its "loading…" text. On success the placeholder
+  is REPLACED (outerHTML) by the partial, which carries its own `every Ns`
+  self-refresh, so there is no nesting and no double-polling.
+#}
+<section class="section" id="status-strip"
+         data-refresh-section
+         hx-get="/live/partials/status-strip{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 15s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading status…</div>
+</section>
+<section class="section" id="coverage-matrix"
+         data-refresh-section
+         hx-get="/live/partials/coverage-matrix{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading coverage matrix…</div>
+</section>
+<section class="section" id="activity-feed"
+         data-refresh-section
+         hx-get="/live/partials/activity-feed{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, every 8s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading activity feed…</div>
+</section>
+<section class="section" id="raw-logs"
+         data-refresh-section
+         hx-get="/live/partials/raw-logs"
+         hx-trigger="load, every 8s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="small">loading raw logs…</div>
+</section>
+{% endblock %}

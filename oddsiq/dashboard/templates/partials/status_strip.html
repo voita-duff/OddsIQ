@@ -1,0 +1,36 @@
+<div class="cellgrid"
+     data-refresh-section
+     hx-get="/live/partials/status-strip{% if sport %}?sport={{ sport }}{% endif %}"
+     hx-trigger="every 15s from:body[data-autorefresh='1'], refreshAll from:body"
+     hx-swap="outerHTML">
+  {% set state_labels = {'alive': 'alive', 'idle-no-games': 'idle · no games', 'stale': 'stale', 'unknown': 'no heartbeat'} %}
+  <div class="gcell">
+    <div class="lbl"><span class="pill {{ 'good' if state == 'alive' else 'caution' if state in ('idle-no-games', 'stale') else 'bad' }}" style="padding:0"><span class="dot"></span></span> Pipeline</div>
+    <div class="big {{ 'ok' if state == 'alive' else 'warn' if state in ('idle-no-games', 'stale') else 'err' }}">{{ state_labels[state] if state in state_labels else state }}</div>
+    <div class="sm">updated {{ updated }}</div>
+  </div>
+  <div class="gcell">
+    <div class="lbl">Active scrapers</div>
+    <div class="big mono" style="font-size:14px;letter-spacing:0">
+      {% if scrapers %}{% for s in scrapers %}{{ s.name }} <span class="{{ s.css_class }}">{{ s.icon }}{% if s.age %} {{ s.age }}{% endif %}</span>{% if s.unsafe_start %} <span class="fresh warn" title="Snapshots dropped: the Tipsport listing carried no usable start time (matching fails closed)">unsafe start: {{ s.unsafe_start }}</span>{% endif %}{% if not loop.last %} · {% endif %}{% endfor %}{% else %}<span class="dim">no recent health lines</span>{% endif %}
+    </div>
+    {% if not api_key_set %}<div class="sm err">API key MISSING</div>{% endif %}
+  </div>
+  <div class="gcell">
+    <div class="lbl">Odds API budget</div>
+    {% if budget %}
+      <div class="big mono">{{ summary.budget_used }}<span class="unit">/ {{ budget.total }}</span></div>
+      <div class="bar-track" style="margin-top:8px"><div class="bar-fill{% if budget.over_budget %} warn-fill{% endif %}" style="width:{{ budget.pct }}%"></div></div>
+      <div class="sm">{{ budget.burn_per_day }}/day ({{ budget.burn_basis }}) · resets {{ budget.resets_on }} ·
+        <span class="{{ 'warn' if budget.over_budget else '' }}">→ {{ budget.projected }}</span></div>
+    {% else %}
+      <div class="big mono">?</div>
+      <div class="sm">no budget numbers yet</div>
+    {% endif %}
+  </div>
+  <div class="gcell">
+    <div class="lbl">Detections today</div>
+    <div class="big mono">{{ summary.flags_today }}{% if summary.suspect_today %} <span class="warn" style="font-size:15px">+{{ summary.suspect_today }} guarded</span>{% endif %}{% if summary.shadow_today %} <span class="dim" style="font-size:15px">+{{ summary.shadow_today }} shadow</span>{% endif %}</div>
+    <div class="sm">{% if summary.suspect_today and not summary.flags_today %}all guard-stamped — detector alive, prices suspect{% elif summary.flags_today %}avg edge {{ "%+.2f"|format(summary.avg_edge_today) }}%{% else %}clean flags (UTC day){% endif %}</div>
+  </div>
+</div>

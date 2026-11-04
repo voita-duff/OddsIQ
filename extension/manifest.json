@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "OddsIQ Betting Actuator",
+  "version": "0.8.3",
+  "description": "Executes OddsIQ bet-placement commands on tipsport.cz via the pipeline bridge. Internal tool — not for the Chrome Web Store.",
+  "permissions": ["debugger", "scripting", "storage", "alarms"],
+  "host_permissions": ["*://*.tipsport.cz/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "minimum_chrome_version": "116"
+}

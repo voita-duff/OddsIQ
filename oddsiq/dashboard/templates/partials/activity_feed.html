@@ -1,0 +1,68 @@
+<section class="section card"
+         data-refresh-section
+         hx-get="/live/partials/activity-feed{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 8s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head bare">
+    <div class="card-title">Activity feed</div>
+    <div class="chips small" id="feed-filters">
+      <label><input type="checkbox" data-evtype="warnings"      checked> warnings</label>
+      <label><input type="checkbox" data-evtype="value_bet"     checked> value bets</label>
+      <label><input type="checkbox" data-evtype="value_bet_suspect" checked> guarded</label>
+      <label><input type="checkbox" data-evtype="clv"           checked> CLV</label>
+      <label><input type="checkbox" data-evtype="lifecycle"     checked> game lifecycle</label>
+      <label><input type="checkbox" data-evtype="coverage_gap"  checked> coverage gaps</label>
+      <label><input type="checkbox" data-evtype="scraper_health"      > poll events</label>
+    </div>
+  </div>
+  {% if rows %}
+    <div class="feed">
+      {% for r in rows %}
+        <div class="feed-row" data-evtype="{{ r.event_type }}" data-level="{{ r.level }}">
+          <span class="feed-tag">{{ r.src }}</span>
+          <span class="feed-time">{{ r.ts_short }}</span>
+          <span class="feed-body {{ 'neg' if r.level == 'ERROR' else 'warn' if r.level == 'WARNING' else '' }}">{{ r.text }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="small">No recent activity.</p>
+  {% endif %}
+  <script>
+    (function() {
+      const root = document.currentScript.closest('section');
+      if (!root) return;
+      const filters = root.querySelectorAll('#feed-filters input');
+      filters.forEach(cb => {
+        const key = 'feed-filter-' + cb.dataset.evtype;
+        const saved = localStorage.getItem(key);
+        if (saved !== null) cb.checked = saved === '1';
+        cb.addEventListener('change', () => {
+          localStorage.setItem(key, cb.checked ? '1' : '0');
+          applyFilters();
+        });
+      });
+      function applyFilters() {
+        const on = {};
+        filters.forEach(cb => on[cb.dataset.evtype] = cb.checked);
+        root.querySelectorAll('.feed-row').forEach(r => {
+          const t = r.dataset.evtype;
+          const lvl = r.dataset.level || '';
+          const isLifecycle = (t === 'game_live' || t === 'game_final');
+          const isWarning = (lvl === 'WARNING' || lvl === 'ERROR');
+          const show =
+            (isWarning && on.warnings) ||
+            (t === 'value_bet' && on.value_bet) ||
+            (t === 'value_bet_suspect' && on.value_bet_suspect) ||
+            (t === 'clv' && on.clv) ||
+            (isLifecycle && on.lifecycle) ||
+            (t === 'coverage_gap' && on.coverage_gap) ||
+            (t === 'scraper_health' && on.scraper_health) ||
+            (t === 'snapshot' && on.value_bet);  // snapshots travel with value bets
+          r.style.display = show ? '' : 'none';
+        });
+      }
+      applyFilters();
+    })();
+  </script>
+</section>

@@ -1,0 +1,55 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local databases, backups and runtime data
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backups/
+data/raw/
+
+# Logs (the dashboard tails the rotating pipeline log)
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Local git worktrees
+.worktrees/
+
+# Editor, IDE and local tool state: every top-level dot-directory except CI
+/.*/
+!/.github/
+*.swp
+*~
+
+# Obsidian per-session UI noise (vault content under docs/ is versioned)
+docs/.obsidian/workspace.json
+docs/.obsidian/workspace-mobile.json
+docs/.obsidian/cache
+docs/.obsidian/graph.json
+docs/.trash/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Machine-specific helper for pulling the production database
+scripts/pull-db-from-vm.sh

@@ -1,0 +1,106 @@
+<div>
+  <div class="engine-banner {{ engine_state }}">
+    <div class="estate"><span class="dot"></span> engine {{ engine_state }} <span class="dim">· bets: {{ o.betting_sports|join(', ')|upper }}</span></div>
+    <div class="row-wrap">
+      <span class="updated">updated {{ updated }}</span>
+      {% if controls_enabled %}
+        {% if o.armed %}
+        <button class="btn-danger" hx-post="/betting/disarm{% if sport %}?sport={{ sport }}{% endif %}"
+                hx-target="#betting-overview" hx-swap="innerHTML">🛑 Disarm</button>
+        {% else %}
+        <button class="btn-arm" hx-post="/betting/arm{% if sport %}?sport={{ sport }}{% endif %}"
+                hx-confirm="Arm the auto-betting engine? It will place real bets on the next qualifying detection."
+                hx-target="#betting-overview" hx-swap="innerHTML">Arm engine</button>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="chain section-gap">
+    {% for l in chain %}
+      <span class="link {{ l.css }}">{{ '✓' if l.css == 'ok' else '✗' if l.css == 'fail' else '·' }} {{ l.label }}{% if l.detail %} <span class="dim">{{ l.detail }}</span>{% endif %}</span>
+      {% if not loop.last %}<span class="sep">→</span>{% endif %}
+    {% endfor %}
+  </div>
+
+  <div class="grid grid-4">
+    <div class="card kpi hero">
+      <span class="label">◆ Realized P&amp;L</span>
+      <div class="big {{ 'pos' if o.realized_pl_czk > 0 else 'neg' if o.realized_pl_czk < 0 else 'zero' }}">{{ "%+.0f"|format(o.realized_pl_czk) }}<span class="unit">Kč</span></div>
+      <div class="sub">{% if o.roi_pct is not none %}ROI {{ "%+.2f"|format(o.roi_pct) }}% · {% endif %}{{ o.n_settled }} settled</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">At risk now</span>
+      <div class="big">{{ "%.0f"|format(o.at_risk_czk) }}<span class="unit">Kč</span></div>
+      <div class="sub">{{ o.n_open }} open bet(s)</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Total staked</span>
+      <div class="big">{{ "%.0f"|format(o.total_staked_czk) }}<span class="unit">Kč</span></div>
+      <div class="sub">{{ o.n_total }} decision(s)</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Balance</span>
+      <div class="big">{% if o.balance_czk is not none %}{{ "%.0f"|format(o.balance_czk) }}<span class="unit">Kč</span>{% else %}—{% endif %}</div>
+      <div class="sub">{% if o.balance_czk is not none %}last reported by extension{% else %}reported after the first placement{% endif %}</div>
+    </div>
+  </div>
+
+  <div class="caps">
+    <div class="cap">
+      <span class="lbl">Bets today</span>
+      {% set bd = o.day.bets_commanded %}{% set bmax = o.max_bets_per_day|int %}
+      <div class="bar-track"><div class="bar-fill{% if bmax and bd >= bmax %} warn-fill{% endif %}" style="width:{{ (bd * 100 // bmax) if bmax else 0 }}%"></div></div>
+      <span class="val">{{ bd }}/{{ bmax }}</span>
+    </div>
+    <div class="cap">
+      <span class="lbl">Open stakes</span>
+      {% set os_ = o.day.open_stakes_czk %}{% set omax = o.max_open_stakes_czk %}
+      <div class="bar-track"><div class="bar-fill{% if omax and os_ >= omax %} warn-fill{% endif %}" style="width:{{ (os_ * 100 / omax)|int if omax else 0 }}%"></div></div>
+      <span class="val">{{ "%.0f"|format(os_) }}/{{ omax|int }} Kč</span>
+    </div>
+    <div class="cap">
+      <span class="lbl">Day P&amp;L vs loss limit</span>
+      {% set pl = o.day.realized_pl_czk %}{% set lmax = o.daily_loss_limit_czk %}
+      <div class="bar-track"><div class="bar-fill{% if pl <= -lmax %} warn-fill{% endif %}" style="width:{{ ((-pl) * 100 / lmax)|int if (lmax and pl < 0) else 0 }}%"></div></div>
+      <span class="val {{ 'pos' if pl > 0 else 'neg' if pl < 0 else '' }}">{{ "%+.0f"|format(pl) }} Kč (limit −{{ lmax|int }})</span>
+    </div>
+    <div class="cap">
+      <span class="lbl">Today's funnel</span>
+      <span class="val">{{ o.today.detections }} clean · <span class="{{ 'warn' if o.today.guarded }}">{{ o.today.guarded }} guarded</span>{% if o.today.shadow %} · <span class="dim">{{ o.today.shadow }} shadow</span>{% endif %} · {{ o.today.skipped }} skipped · <span class="{{ 'err' if o.today.rejected }}">{{ o.today.rejected }} rejected</span> · <span class="{{ 'ok' if o.today.placed }}">{{ o.today.placed }} placed</span></span>
+    </div>
+  </div>
+
+  {% if o.disarm_reason %}
+  <p class="small" style="margin-top:10px">Last auto-disarm: <span class="mono">{{ o.disarm_reason }}</span></p>
+  {% endif %}
+
+  {% if controls_enabled %}
+  <div class="card" style="margin-top:14px">
+    <div class="card-head bare"><div class="card-title">Money knobs</div>{% if saved %}<span class="save-flash">saved ✓</span>{% endif %}</div>
+    <form hx-post="/betting/config{% if sport %}?sport={{ sport }}{% endif %}"
+          hx-target="#betting-overview" hx-swap="innerHTML" class="form-grid">
+      <label>Flat stake (Kč)<input type="number" name="flat_stake_czk" value="{{ o.flat_stake_czk|int }}" min="1" max="{{ max_stake_czk|int }}" step="1"></label>
+      <label>Max bets/day<input type="number" name="max_bets_per_day" value="{{ o.max_bets_per_day }}" min="0" max="{{ max_bets_per_day_ceiling }}" step="1"></label>
+      <label>Max open (Kč)<input type="number" name="max_open_stakes_czk" value="{{ o.max_open_stakes_czk|int }}" min="0" max="{{ max_open_stakes_czk_ceiling|int }}" step="1"></label>
+      <label>Daily loss limit (Kč)<input type="number" name="daily_loss_limit_czk" value="{{ o.daily_loss_limit_czk|int }}" min="0" max="{{ daily_loss_limit_czk_ceiling|int }}" step="1"></label>
+      <div class="sports-gate">
+        <span class="flabel">Betting sports</span>
+        <span class="checks">
+        {% for s in gate_sports %}
+          <label class="check">
+            <input type="checkbox" name="betting_sports" value="{{ s }}" {% if s in o.betting_sports %}checked{% endif %}> {{ s|upper }}
+          </label>
+        {% endfor %}
+        </span>
+      </div>
+      <input type="hidden" name="betting_sports_present" value="1">
+      <div class="actions"><button class="btn" type="submit">Save</button></div>
+    </form>
+  </div>
+  {% elif controls_flag_enabled and not controls_auth_configured %}
+  <p class="small warn" style="margin-top:12px">Controls are enabled but <span class="mono">DASHBOARD_CONTROLS_USERNAME</span>/<span class="mono">DASHBOARD_CONTROLS_PASSWORD</span> are not set — write controls are unavailable until both are configured. <span class="mono">oddsiq betting --disarm</span> on the host is the kill switch.</p>
+  {% else %}
+  <p class="small" style="margin-top:12px">Read-only — engine controls are hidden until <span class="mono">DASHBOARD_CONTROLS_ENABLED=1</span> (set only behind auth). Use <span class="mono">oddsiq betting --arm</span> on the host meanwhile.</p>
+  {% endif %}
+</div>

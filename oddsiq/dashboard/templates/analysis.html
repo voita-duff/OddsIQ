@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pagebar"><div class="pb-left"><h1>Analysis</h1><span class="pb-meta">performance &amp; CLV</span></div></div>
+<section class="section" id="big-numbers"
+         data-refresh-section
+         hx-get="/analysis/partials/big-numbers{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading summary…</div>
+</section>
+<section class="section" id="calendar"
+         data-refresh-section
+         hx-get="/analysis/partials/calendar{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading activity calendar…</div>
+</section>
+<section class="section" id="monthly"
+         data-refresh-section
+         hx-get="/analysis/partials/monthly{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading monthly performance…</div>
+</section>
+<section class="section" id="profit-curve"
+         data-refresh-section
+         hx-get="/analysis/partials/profit-curve{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading profit curve…</div>
+</section>
+<section class="section" id="clv-trend"
+         data-refresh-section
+         hx-get="/analysis/partials/clv-trend{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading CLV trend…</div>
+</section>
+<section class="section" id="edge-buckets"
+         data-refresh-section
+         hx-get="/analysis/partials/edge-buckets{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading edge buckets…</div>
+</section>
+<section class="section" id="scoreboard"
+         data-refresh-section
+         hx-get="/analysis/partials/scoreboard{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="load, refreshAll from:body"
+         hx-swap="innerHTML">
+  <div class="small">loading scoreboard…</div>
+</section>
+{% endblock %}

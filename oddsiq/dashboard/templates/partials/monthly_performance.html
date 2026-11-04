@@ -1,0 +1,46 @@
+<section class="section"
+         data-refresh-section
+         hx-get="/analysis/partials/monthly{% if is_all and sport %}?month=all&sport={{ sport }}{% elif is_all %}?month=all{% elif month and sport %}?month={{ month }}&sport={{ sport }}{% elif month %}?month={{ month }}{% elif sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head bare">
+    <div class="card-title">Performance</div>
+    <div class="chips">
+      <button class="chip{% if is_all %} on{% endif %}"
+              hx-get="/analysis/partials/monthly?month=all{% if sport %}&sport={{ sport }}{% endif %}"
+              hx-target="closest section" hx-swap="outerHTML">All time</button>
+      {% for ym, label in months %}
+      <button class="chip{% if ym == month %} on{% endif %}"
+              hx-get="/analysis/partials/monthly?month={{ ym }}{% if sport %}&sport={{ sport }}{% endif %}"
+              hx-target="closest section" hx-swap="outerHTML">{{ label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  {% if not month and not is_all %}
+    <p class="small">No monthly data yet — stats appear once value bets are recorded.</p>
+  {% else %}
+  <div class="grid grid-4">
+    <div class="card kpi hero">
+      <span class="label">◆ Profit (flat 1u)</span>
+      <div class="big {{ 'pos' if bets.flat_pl > 0 else 'neg' if bets.flat_pl < 0 else 'zero' }}">{{ "%+.2f"|format(bets.flat_pl) }}<span class="unit">u</span></div>
+      <div class="sub">ROI {{ "%+.2f"|format(bets.flat_roi_pct) }}% · {{ bets.n_resolved }} resolved</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Value bets</span>
+      <div class="big">{{ bets.n_total }}</div>
+      <div class="sub">{{ bets.n_win }}W-{{ bets.n_loss }}L-{{ bets.n_push }}P</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Win rate</span>
+      <div class="big">{% if bets.win_rate is not none %}{{ bets.win_rate }}<span class="unit">%</span>{% else %}—{% endif %}</div>
+      <div class="sub">of {{ bets.n_win + bets.n_loss }} decided</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Avg CLV</span>
+      <div class="big {% if bets.avg_clv is not none %}{{ 'pos' if bets.avg_clv > 0 else 'neg' if bets.avg_clv < 0 else 'zero' }}{% endif %}">{% if bets.avg_clv is not none %}{{ "%+.2f"|format(bets.avg_clv) }}<span class="unit">%</span>{% else %}—{% endif %}</div>
+      <div class="sub">n={{ bets.n_clv }} with CLV{% if bets.avg_edge is not none %} · avg edge {{ "%+.2f"|format(bets.avg_edge) }}%{% endif %}</div>
+    </div>
+  </div>
+
+  {% endif %}
+</section>

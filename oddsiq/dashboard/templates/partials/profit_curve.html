@@ -1,0 +1,42 @@
+<section class="section"
+         data-refresh-section
+         hx-get="/analysis/partials/profit-curve{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head bare">
+    <div class="card-title">Profit curve — cumulative flat 1u</div>
+  </div>
+  {% if not curve.labels %}
+    <p class="small">No resolved bets yet. The equity curve appears once value bets settle.</p>
+  {% endif %}
+  <div class="chart-box" style="position:relative;height:240px"><canvas id="profit-curve-chart"></canvas></div>
+  <script>
+    (function() {
+      if (!window.oddsiqChart) return;
+      const data = {{ curve | tojson }};
+      oddsiqChart('profit-curve-chart', {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Cumulative units',
+            data: data.cumulative,
+            borderColor: '#8fb96a',
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+            spanGaps: true,   // no-bet days carry the line forward
+            fill: { target: 'origin', above: 'rgba(143,185,106,0.07)', below: 'rgba(232,106,106,0.07)' },
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
+            y: { title: { display: true, text: 'units' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          },
+        }
+      });
+    })();
+  </script>
+</section>

@@ -1,0 +1,55 @@
+<section class="section"
+         data-refresh-section
+         hx-get="/analysis/partials/clv-trend{% if days and sport %}?days={{ days }}&sport={{ sport }}{% elif days %}?days={{ days }}{% elif sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head bare">
+    <div class="card-title">CLV trend</div>
+    <div class="chips">
+      <button class="chip{% if not days %} on{% endif %}" hx-get="/analysis/partials/clv-trend{% if sport %}?sport={{ sport }}{% endif %}"          hx-target="closest section" hx-swap="outerHTML">All time</button>
+      <button class="chip{% if days == 30 %} on{% endif %}" hx-get="/analysis/partials/clv-trend?days=30{% if sport %}&sport={{ sport }}{% endif %}"  hx-target="closest section" hx-swap="outerHTML">Last 30d</button>
+      <button class="chip{% if days == 7 %} on{% endif %}" hx-get="/analysis/partials/clv-trend?days=7{% if sport %}&sport={{ sport }}{% endif %}"   hx-target="closest section" hx-swap="outerHTML">Last 7d</button>
+    </div>
+  </div>
+  {% if not series.labels %}
+    <p class="small">No CLV data yet. Trend appears once value bets are resolved with closing snapshots.</p>
+  {% endif %}
+  <div class="chart-box" style="position:relative;height:240px"><canvas id="clv-trend-chart"></canvas></div>
+  <script>
+    (function() {
+      if (!window.oddsiqChart) return;
+      const data = {{ series | tojson }};
+      oddsiqChart('clv-trend-chart', {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Nightly avg',
+              data: data.nightly,
+              borderColor: 'rgba(127,127,127,0.6)',
+              pointRadius: 2,
+              tension: 0.2,
+              spanGaps: false,  // no-data days (e.g. outages) break the line — honest gaps
+            },
+            {
+              label: '7-day rolling',
+              data: data.rolling7,
+              borderColor: '#8fb96a',
+              borderWidth: 2,
+              pointRadius: 0,
+              spanGaps: true,   // the trend line bridges gaps for readability
+            },
+          ]
+        },
+        options: {
+          plugins: { legend: { display: true } },
+          scales: {
+            x: { ticks: { autoSkip: true, maxTicksLimit: 12 } },
+            y: { title: { display: true, text: 'CLV %' } },
+          },
+        }
+      });
+    })();
+  </script>
+</section>

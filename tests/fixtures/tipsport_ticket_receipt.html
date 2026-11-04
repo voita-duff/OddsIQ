@@ -1,0 +1,25 @@
+<!-- Placed-bet receipt fragment captured live from tipsport.cz on 2026-08-10
+     (P4 first supervised placement), sanitized: ticket id / hash redacted, balance
+     replaced with a synthetic value. Success is signalled by the body text "Tiket byl vsazen." plus
+     the URL /tiket?idu=<ticketId>. Ticket detail lives in
+     [data-atid="ticketDetailContent"] ("Celkový kurz" = accepted odds,
+     "Vklad" = stake). Balance chip has NO stable data-atid — only a
+     styled-component class ("...AccountState..."), so it's best-effort;
+     reconciliation against bet history is the real safety net.
+     Real captured URL shape: /tiket?idu=<int>&idb=-1&hash=<hex> -->
+<div>
+  <div class="ClientMenu-styled__AccountState-sc-REDACTED">1 000,00 Kč</div>
+  <div>Tiket byl vsazen.</div>
+  <div class="flex gap-16 justify-between items-center" data-atid="ticketDetailBet">
+    <div>Dnes | 23:07</div>
+    <div>Toronto Blue Jays - Boston Red Sox</div>
+  </div>
+  <div data-atid="ticketDetailContent">
+    Dnes 23:07 Toronto Blue Jays - Boston Red Sox
+    Vítěz zápasu do rozhodnutí: Toronto Blue Jays 2.30
+    Celkový kurz 2.30
+    Vklad 10,00 Kč
+    Možná výhra 23,00 Kč
+    Cashout tiketu 9,90 Kč
+  </div>
+</div>

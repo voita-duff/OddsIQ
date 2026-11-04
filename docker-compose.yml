@@ -1,0 +1,106 @@
+# The image is built and pushed by scripts/build-and-push.sh (make push).
+# On the VM, deploy/upgrade with:  docker compose pull && docker compose up -d
+# Image names default to local builds (`oddsiq`, `oddsiq-chrome`); point them
+# at a registry with ODDSIQ_IMAGE / ODDSIQ_CHROME_IMAGE in .env, e.g.
+#   ODDSIQ_IMAGE=registry.example.com/oddsiq
+# Pin a specific build with ODDSIQ_TAG (a version or git sha); default is latest:
+#   ODDSIQ_TAG=0.1.0 docker compose up -d
+services:
+  pipeline:
+    build: .
+    image: ${ODDSIQ_IMAGE:-oddsiq}:${ODDSIQ_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - path: .env          # ODDS_API_KEY (+ optional Telegram/TZ/heartbeat).
+        required: false     # app exits fast if ODDS_API_KEY is unset — see cli.py
+    stop_grace_period: 30s   # shutdown runs a full backup + integrity check
+    init: true               # reap Chromium child processes
+    shm_size: "1gb"          # headless Chromium needs >64MB /dev/shm
+    environment:
+      # When BETTING_ENABLED=1 (from .env), the betting bridge must bind on the
+      # compose network so the `chrome` service can reach it. Token-authed and
+      # NOT published to the host — internal to the compose network only.
+      BETTING_BRIDGE_HOST: "0.0.0.0"
+    volumes:
+      - oddsiq-data:/data
+    # Liveness: the scheduler appends a `heartbeat:` line every
+    # SCHEDULER_HEARTBEAT_SECONDS (~60s), so a log untouched for >5 min means a
+    # frozen/dead pipeline. Surfaces in `docker ps` (Compose doesn't auto-restart
+    # on unhealthy — `restart: unless-stopped` covers crashes; pair with an
+    # external watcher for frozen-but-alive paging). Assumes LOG_FILE_ENABLED=1.
+    healthcheck:
+      test: ["CMD-SHELL", "find /data/logs/oddsiq.log -mmin -5 | grep -q . || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s   # must exceed cold start: browser preflight + first refresh
+    # Run exactly ONE pipeline instance: a second one doubles API spend and
+    # both write the same SQLite DB.
+
+  dashboard:
+    image: ${ODDSIQ_IMAGE:-oddsiq}:${ODDSIQ_TAG:-latest}
+    build: .
+    profiles: ["dashboard"]  # only starts with: docker compose --profile dashboard up -d
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    command: ["oddsiq", "dashboard", "--host", "0.0.0.0", "--port", "8080"]
+    ports:
+      # Published to host loopback only — the dashboard has NO auth. Use an SSH
+      # tunnel to reach it, or change to "8080:8080" only on a trusted network.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - oddsiq-data:/data
+    depends_on:
+      - pipeline
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/', timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # Betting actuator: a real Chrome running the OddsIQ extension (P1 Phase 2).
+  # Behind the `betting` profile — only starts with:
+  #   docker compose --profile betting up -d      (add --profile dashboard too)
+  # Ships incapable of placing a bet three times over: the pipeline engine is
+  # off unless BETTING_ENABLED=1, DISARMED until `oddsiq betting --arm`, and the
+  # extension's CONFIRM click is gated by BETTING_CONFIRM_ENABLED (false here).
+  chrome:
+    image: ${ODDSIQ_CHROME_IMAGE:-oddsiq-chrome}:${ODDSIQ_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/chrome/Dockerfile
+    profiles: ["betting"]
+    restart: unless-stopped
+    init: true               # reap Chrome child processes
+    shm_size: "1gb"          # Chrome needs >64MB /dev/shm
+    environment:
+      BRIDGE_URL: "ws://pipeline:8765"
+      BRIDGE_TOKEN: "${BETTING_BRIDGE_TOKEN:-}"
+      # Money gate — stays false through Phase 2/3; flipped to true only for
+      # Phase 4 supervised placement.
+      CONFIRM_ENABLED: "${BETTING_CONFIRM_ENABLED:-false}"
+      # Optional throwaway VNC password (macOS Screen Sharing refuses
+      # password-less servers). The SSH tunnel remains the real control.
+      VNC_PASSWORD: "${VNC_PASSWORD:-}"
+    ports:
+      # x11vnc for the ONE-TIME manual Tipsport login — loopback only; reach it
+      # via an SSH tunnel (see DEPLOY.md). Never expose this publicly.
+      - "127.0.0.1:5900:5900"
+    volumes:
+      # Persistent logged-in Chrome profile — the session survives restarts.
+      - oddsiq-chrome-profile:/profile
+    depends_on:
+      - pipeline
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f google-chrome >/dev/null || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  oddsiq-data:
+  oddsiq-chrome-profile:

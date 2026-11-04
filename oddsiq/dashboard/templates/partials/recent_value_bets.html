@@ -1,0 +1,43 @@
+<section class="section card flush"
+         data-refresh-section
+         hx-get="/betting/partials/value-bets{{ self_qs }}"
+         hx-trigger="every 30s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <div class="card-head" style="padding:14px 20px;margin:0">
+    <div class="card-title">Recent value bets{% if show == "suspect" %} (incl. guarded){% endif %}</div>
+    <a class="chip" hx-get="/betting/partials/value-bets{{ toggle_qs }}"
+       hx-target="closest .section" hx-swap="outerHTML"
+       role="button" style="cursor:pointer">{{ toggle_label }}</a>
+  </div>
+  {% if rows %}
+    <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Flagged</th><th>Tier</th><th>Game</th><th>Selection</th>
+          <th class="num right">Odds</th><th class="num right">Edge</th><th class="num right">CLV</th><th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr{% if r.excluded_reason %} class="suspect"{% endif %}>
+            <td class="num">{{ r.flagged_at | flagged_at }}</td>
+            <td><span class="tag">{{ r.tier or "—" }}</span></td>
+            <td class="game-cell"><a href="/game/{{ r.game_id }}">{{ r.away_team }} @ {{ r.home_team }}</a></td>
+            <td>{{ r.selection | team(r.home_team, r.away_team) }}{% if r.line is not none %} ({{ r.line }}){% endif %}
+              {% if r.excluded_reason %}<span class="pill caution" title="guard-stamped at insert — recorded, never bet">{{ r.excluded_reason }}</span>{% endif %}
+              {% if r.tipsport_url %} <a class="dim" href="https://www.tipsport.cz{{ r.tipsport_url }}" target="_blank" rel="noopener" title="open on Tipsport">↗</a>{% endif %}
+            </td>
+            <td class="num right">{% if r.entry_odds is not none %}{{ "%.2f"|format(r.entry_odds) }}{% else %}—{% endif %}</td>
+            <td class="num right">{{ "%+.2f"|format(r.edge_pct) }}%</td>
+            <td class="num right {{ 'pos' if r.clv_pct is not none and r.clv_pct > 0 else 'neg' if r.clv_pct is not none and r.clv_pct < 0 else '' }}">{% if r.clv_pct is not none %}{{ "%+.2f"|format(r.clv_pct) }}%{% else %}<span class="zero">—</span>{% endif %}</td>
+            <td>{% if r.result %}<span class="pill {{ 'good' if r.result == 'win' else 'bad' if r.result == 'loss' else '' }}">{{ r.result }}</span>{% else %}<span class="zero">—</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="small" style="padding:0 20px 18px">No value bets flagged yet{% if show != "suspect" %} — guard-stamped detections are hidden; use the toggle to see them{% endif %}.</p>
+  {% endif %}
+</section>

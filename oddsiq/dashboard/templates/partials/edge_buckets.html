@@ -1,0 +1,27 @@
+<section class="section"
+         data-refresh-section
+         hx-get="/analysis/partials/edge-buckets{% if sport %}?sport={{ sport }}{% endif %}"
+         hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+         hx-swap="outerHTML">
+  <h3>Edge buckets — volume &amp; calibration</h3>
+  <div class="tablewrap" style="margin-top:10px">
+  <table>
+    <thead>
+      <tr><th>Bucket</th><th style="min-width:160px">Volume</th><th class="num right">Flagged</th><th class="num right">Resolved</th><th class="num right">Break-even win%</th><th class="num right">Actual win%</th><th class="num right">Δ</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+        <tr>
+          <td>{{ r.bucket }}{% if r.thin %} <span class="pill caution" title="fewer than 10 resolved bets — take with salt">⚠ thin</span>{% endif %}</td>
+          <td><div class="bar-track"><div class="bar-fill" style="width:{{ r.bar_pct }}%;background:var(--good);opacity:.85"></div></div></td>
+          <td class="num right">{{ r.count }}</td>
+          <td class="num right">{{ r.n if r.n is not none else "—" }}</td>
+          <td class="num right">{% if r.expected_win is not none %}{{ r.expected_win }}%{% else %}—{% endif %}</td>
+          <td class="num right">{% if r.actual_win is not none %}{{ r.actual_win }}%{% else %}—{% endif %}</td>
+          <td class="num right {% if r.delta is not none %}{{ 'pos' if r.delta > 0 else 'neg' if r.delta < 0 else '' }}{% endif %}">{% if r.delta is not none %}{{ "%+.1f"|format(r.delta) }}{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>

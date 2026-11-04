@@ -1,0 +1,27 @@
+<div data-refresh-section
+     hx-get="/analysis/partials/big-numbers{% if sport %}?sport={{ sport }}{% endif %}"
+     hx-trigger="every 300s from:body[data-autorefresh='1'], refreshAll from:body"
+     hx-swap="outerHTML">
+  <div class="grid grid-4">
+    <div class="card kpi">
+      <span class="label">Value bets</span>
+      <div class="big">{{ n.bets_total }}</div>
+      <div class="sub">{{ n.bets_resolved }} resolved</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Avg CLV</span>
+      <div class="big {% if n.avg_clv is not none %}{{ 'pos' if n.avg_clv > 0 else 'neg' if n.avg_clv < 0 else 'zero' }}{% endif %}">{% if n.avg_clv is not none %}{{ "%+.2f"|format(n.avg_clv) }}<span class="unit">%</span>{% else %}—{% endif %}</div>
+      <div class="sub">n={{ n.bets_with_clv }} with CLV</div>
+    </div>
+    <div class="card kpi">
+      <span class="label">Win rate</span>
+      <div class="big">{% if n.win_rate is not none %}{{ n.win_rate }}<span class="unit">%</span>{% else %}—{% endif %}</div>
+      <div class="sub">w={{ n.n_win }} of {{ n.bets_resolved }}{% if n.avg_odds is not none %} · avg odds {{ "%.2f"|format(n.avg_odds) }}{% endif %}</div>
+    </div>
+    <div class="card kpi hero">
+      <span class="label">◆ Overall ROI</span>
+      <div class="big {{ 'pos' if n.flat_roi_pct > 0 else 'neg' if n.flat_roi_pct < 0 else 'zero' }}">{{ "%+.2f"|format(n.flat_roi_pct) }}<span class="unit">%</span></div>
+      <div class="sub">flat 1u · {{ n.bets_resolved }} resolved · {{ "%+.2f"|format(n.flat_pl) }}u</div>
+    </div>
+  </div>
+</div>
